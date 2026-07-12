@@ -1,0 +1,269 @@
+{
+  "module_id": "cashflow_evidence",
+  "name": "Cashflow Evidence",
+  "status": "allocation_aware_preflight",
+  "version": "0.1.0-draft",
+  "owner": "asymmflow",
+  "product_loop": {
+    "messy_input": [
+      "orders",
+      "customer_invoices",
+      "payments",
+      "bank_statements",
+      "documents",
+      "butler_context"
+    ],
+    "canonical_state": "cashflow_evidence_command_center",
+    "intelligence": [
+      "cash_exposure",
+      "missing_evidence_detection",
+      "posting_readiness",
+      "trial_balance_gate",
+      "bank_match_status",
+      "allocation_evidence_status",
+      "invoice_traceability_status",
+      "follow_up_task_status"
+    ],
+    "decision_or_action": [
+      "draft_follow_up",
+      "request_draft_journal",
+      "resolve_bank_match",
+      "export_evidence_pack"
+    ],
+    "audit_trail": "cashflow_evidence_audit_pack"
+  },
+  "justification_filters": {
+    "roi_proof": "Reduce receivables chasing, reconciliation labor, accountant back-and-forth, and payment-evidence search time.",
+    "workflow_closure": "Operator can inspect sources, correct or link missing evidence, draft follow-up, request deterministic posting, and export a pack.",
+    "engine_leverage": [
+      "pkg/cashflow/evidence",
+      "pkg/finance/posting",
+      "pkg/finance/banking",
+      "document_classification",
+      "butler_toon_context",
+      "local_first_sync_events"
+    ],
+    "operator_trust": [
+      "source_provenance",
+      "posting_coverage",
+      "trial_balance_status",
+      "evidence_completeness",
+      "bank_match_status",
+      "allocation_state",
+      "approval_path",
+      "export"
+    ]
+  },
+  "contracts": {
+    "capnp_schemas": [
+      "schemas/finance.capnp",
+      "schemas/documents.capnp",
+      "schemas/butler.capnp",
+      "schemas/infra.capnp"
+    ],
+    "json_payloads": [
+      "pkg/cashflow/evidence.CommandCenter",
+      "pkg/cashflow/evidence.EvidencePack",
+      "pkg/cashflow/evidence.AllocationEvidence",
+      "pkg/cashflow/evidence.AllocationSummary",
+      "pkg/cashflow/evidence.ActionProposal",
+      "internal/viewmodel/cashflow.CommandCenterVM",
+      "manifest"
+    ],
+    "toon_contexts": [
+      "butler_cashflow_evidence_briefing",
+      "evidence_pack_summary"
+    ]
+  },
+  "kernels": [
+    {
+      "name": "cash_exposure",
+      "path": "pkg/cashflow/evidence/model.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/cashflow/evidence -count=1"
+      ]
+    },
+    {
+      "name": "missing_evidence",
+      "path": "pkg/cashflow/evidence/model.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/cashflow/evidence -count=1"
+      ]
+    },
+    {
+      "name": "posting_readiness",
+      "path": "pkg/cashflow/evidence/model.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/cashflow/evidence -count=1"
+      ]
+    },
+    {
+      "name": "allocation_aware_bank_evidence",
+      "path": "pkg/cashflow/evidence/model.go",
+      "side_effects": false,
+      "tracks": [
+        "allocation_id",
+        "bank_statement_line_id",
+        "source_type",
+        "source_id",
+        "amount",
+        "allocation_type",
+        "confidence",
+        "allocation_status"
+      ],
+      "required_tests": [
+        "go test ./pkg/cashflow/evidence -count=1"
+      ]
+    },
+    {
+      "name": "action_proposals",
+      "path": "pkg/cashflow/evidence/proposal.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/cashflow/evidence -count=1"
+      ]
+    }
+  ],
+  "domain_services": [
+    {
+      "name": "cashflow_evidence_service",
+      "path": "pkg/cashflow/evidence/service.go",
+      "responsibilities": [
+        "load snapshot facts from existing deterministic sources",
+        "build command-center read model",
+        "avoid duplicate accounting state",
+        "return next deterministic action",
+        "build JSON and TOON evidence packs without mutating accounting state",
+        "carry allocation-aware bank evidence in the command center read model",
+        "read invoice traceability links from existing finance storage",
+        "read open receivables/payment follow-up counts from existing task storage"
+      ]
+    }
+  ],
+  "storage_adapters": [
+    {
+      "name": "cashflow_evidence_snapshot_reader",
+      "path": "cashflow_evidence_service.go",
+      "migration_owner": "none yet; current slice is read-only over existing tables",
+      "sync_impact": "future durable evidence packs should use module-aware sync envelopes"
+    }
+  ],
+  "viewmodels": [
+    {
+      "name": "CommandCenterVM",
+      "path": "internal/viewmodel/cashflow/evidence_vm.go",
+      "commands": [
+        "cashflowEvidence.inspectSources",
+        "cashflowEvidence.inspectAllocations",
+        "cashflowEvidence.draftFollowUp",
+        "cashflowEvidence.exportPack"
+      ]
+    }
+  ],
+  "ui_surfaces": [
+    {
+      "name": "AccountingScreenCashflowEvidencePanel",
+      "path": "frontend/src/lib/screens/AccountingScreen.svelte",
+      "status": "shipped_minimal"
+    }
+  ],
+  "events": {
+    "publishes": [
+      "cashflow.evidence.reviewed",
+      "cashflow.evidence.exported",
+      "cashflow.evidence.allocation_reviewed"
+    ],
+    "subscribes": [
+      "finance.invoice.created",
+      "finance.payment.recorded",
+      "finance.bank_statement.imported",
+      "documents.document.classified"
+    ],
+    "correlation_id_required": true
+  },
+  "permissions": [
+    "finance:view (current App/FinanceService gate)",
+    "cashflow_evidence:view",
+    "cashflow_evidence:export",
+    "cashflow_evidence:agent"
+  ],
+  "audit": {
+    "records": [
+      "cashflow_evidence_audit_pack"
+    ],
+    "required_fields": [
+      "actor",
+      "action",
+      "source_type",
+      "source_id",
+      "correlation_id",
+      "performed_at",
+      "reason"
+    ],
+    "agent_suggestion_link_required": true
+  },
+  "agent_safe_apis": [
+    {
+      "name": "inspect_cashflow_evidence",
+      "path": "pkg/cashflow/evidence/agent.go; service_butler.go",
+      "mode": "inspect",
+      "mutates_state": false
+    },
+    {
+      "name": "draft_follow_up",
+      "path": "pkg/cashflow/evidence/agent.go",
+      "mode": "draft",
+      "mutates_state": false
+    },
+    {
+      "name": "recommend_posting_action",
+      "path": "pkg/cashflow/evidence/agent.go",
+      "mode": "recommend",
+      "mutates_state": false
+    },
+    {
+      "name": "export_evidence_pack",
+      "path": "pkg/cashflow/evidence/export.go",
+      "mode": "export",
+      "mutates_state": false
+    }
+  ],
+  "forbidden_agent_operations": [
+    "approve",
+    "post",
+    "persist",
+    "delete",
+    "reverse",
+    "file_tax_return"
+  ],
+  "tests": {
+    "kernel": [
+      "go test ./pkg/cashflow/evidence -count=1"
+    ],
+    "viewmodel": [
+      "go test ./internal/viewmodel/cashflow -count=1"
+    ],
+    "build": [
+      "go build ./..."
+    ],
+    "docs": [
+      "Get-Content docs/modules/cashflow_evidence.manifest.json | ConvertFrom-Json | Out-Null"
+    ]
+  },
+  "launch_readiness": [
+    "closed_loop_documented",
+    "kernel_tests_passing",
+    "read_model_service_available",
+    "viewmodel_available",
+    "allocation_aware_read_model_available",
+    "allocation_summary_export_available",
+    "agent_api_draft_only",
+    "json_export_available",
+    "read_only_action_proposals_available",
+    "minimal_ui_surface_available",
+    "baseline_warnings_recorded"
+  ]
+}

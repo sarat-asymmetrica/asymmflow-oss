@@ -1,0 +1,39 @@
+{
+  "version": "QGIF/1.0",
+  "metadata": {
+    "title": "Breathing Pulse",
+    "author": "",
+    "description": "",
+    "duration": 4,
+    "fps": 60
+  },
+  "tracks": [
+    {
+      "name": "scale",
+      "type": "scalar",
+      "interpolation": "linear",
+      "keyframes": [
+        {
+          "time": 0,
+          "value": 1,
+          "easing": "easeInOut"
+        },
+        {
+          "time": 2,
+          "value": 1.15,
+          "easing": "easeInOut"
+        },
+        {
+          "time": 4,
+          "value": 1,
+          "easing": "easeInOut"
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "type": "sphere",
+    "scale": 1,
+    "color": "#fdfbf7"
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "module_id": "trading_distribution",
+  "name": "Trading & Distribution",
+  "status": "operational",
+  "version": "0.1.0",
+  "owner": "asymmflow",
+  "summary": "The core instrumentation-trading vertical: RFQ -> costing -> offer -> order -> GRN -> invoice -> payment, with supplier procurement, multi-division branding, and Bahrain VAT e-invoicing. This is the reference overlay that proves the 'company facts are configuration, not code' thesis.",
+  "product_loop": {
+    "messy_input": [
+      "rfq_documents",
+      "supplier_baskets",
+      "opportunities",
+      "customer_master",
+      "supplier_master",
+      "butler_context"
+    ],
+    "canonical_state": "offer_order_invoice_chain",
+    "intelligence": [
+      "customer_payment_grade_prediction",
+      "product_markup_and_margin_costing",
+      "approval_risk_assessment",
+      "named_competitor_margin_floor",
+      "document_classification_ocr"
+    ],
+    "decision_or_action": [
+      "generate_costing_sheet",
+      "draft_offer",
+      "confirm_order",
+      "post_invoice",
+      "record_payment",
+      "export_quotation_pdf",
+      "emit_vat_einvoice_xml"
+    ],
+    "audit_trail": "costing_and_order_audit"
+  },
+  "justification_filters": {
+    "roi_proof": "Replaces manual Excel costing, quotation typing, and per-division branding lookups; enforces margin/approval policy automatically.",
+    "workflow_closure": "Operator runs an RFQ through costing, reviews margin/risk warnings, approves or declines, exports a branded quotation, and the offer flows to order -> invoice -> payment with a full audit trail.",
+    "engine_leverage": [
+      "pkg/engines costing_engine",
+      "pkg/engines geometry_bridge (tender/customer-360/payment pipelines)",
+      "pkg/engines eh_parser (supplier basket pricing)",
+      "pkg/engines pdf_generator + arabic_shaper",
+      "pkg/overlay company/division/business-rules configuration",
+      "pkg/butler/prediction payment-grade model",
+      "local_first_sqlite (ncruces, no CGO)"
+    ],
+    "operator_trust": [
+      "source_preview",
+      "margin_and_risk_warnings",
+      "approval_step",
+      "byte_identical_financial_values",
+      "audit_trail",
+      "branded_pdf_export"
+    ]
+  },
+  "overlay_configuration": {
+    "package": "pkg/overlay",
+    "active_accessor": "overlay.Active() / overlay.SetActive() (synced from package-main activeOverlay at startup)",
+    "company_facts": [
+      "company_display_name",
+      "industry",
+      "country",
+      "currency + currency_decimals",
+      "default_vat_rate"
+    ],
+    "division_profiles": [
+      "key + legal_name + vat_number + city",
+      "address_lines",
+      "bank_details",
+      "letterhead_asset_name + letterhead_file",
+      "aliases (normalization)"
+    ],
+    "business_rules": [
+      "min_margin_pct (0.08)",
+      "abb_competition_min_margin (0.15)",
+      "emergency_min_margin_pct (0.20)",
+      "approval_threshold_margin (0.20)",
+      "large_order_threshold_bhd (10000)",
+      "monthly_operating_cost_bhd (15000)",
+      "named_competitors",
+      "grade_payment_terms (A/B/C/D: terms, advance_pct, max_discount, max_days)"
+    ],
+    "product_markup_rules": "per product_type margin list + default_product_margin (0.12)",
+    "cascade": "overlay.json from exe dir > data/ > app-data dir; falls back to BuiltinDefaults() (never nil; offline-first)",
+    "example": "data/overlay.json"
+  },
+  "kernels": [
+    {
+      "name": "money",
+      "path": "pkg/kernel/money",
+      "side_effects": false,
+      "required_tests": ["go test ./pkg/kernel/money -count=1"]
+    },
+    {
+      "name": "approval",
+      "path": "pkg/kernel/approval",
+      "side_effects": false,
+      "required_tests": ["go test ./pkg/kernel/approval -count=1"]
+    },
+    {
+      "name": "evidence",
+      "path": "pkg/kernel/evidence",
+      "side_effects": false,
+      "required_tests": ["go test ./pkg/kernel/evidence -count=1"]
+    },
+    {
+      "name": "text",
+      "path": "pkg/kernel/text",
+      "side_effects": false,
+      "required_tests": ["go test ./pkg/kernel/text -count=1"]
+    }
+  ],
+  "engines": [
+    {
+      "name": "costing_engine",
+      "path": "pkg/engines/costing_engine.go",
+      "responsibilities": [
+        "product margin lookup (overlay.Active().ProductMargin)",
+        "grade discount + payment terms (overlay.Active().CustomerDiscount/PaymentTerms)",
+        "VAT calculation",
+        "risk assessment + approval status (overlay business rules)"
+      ]
+    },
+    {
+      "name": "geometry_bridge",
+      "path": "pkg/engines/geometry_bridge.go",
+      "responsibilities": [
+        "tender evaluation (named-competitor margin floor from overlay)",
+        "customer 360",
+        "payment intelligence"
+      ]
+    },
+    {
+      "name": "eh_parser",
+      "path": "pkg/engines/eh_parser.go",
+      "responsibilities": ["supplier basket XML pricing", "product-type detection"]
+    }
+  ],
+  "domain_services": [
+    {
+      "name": "costing / offer / order surface",
+      "path": "app_costing_exports_surface.go, app_sales_pipeline.go, app_order_customer_surface.go",
+      "responsibilities": [
+        "calculate costing (assessCostingRisk uses overlay business rules)",
+        "draft + persist offers",
+        "confirm orders",
+        "export quotation PDF/Excel"
+      ]
+    },
+    {
+      "name": "einvoice_service",
+      "path": "einvoice_service.go",
+      "responsibilities": [
+        "Bahrain NBR VAT e-invoice XML",
+        "supplier identity dispatched per invoice.Division via overlay (fixed the per-division TRN bug in 2b)"
+      ]
+    },
+    {
+      "name": "contract_service / supplier procurement",
+      "path": "contract_service.go, purchase_order_service.go, supplier_invoice_service.go",
+      "responsibilities": ["contracts", "purchase orders", "GRN", "supplier invoices/payments"]
+    }
+  ],
+  "storage_adapters": [
+    {
+      "name": "gorm sqlite (ncruces, no CGO)",
+      "path": "pkg/crm/domain.go, pkg/finance/domain.go, payroll_service.go",
+      "migration_owner": "app.go runCustomMigrations + AutoMigrate",
+      "division_default": "overlay-driven at write time via normalizeDivisionName(\"\") and divisionDefaultSQLLiteral() (no hardcoded GORM/DDL default as of Phase 2d)",
+      "sync_impact": "optional Supabase/Turso sync envelope"
+    }
+  ],
+  "domain_vocabulary": [
+    "RFQ / Opportunity",
+    "CostingSheet",
+    "Offer",
+    "Order",
+    "PurchaseOrder",
+    "GRN",
+    "Invoice (VAT)",
+    "CreditNote",
+    "Payment",
+    "SupplierInvoice / SupplierPayment",
+    "DeliveryNote",
+    "CustomerGrade A/B/C/D",
+    "Division (Acme Instrumentation / Beacon Controls)"
+  ],
+  "ui_surfaces": [
+    {
+      "name": "Costing / Offers / Orders / Invoices screens",
+      "path": "frontend/src (Svelte 5)",
+      "trust_surfaces": [
+        "margin_and_risk_warnings",
+        "approval_status",
+        "source_documents",
+        "branded_pdf_preview",
+        "audit_timeline"
+      ]
+    }
+  ],
+  "events": {
+    "publishes": [
+      "finance.invoice.created (subscribers exist; production PUBLISHERS pending Phase 3)",
+      "finance.payment.recorded",
+      "crm.order.confirmed"
+    ],
+    "subscribes": ["compliance hooks (pkg/infra/events)"],
+    "correlation_id_required": true,
+    "note": "Event bus has subscribers but zero production publishers today — wiring publishers is Mission B / Phase 3."
+  },
+  "policies": {
+    "source": "pkg/overlay BusinessRules (Phase 2c)",
+    "invariant_suite": "business_invariants.go (AllInvariants: grading, payment terms, discounts, product margins, risk/approval, financial) + ValidateCostingApproval",
+    "financial_semantics": "SACRED — margin floors, grade terms, rounding, posting order, VAT are stop-and-ask; Phase 2c relocated values byte-identically only"
+  },
+  "permissions": [
+    "offers:create",
+    "customers:create",
+    "suppliers:create",
+    "orders:create",
+    "invoices:create",
+    "payments:create"
+  ],
+  "agent_safe_apis": [
+    {
+      "name": "butler costing/offer draft (CreateOfferDraftFromButler, draft only)",
+      "mode": "draft",
+      "mutates_state": false
+    },
+    {
+      "name": "butler inspect costing / customer 360",
+      "mode": "inspect",
+      "mutates_state": false
+    },
+    {
+      "name": "butler recommend approval action",
+      "mode": "recommend",
+      "mutates_state": false
+    }
+  ],
+  "forbidden_agent_operations": [
+    "approve",
+    "post",
+    "persist",
+    "delete",
+    "reverse",
+    "emit_einvoice"
+  ],
+  "tests": {
+    "kernel": ["go test ./pkg/kernel/... -count=1"],
+    "engine": ["go test ./pkg/engines -count=1", "go test ./pkg/overlay -count=1"],
+    "service": [
+      "go test . -run 'Invariant|ABB|Costing|Division|EInvoice|Margin|Product|Tender|Payment' -count=1"
+    ],
+    "migration": ["go test . -run 'Division|Migration' -count=1"],
+    "full": ["go build ./...", "go test ./..."]
+  },
+  "support_boundary": {
+    "in_scope": [
+      "RFQ->payment trading loop",
+      "supplier procurement",
+      "multi-division branding + VAT e-invoice",
+      "overlay-configurable company facts + business policy"
+    ],
+    "out_of_scope_or_follow_up": [
+      "full overlays/trading/ domain-package move (workflow code still in package main)",
+      "division-SET / alias enumeration -> generate from overlay.Divisions (SQL IN-lists, banking alias switch, validDivisions maps, Acme-vs-Beacon breakdowns)",
+      "branding/identity strings (report titles, contract T&C text, companyName setting default) -> overlay display name",
+      "EUR->BHD exchange-rate inconsistency (0.41 eh_parser vs 0.45 live) — financial decision pending Commander",
+      "event-bus production publishers (Mission B / Phase 3)"
+    ]
+  },
+  "maturity": {
+    "level": "operational-but-not-yet-extracted",
+    "thesis_proven_pct": 60,
+    "notes": "Company facts (identity, division profiles, business rules, product markup, division defaults) are now overlay configuration (Phase 2a-2d). The trading WORKFLOW code still lives in package main; promoting it into overlays/trading/ and generic capabilities (document numbering, approval routing, PDF assembly) into pkg/ engines is a later wave (Phase 2f / Mission A continuation)."
+  }
+}

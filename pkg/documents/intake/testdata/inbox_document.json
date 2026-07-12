@@ -1,0 +1,16 @@
+{
+  "id": 42,
+  "document_id": "rfq-mail-77",
+  "file_name": "RFQ-77.eml",
+  "file_path": "C:\\Inbox\\RFQ-77.eml",
+  "document_type": "RFQ",
+  "status": "NeedsReview",
+  "confidence": 0.64,
+  "extracted_data": {
+    "rfq_number": "RFQ-77",
+    "customer_name": "GSC",
+    "bid_deadline": ""
+  },
+  "suggested_actions": ["Create opportunity from RFQ"],
+  "processed_at": "2026-05-14T16:21:00+05:30"
+}

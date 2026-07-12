@@ -1,0 +1,2976 @@
+{
+  "generatedAt": "2026-04-17T14:09:38.597Z",
+  "screenModalCount": 63,
+  "componentModalCount": 3,
+  "backendMappedModalCount": 49,
+  "staticReviewNoteCount": 13,
+  "modals": [
+    {
+      "screen": "AccountingScreen",
+      "file": "frontend/src/lib/screens/AccountingScreen.svelte",
+      "line": 599,
+      "type": "manual",
+      "title": "New Accounting Entry",
+      "open": "showVoucherModal",
+      "fields": [
+        "Voucher Type",
+        "Date",
+        "Reference (Cheque No / Transfer Ref)",
+        "{newVoucher.type}",
+        "{newVoucher.date}",
+        "e.g. CHQ-12345",
+        "{line.account}",
+        "0.00"
+      ],
+      "buttons": [
+        {
+          "line": 654,
+          "kind": "button",
+          "label": "+ Add Line",
+          "handler": "addVoucherLine",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 692,
+          "kind": "button",
+          "label": "×",
+          "handler": "() => removeVoucherLine(i)",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 718,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "() => (showVoucherModal = false)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 724,
+          "kind": "button",
+          "label": "Create Entry",
+          "handler": "createVoucher",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreateJournalEntry",
+            "GetChartOfAccounts",
+            "GetJournalEntries"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "AccountingScreen",
+      "file": "frontend/src/lib/screens/AccountingScreen.svelte",
+      "line": 733,
+      "type": "manual",
+      "title": "{editingAccount ? \"Edit Account\" : \"Add Account\"}",
+      "open": "showAccountModal",
+      "fields": [
+        "Account Code *",
+        "Account Type *",
+        "Account Name *",
+        "VAT Account (for Bahrain VAT tracking)",
+        "e.g. 1000",
+        "{newAccount.type}",
+        "e.g. Cash in Bank",
+        "input:checkbox"
+      ],
+      "buttons": [
+        {
+          "line": 789,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "() => (showAccountModal = false)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 791,
+          "kind": "button",
+          "label": "{editingAccount ? \"Update\" : \"Add Account\"}",
+          "handler": "saveAccount",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateAccount",
+            "GetChartOfAccounts",
+            "GetJournalEntries",
+            "UpdateAccount"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "AuditTrailViewer",
+      "file": "frontend/src/lib/screens/AuditTrailViewer.svelte",
+      "line": 387,
+      "type": "Modal",
+      "title": "Reverse Action",
+      "open": "{showReverseModal}",
+      "fields": [
+        "Explain why this action is being reversed..."
+      ],
+      "buttons": [
+        {
+          "line": 417,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showReverseModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 418,
+          "kind": "Button",
+          "label": "Reverse Action",
+          "handler": "handleReverse",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetAuditTrail",
+            "ReverseAction"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BankReconciliationScreen.svelte",
+      "line": 1067,
+      "type": "Modal",
+      "title": "Import Bank Statement",
+      "open": "{showImportModal}",
+      "fields": [
+        "{importAccountId}"
+      ],
+      "buttons": [
+        {
+          "line": 1083,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showImportModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1084,
+          "kind": "Button",
+          "label": "Import",
+          "handler": "handleImport",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetBankStatements",
+            "GetCashPosition",
+            "ImportBankStatementWithDialog"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BankReconciliationScreen.svelte",
+      "line": 1091,
+      "type": "Modal",
+      "title": "Match Transaction",
+      "open": "{showMatchModal}",
+      "fields": [
+        "{buildMatchCandidateLabel(candidate, matchingType)}",
+        "{matchingType}",
+        "{candidate.id}"
+      ],
+      "buttons": [
+        {
+          "line": 1123,
+          "kind": "Button",
+          "label": "Unmatch",
+          "handler": "() => matchingLine && handleUnmatch(matchingLine)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetBankStatementLines",
+            "UnmatchLine"
+          ]
+        },
+        {
+          "line": 1133,
+          "kind": "Button",
+          "label": "Fix Debit/Credit",
+          "handler": "() => matchingLine && openOCRReviewModal(matchingLine)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1178,
+          "kind": "Button",
+          "label": "Match Selected",
+          "handler": "handleManualMatch",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetBankStatementLines",
+            "ManualMatchLine"
+          ]
+        },
+        {
+          "line": 1182,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => showMatchModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BankReconciliationScreen.svelte",
+      "line": 1187,
+      "type": "Modal",
+      "title": "Edit Statement",
+      "open": "{showEditStatementModal}",
+      "fields": [
+        "{editStatementData.period_start}",
+        "{editStatementData.period_end}",
+        "{editStatementData.opening_balance}",
+        "{editStatementData.closing_balance}",
+        "{editStatementData.status}",
+        "OCR summary, import context, or reconciliation notes"
+      ],
+      "buttons": [
+        {
+          "line": 1222,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showEditStatementModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1223,
+          "kind": "Button",
+          "label": "Save Changes",
+          "handler": "handleSaveStatement",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetBankStatements",
+            "UpdateBankStatement"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BankReconciliationScreen.svelte",
+      "line": 1230,
+      "type": "Modal",
+      "title": "Edit Transaction",
+      "open": "{showEditLineModal}",
+      "fields": [
+        "{lineFormData.transaction_date}",
+        "{lineFormData.debit}",
+        "{lineFormData.credit}"
+      ],
+      "buttons": [
+        {
+          "line": 1256,
+          "kind": "Button",
+          "label": "Flip Debit / Credit",
+          "handler": "flipLineDebitCredit",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1270,
+          "kind": "Button",
+          "label": "Delete Transaction",
+          "handler": "handleDeleteLine",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "DeleteBankStatementLine",
+            "GetBankStatementLines",
+            "GetBankStatements"
+          ]
+        },
+        {
+          "line": 1274,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showEditLineModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1275,
+          "kind": "Button",
+          "label": "Save Changes",
+          "handler": "handleSaveLine",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateBankStatementLine",
+            "GetBankStatementLines",
+            "GetBankStatements",
+            "UpdateBankStatementLine"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BankReconciliationScreen.svelte",
+      "line": 1282,
+      "type": "Modal",
+      "title": "Add Transaction",
+      "open": "{showAddLineModal}",
+      "fields": [
+        "{lineFormData.transaction_date}",
+        "{lineFormData.debit}",
+        "{lineFormData.credit}"
+      ],
+      "buttons": [
+        {
+          "line": 1312,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showAddLineModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1313,
+          "kind": "Button",
+          "label": "Add Transaction",
+          "handler": "handleSaveLine",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateBankStatementLine",
+            "GetBankStatementLines",
+            "GetBankStatements",
+            "UpdateBankStatementLine"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BankReconciliationScreen.svelte",
+      "line": 1320,
+      "type": "Modal",
+      "title": "Manage Bank Accounts",
+      "open": "{showManageAccountsModal}",
+      "fields": [
+        "{accountFormData.division}",
+        "{accountFormData.currency}"
+      ],
+      "buttons": [
+        {
+          "line": 1350,
+          "kind": "button",
+          "label": "✏️",
+          "handler": "() => editAccount(account)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1354,
+          "kind": "button",
+          "label": "🗑️",
+          "handler": "() => handleDeleteAccount(account)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "DeleteBankAccount",
+            "GetAllBankAccounts"
+          ]
+        },
+        {
+          "line": 1420,
+          "kind": "Button",
+          "label": "Cancel Edit",
+          "handler": "resetAccountForm",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1422,
+          "kind": "Button",
+          "label": "{editingAccount ? 'Update Account' : 'Add Account'}",
+          "handler": "handleSaveAccount",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateBankAccount",
+            "GetAllBankAccounts",
+            "UpdateBankAccount"
+          ]
+        },
+        {
+          "line": 1429,
+          "kind": "Button",
+          "label": "Import from Statement",
+          "handler": "handleImportFromStatement",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1436,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => { showManageAccountsModal = false; resetAccountForm(); }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BookBankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BookBankReconciliationScreen.svelte",
+      "line": 501,
+      "type": "Modal",
+      "title": "New Book-Bank Reconciliation",
+      "open": "{showNewModal}",
+      "fields": [
+        "Add notes..."
+      ],
+      "buttons": [
+        {
+          "line": 533,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showNewModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 534,
+          "kind": "Button",
+          "label": "Create",
+          "handler": "handleCreate",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateBookBankReconciliation",
+            "GetBookBankReconciliations",
+            "GetReconciliationVariances",
+            "UpdateBookBankReconciliation"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "BookBankReconciliationScreen",
+      "file": "frontend/src/lib/screens/BookBankReconciliationScreen.svelte",
+      "line": 541,
+      "type": "Modal",
+      "title": "Edit Adjustments",
+      "open": "{showEditModal}",
+      "fields": [
+        "Add notes..."
+      ],
+      "buttons": [
+        {
+          "line": 565,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showEditModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 566,
+          "kind": "Button",
+          "label": "Update",
+          "handler": "handleUpdate",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetBookBankReconciliations",
+            "GetReconciliationVariances",
+            "UpdateBookBankReconciliation"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "CRMCustomerDashboard",
+      "file": "frontend/src/lib/screens/CRMCustomerDashboard.svelte",
+      "line": 291,
+      "type": "manual",
+      "title": "Create New Customer",
+      "open": "showCreateModal",
+      "fields": [
+        "Business Name *",
+        "Customer Code",
+        "Customer Type",
+        "Payment Grade",
+        "Address",
+        "City",
+        "Country",
+        "TRN",
+        "Industry",
+        "Company name",
+        "Auto-generated if empty",
+        "{newCustomer.customer_type}",
+        "{newCustomer.payment_grade}",
+        "Street address",
+        "Tax registration number",
+        "Industry sector"
+      ],
+      "buttons": [
+        {
+          "line": 346,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCreateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 347,
+          "kind": "Button",
+          "label": "Create Customer",
+          "handler": "saveCustomer",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateCustomer",
+            "GetCRMCustomerDashboard",
+            "GetCRMCustomerDashboardByYear"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "CRMSupplierDashboard",
+      "file": "frontend/src/lib/screens/CRMSupplierDashboard.svelte",
+      "line": 257,
+      "type": "manual",
+      "title": "Create New Supplier",
+      "open": "showCreateModal",
+      "fields": [
+        "Supplier Name *",
+        "Supplier Code",
+        "Supplier Type",
+        "Country",
+        "Lead Time (Days)",
+        "Payment Terms *",
+        "Rating",
+        "Primary Contact",
+        "Email",
+        "Phone",
+        "Address",
+        "Company name",
+        "Auto-generated if empty",
+        "{newSupplier.supplier_type}",
+        "30",
+        "{newSupplier.payment_terms}",
+        "{newSupplier.rating}",
+        "Contact person name",
+        "email@example.com",
+        "+973-XXXX-XXXX",
+        "Full address"
+      ],
+      "buttons": [
+        {
+          "line": 329,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCreateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 330,
+          "kind": "Button",
+          "label": "Create Supplier",
+          "handler": "saveSupplier",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateSupplier",
+            "GetCRMSupplierDashboard",
+            "GetCRMSupplierDashboardByYear"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "ChequeRegisterScreen",
+      "file": "frontend/src/lib/screens/ChequeRegisterScreen.svelte",
+      "line": 470,
+      "type": "Modal",
+      "title": "Register Cheque Book",
+      "open": "{showRegisterModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 483,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showRegisterModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 484,
+          "kind": "Button",
+          "label": "Register",
+          "handler": "handleCreateRegister",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateChequeRegister",
+            "GetChequeRegisters",
+            "GetNextChequeNumber",
+            "GetOutstandingCheques",
+            "GetStaleCheques"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "ChequeRegisterScreen",
+      "file": "frontend/src/lib/screens/ChequeRegisterScreen.svelte",
+      "line": 491,
+      "type": "Modal",
+      "title": "Issue Cheque",
+      "open": "{showIssueModal}",
+      "fields": [
+        "{issuePayeeType}"
+      ],
+      "buttons": [
+        {
+          "line": 515,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showIssueModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 516,
+          "kind": "Button",
+          "label": "Issue Cheque",
+          "handler": "handleIssueCheque",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetChequeRegisters",
+            "GetNextChequeNumber",
+            "GetOutstandingCheques",
+            "GetStaleCheques",
+            "IssueCheque"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "CustomerDetailView",
+      "file": "frontend/src/lib/screens/CustomerDetailView.svelte",
+      "line": 513,
+      "type": "manual",
+      "title": "Add Note",
+      "open": "showNoteModal",
+      "fields": [
+        "Type",
+        "Content",
+        "{newNoteType}",
+        "Enter note..."
+      ],
+      "buttons": [
+        {
+          "line": 533,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showNoteModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 534,
+          "kind": "Button",
+          "label": "Save Note",
+          "handler": "saveNote",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "AddCustomerNote",
+            "GetCustomerFullProfile"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "CustomerDetailView",
+      "file": "frontend/src/lib/screens/CustomerDetailView.svelte",
+      "line": 540,
+      "type": "manual",
+      "title": "Add Contact",
+      "open": "showContactModal",
+      "fields": [
+        "Name *",
+        "Job Title",
+        "Email",
+        "Phone",
+        "Address",
+        "Primary Contact",
+        "Contact person name",
+        "e.g. Procurement Manager",
+        "email@company.com",
+        "+973 1234 5678",
+        "input:checkbox"
+      ],
+      "buttons": [
+        {
+          "line": 570,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showContactModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 571,
+          "kind": "Button",
+          "label": "Save Contact",
+          "handler": "saveContact",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "AddCustomerContact",
+            "GetCustomerFullProfile"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "CustomerDetailView",
+      "file": "frontend/src/lib/screens/CustomerDetailView.svelte",
+      "line": 578,
+      "type": "ContextTaskModal",
+      "title": "Create Customer Task",
+      "open": "{showTaskModal}",
+      "fields": [],
+      "buttons": [],
+      "staticStatus": "No visible cancel/close footer button detected."
+    },
+    {
+      "screen": "DeliveryNotesScreen",
+      "file": "frontend/src/lib/screens/DeliveryNotesScreen.svelte",
+      "line": 924,
+      "type": "manual",
+      "title": "Items to Ship",
+      "open": "showModal",
+      "fields": [
+        "{ if (!item.selected_serials) item.selected_serials = []; if (e.currentTarget.checked) { if (item.selected_serials.length s !== serial.serial_no); fulfillmentItems = fulfillmentItems; } }} /> {serial.serial_no}",
+        "Partial Delivery",
+        "{formData.orderId}",
+        "{fulfillmentItems[i].ship_qty}",
+        "input:checkbox",
+        "Full delivery address",
+        "{formData.transportMethod}",
+        "{formData.status}"
+      ],
+      "buttons": [
+        {
+          "line": 1145,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showModal = false",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1148,
+          "kind": "Button",
+          "label": "{saving ? 'Saving...' : modalMode === 'edit' ? 'Update Delivery Note' : 'Create Delivery Note'}",
+          "handler": "",
+          "type": "submit",
+          "disabled": true,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Has submit-like button but no mapped backend method in first two handler hops."
+    },
+    {
+      "screen": "DeliveryNotesScreen",
+      "file": "frontend/src/lib/screens/DeliveryNotesScreen.svelte",
+      "line": 925,
+      "type": "Modal",
+      "title": "{modalMode === 'create' ? 'New Delivery Note' : 'Edit Delivery Note'}",
+      "open": "{showModal}",
+      "fields": [
+        "{ if (!item.selected_serials) item.selected_serials = []; if (e.currentTarget.checked) { if (item.selected_serials.length s !== serial.serial_no); fulfillmentItems = fulfillmentItems; } }} /> {serial.serial_no}",
+        "Partial Delivery",
+        "{formData.orderId}",
+        "{fulfillmentItems[i].ship_qty}",
+        "input:checkbox",
+        "Full delivery address",
+        "{formData.transportMethod}",
+        "{formData.status}"
+      ],
+      "buttons": [
+        {
+          "line": 1145,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showModal = false",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1148,
+          "kind": "Button",
+          "label": "{saving ? 'Saving...' : modalMode === 'edit' ? 'Update Delivery Note' : 'Create Delivery Note'}",
+          "handler": "",
+          "type": "submit",
+          "disabled": true,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Has submit-like button but no mapped backend method in first two handler hops."
+    },
+    {
+      "screen": "DeliveryNotesScreen",
+      "file": "frontend/src/lib/screens/DeliveryNotesScreen.svelte",
+      "line": 1158,
+      "type": "Modal",
+      "title": "{`Delivery Note ${selectedNote.dn_number}",
+      "open": "{showDetailModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1265,
+          "kind": "Button",
+          "label": "{pdfGenerating ? 'Generating PDF...' : 'Download PDF'}",
+          "handler": "() => handleGeneratePDF(selectedNote)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GenerateDeliveryNotePDF",
+            "OpenExportedFile"
+          ]
+        },
+        {
+          "line": 1269,
+          "kind": "Button",
+          "label": "Dispatch",
+          "handler": "() => handleDispatch(selectedNote)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "DispatchDeliveryNote",
+            "GetDeliveryNotes",
+            "ListCustomers",
+            "ListOrders"
+          ]
+        },
+        {
+          "line": 1274,
+          "kind": "Button",
+          "label": "Confirm Delivery",
+          "handler": "() => handleConfirmDelivery(selectedNote)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "ConfirmDeliveryNote",
+            "GetDeliveryNotes",
+            "ListCustomers",
+            "ListOrders"
+          ]
+        },
+        {
+          "line": 1278,
+          "kind": "Button",
+          "label": "Edit",
+          "handler": "() => openEditModal(selectedNote)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1282,
+          "kind": "Button",
+          "label": "Delete",
+          "handler": "() => handleDelete(selectedNote)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "DeleteDeliveryNote",
+            "GetDeliveryNotes",
+            "ListCustomers",
+            "ListOrders"
+          ]
+        }
+      ],
+      "staticStatus": "No visible cancel/close footer button detected. Submit-like modal has no detected input fields."
+    },
+    {
+      "screen": "ExpensesScreen",
+      "file": "frontend/src/lib/screens/ExpensesScreen.svelte",
+      "line": 855,
+      "type": "manual",
+      "title": "Record Expense Payment",
+      "open": "showPaymentModal && paymentEntry",
+      "fields": [
+        "Payment Date",
+        "Method {#each expensePaymentMethods as method} {method} {/each}",
+        "Bank Account Select bank account {#each bankAccounts as bank} {bank.bank_name} • {bank.account_number} {/each}",
+        "Reference",
+        "{expensePaymentForm.paidAt}",
+        "{expensePaymentForm.paymentMethod}",
+        "{expensePaymentForm.bankAccountID}",
+        "NEFT / cheque / transfer reference"
+      ],
+      "buttons": [
+        {
+          "line": 892,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "() => { showPaymentModal = false; paymentEntry = null; }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 893,
+          "kind": "button",
+          "label": "{payingExpense ? \"Saving...\" : \"Mark Paid\"}",
+          "handler": "submitExpensePayment",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetActiveBankAccounts"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "FXRevaluationScreen",
+      "file": "frontend/src/lib/screens/FXRevaluationScreen.svelte",
+      "line": 478,
+      "type": "Modal",
+      "title": "Update FX Rate",
+      "open": "{showRateModal}",
+      "fields": [
+        "{rateCurrency}",
+        "{rateSource}"
+      ],
+      "buttons": [
+        {
+          "line": 499,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showRateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 500,
+          "kind": "Button",
+          "label": "Save Rate",
+          "handler": "handleAddRate",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateFXRate",
+            "GetFXExposureReport"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "GRNScreen",
+      "file": "frontend/src/lib/screens/GRNScreen.svelte",
+      "line": 659,
+      "type": "WabiModal",
+      "title": "Receive Goods from PO",
+      "open": "{showReceiveModal}",
+      "fields": [
+        "{receiveFormData.po_id}",
+        "{item.quantity_received}",
+        "{item.quantity_rejected}",
+        "{item.rejection_reason}",
+        "{\"SN-001\\nSN-002\\nSN-003\"}"
+      ],
+      "buttons": [
+        {
+          "line": 827,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showReceiveModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 835,
+          "kind": "Button",
+          "label": "Create GRN",
+          "handler": "handleReceiveAgainstPO",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetPurchaseOrders",
+            "ListGRNs",
+            "ReceiveAgainstPO",
+            "ReceiveAgainstPOWithSerials"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "GRNScreen",
+      "file": "frontend/src/lib/screens/GRNScreen.svelte",
+      "line": 843,
+      "type": "WabiModal",
+      "title": "GRN Details",
+      "open": "{showViewModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 949,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => showViewModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "GRNScreen",
+      "file": "frontend/src/lib/screens/GRNScreen.svelte",
+      "line": 958,
+      "type": "WabiModal",
+      "title": "Quality Control Review",
+      "open": "{showQCModal}",
+      "fields": [
+        "{qcFormData.status}",
+        "Enter QC inspection notes..."
+      ],
+      "buttons": [
+        {
+          "line": 1001,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showQCModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1008,
+          "kind": "Button",
+          "label": "Update QC Status",
+          "handler": "handleQCUpdate",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetPurchaseOrders",
+            "ListGRNs",
+            "UpdateGRNQCStatus"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "InvoicesScreen",
+      "file": "frontend/src/lib/screens/InvoicesScreen.svelte",
+      "line": 1008,
+      "type": "Modal",
+      "title": "Create Invoice from Order",
+      "open": "{showCreateModal}",
+      "fields": [
+        "Equipment Name",
+        "Specification",
+        "Detailed Description",
+        "FOB Cost",
+        "Freight Cost",
+        "Total Cost",
+        "Margin %",
+        "Source Currency",
+        "Contact Person",
+        "RFQ Reference",
+        "Country of Origin",
+        "Delivery Time",
+        "{selectedOrderId}",
+        "{selectedDeliveryNoteId}",
+        "input:checkbox"
+      ],
+      "buttons": [
+        {
+          "line": 1138,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showCreateModal = false; resetFieldVisibility(); }",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1145,
+          "kind": "Button",
+          "label": "{createLoading ? 'Creating...' : selectedDeliveryNoteId ? 'Create Invoice + Link DN' : 'Create Invoice'}",
+          "handler": "handleCreateInvoice",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreateInvoiceWithOptions",
+            "ListCustomerInvoices"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "InvoicesScreen",
+      "file": "frontend/src/lib/screens/InvoicesScreen.svelte",
+      "line": 1154,
+      "type": "Modal",
+      "title": "Delete Invoice",
+      "open": "{showDeleteModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1166,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => (showDeleteModal = false)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1169,
+          "kind": "Button",
+          "label": "{deleteLoading ? 'Deleting...' : 'Delete Invoice'}",
+          "handler": "handleDeleteInvoice",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "DeleteCustomerInvoice",
+            "ListCustomerInvoices"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "InvoicesScreen",
+      "file": "frontend/src/lib/screens/InvoicesScreen.svelte",
+      "line": 1177,
+      "type": "Modal",
+      "title": "Edit Invoice",
+      "open": "{showEditModal}",
+      "fields": [
+        "Invoice Number",
+        "Status",
+        "Amount (BHD) *",
+        "Outstanding (BHD) *",
+        "Customer PO Number",
+        "{editInvoice.invoice_number}",
+        "{editInvoice.status}",
+        "{editInvoice.grand_total_bhd}",
+        "{editInvoice.outstanding_bhd}",
+        "{editInvoice.customer_po_number}"
+      ],
+      "buttons": [
+        {
+          "line": 1233,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showEditModal = false; editInvoice = null; }",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1236,
+          "kind": "Button",
+          "label": "{editLoading ? 'Saving...' : 'Save Changes'}",
+          "handler": "saveInvoiceEdit",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "ListCustomerInvoices",
+            "UpdateCustomerInvoice"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "InvoicesScreen",
+      "file": "frontend/src/lib/screens/InvoicesScreen.svelte",
+      "line": 1245,
+      "type": "Modal",
+      "title": "Issue Credit Note",
+      "open": "{showCNModal}",
+      "fields": [
+        "{cnInvoiceId}",
+        "e.g. Goods returned, pricing correction, quantity adjustment...",
+        "Description",
+        "Qty",
+        "Rate (BHD)"
+      ],
+      "buttons": [
+        {
+          "line": 1276,
+          "kind": "button",
+          "label": "+ Add Item",
+          "handler": "addCNItem",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1320,
+          "kind": "button",
+          "label": "&times;",
+          "handler": "() => removeCNItem(i)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1336,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCNModal = false",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1339,
+          "kind": "Button",
+          "label": "{cnSaving ? 'Creating...' : 'Issue Credit Note'}",
+          "handler": "handleCreateCN",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreateCreditNote",
+            "ListCreditNotes"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "InvoicesScreen",
+      "file": "frontend/src/lib/screens/InvoicesScreen.svelte",
+      "line": 1348,
+      "type": "Modal",
+      "title": "Invoice Details",
+      "open": "{showDetailModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1492,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => { showDetailModal = false; selectedInvoice = null; }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1495,
+          "kind": "Button",
+          "label": "{pdfLoadingMap[selectedInvoice?.id || ''] ? 'Generating...' : 'Download PDF'}",
+          "handler": "() => downloadPDF(selectedInvoice)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GenerateInvoicePDF"
+          ]
+        },
+        {
+          "line": 1498,
+          "kind": "Button",
+          "label": "Edit Invoice",
+          "handler": "() => { showDetailModal = false; openEditModal(selectedInvoice); }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OffersScreen",
+      "file": "frontend/src/lib/screens/OffersScreen.svelte",
+      "line": 1217,
+      "type": "WabiModal",
+      "title": "Create New Offer",
+      "open": "{showCreateModal}",
+      "fields": [
+        "{formData.customer_id}"
+      ],
+      "buttons": [
+        {
+          "line": 1302,
+          "kind": "button",
+          "label": "×",
+          "handler": "() => removeLineItem(index)",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1259,
+          "kind": "Button",
+          "label": "+ Add Item",
+          "handler": "addLineItem",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1318,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCreateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1325,
+          "kind": "Button",
+          "label": "Create Offer",
+          "handler": "handleCreateOffer",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetAllOffers",
+            "ListCustomers",
+            "SaveCostingAsOffer"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OffersScreen",
+      "file": "frontend/src/lib/screens/OffersScreen.svelte",
+      "line": 1332,
+      "type": "WabiModal",
+      "title": "Edit Offer",
+      "open": "{showEditModal}",
+      "fields": [
+        "Search customer...",
+        "Product/Equipment name",
+        "Model number",
+        "{item.currency}",
+        "Technical specification",
+        "Extended specifications, codes, approvals...",
+        "{item.quantity}",
+        "{item.fob}",
+        "{item.freight}",
+        "{item.total_cost}",
+        "{item.margin_percent}",
+        "{item.unit_price}"
+      ],
+      "buttons": [
+        {
+          "line": 1398,
+          "kind": "button",
+          "label": "×",
+          "handler": "() => removeLineItem(index)",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1387,
+          "kind": "Button",
+          "label": "+ Add Item",
+          "handler": "addLineItem",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1483,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showEditModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1484,
+          "kind": "Button",
+          "label": "Save Changes",
+          "handler": "handleEditOffer",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetAllOffers",
+            "ListCustomers",
+            "UpdateOfferFull"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OffersScreen",
+      "file": "frontend/src/lib/screens/OffersScreen.svelte",
+      "line": 1489,
+      "type": "WabiModal",
+      "title": "Mark Offer as Won",
+      "open": "{showWonModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1510,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showWonModal = false; actionOffer = null; }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1517,
+          "kind": "Button",
+          "label": "Confirm Won",
+          "handler": "handleMarkWon",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetAllOffers",
+            "ListCustomers",
+            "MarkOfferWon"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OffersScreen",
+      "file": "frontend/src/lib/screens/OffersScreen.svelte",
+      "line": 1524,
+      "type": "WabiModal",
+      "title": "Mark Offer as Lost",
+      "open": "{showLostModal}",
+      "fields": [
+        "{lostReason}"
+      ],
+      "buttons": [
+        {
+          "line": 1564,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showLostModal = false; actionOffer = null; }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1571,
+          "kind": "Button",
+          "label": "Confirm Lost",
+          "handler": "handleMarkLost",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetAllOffers",
+            "ListCustomers",
+            "MarkOfferLost"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OffersScreen",
+      "file": "frontend/src/lib/screens/OffersScreen.svelte",
+      "line": 1578,
+      "type": "manual",
+      "title": "Schedule Follow-Up",
+      "open": "showFollowUpModal",
+      "fields": [
+        "Follow-Up Date",
+        "Notes",
+        "{followUpDate}",
+        "What to follow up on..."
+      ],
+      "buttons": [
+        {
+          "line": 1599,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "() => showFollowUpModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1600,
+          "kind": "button",
+          "label": "{followUpLoading ? 'Processing...' : 'Schedule'}",
+          "handler": "scheduleFollowUp",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "AddOfferFollowUp",
+            "GetPendingFollowUps"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OffersScreen",
+      "file": "frontend/src/lib/screens/OffersScreen.svelte",
+      "line": 1626,
+      "type": "WabiModal",
+      "title": "Offer Details",
+      "open": "{showViewModal}",
+      "fields": [
+        "Offer number",
+        "Folder #",
+        "RFQ / enquiry ref",
+        "e.g. Net 30",
+        "e.g. DAP Bahrain",
+        "Contact name",
+        "Company name",
+        "Phone",
+        "Name",
+        "Add a note about this opportunity..."
+      ],
+      "buttons": [
+        {
+          "line": 1774,
+          "kind": "button",
+          "label": "{notesLoading ? 'Adding...' : 'Add Note'}",
+          "handler": "handleAddNote",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "AddOfferNote",
+            "GetOfferNotes"
+          ]
+        },
+        {
+          "line": 1785,
+          "kind": "button",
+          "label": "&times;",
+          "handler": "() => handleDeleteNote(note.id)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "DeleteOfferNote",
+            "GetOfferNotes"
+          ]
+        },
+        {
+          "line": 1799,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => { showViewModal = false; viewOffer = null; }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1802,
+          "kind": "Button",
+          "label": "Download PDF",
+          "handler": "() => viewOffer && handleDownloadPDF(viewOffer)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GenerateOfferPDF",
+            "OpenExportedFile"
+          ]
+        },
+        {
+          "line": 1805,
+          "kind": "Button",
+          "label": "Save Changes",
+          "handler": "handleSaveViewOffer",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetAllOffers",
+            "ListCustomers",
+            "UpdateOfferFull"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OpportunitiesScreen",
+      "file": "frontend/src/lib/screens/OpportunitiesScreen.svelte",
+      "line": 597,
+      "type": "manual",
+      "title": "{selected.project || selected.project_name || \"Opportunity Details\"}",
+      "open": "showOpportunityModal && selected",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 613,
+          "kind": "button",
+          "label": "Create Task",
+          "handler": "() => showTaskModal = true",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 614,
+          "kind": "button",
+          "label": "Close",
+          "handler": "closeOpportunityModal",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Submit-like modal has no detected input fields."
+    },
+    {
+      "screen": "OpportunitiesScreen",
+      "file": "frontend/src/lib/screens/OpportunitiesScreen.svelte",
+      "line": 624,
+      "type": "ContextTaskModal",
+      "title": "Create Opportunity Task",
+      "open": "{showTaskModal}",
+      "fields": [],
+      "buttons": [],
+      "staticStatus": "No visible cancel/close footer button detected."
+    },
+    {
+      "screen": "OrdersScreen",
+      "file": "frontend/src/lib/screens/OrdersScreen.svelte",
+      "line": 1104,
+      "type": "manual",
+      "title": "Order Line Items",
+      "open": "showModal",
+      "fields": [
+        "Search customer...",
+        "{formData.status}",
+        "{formData.paymentTerms}",
+        "{formData.deliveryTerms}",
+        "Code",
+        "Description",
+        "{formItems[index].quantity}",
+        "{formItems[index].unit_price_bhd}"
+      ],
+      "buttons": [
+        {
+          "line": 1263,
+          "kind": "button",
+          "label": "Remove",
+          "handler": "() => removeFormItem(index)",
+          "type": "button",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1202,
+          "kind": "Button",
+          "label": "+ Add Line",
+          "handler": "addFormItem",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1272,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showModal = false",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1275,
+          "kind": "Button",
+          "label": "{saving ? 'Saving...' : modalMode === 'edit' ? 'Update Order' : 'Create Order'}",
+          "handler": "",
+          "type": "submit",
+          "disabled": true,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Has submit-like button but no mapped backend method in first two handler hops."
+    },
+    {
+      "screen": "OrdersScreen",
+      "file": "frontend/src/lib/screens/OrdersScreen.svelte",
+      "line": 1105,
+      "type": "Modal",
+      "title": "{modalMode === 'create' ? 'New Order' : 'Edit Order'}",
+      "open": "{showModal}",
+      "fields": [
+        "Search customer...",
+        "{formData.status}",
+        "{formData.paymentTerms}",
+        "{formData.deliveryTerms}",
+        "Code",
+        "Description",
+        "{formItems[index].quantity}",
+        "{formItems[index].unit_price_bhd}"
+      ],
+      "buttons": [
+        {
+          "line": 1263,
+          "kind": "button",
+          "label": "Remove",
+          "handler": "() => removeFormItem(index)",
+          "type": "button",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1202,
+          "kind": "Button",
+          "label": "+ Add Line",
+          "handler": "addFormItem",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1272,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showModal = false",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1275,
+          "kind": "Button",
+          "label": "{saving ? 'Saving...' : modalMode === 'edit' ? 'Update Order' : 'Create Order'}",
+          "handler": "",
+          "type": "submit",
+          "disabled": true,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Has submit-like button but no mapped backend method in first two handler hops."
+    },
+    {
+      "screen": "OrdersScreen",
+      "file": "frontend/src/lib/screens/OrdersScreen.svelte",
+      "line": 1285,
+      "type": "Modal",
+      "title": "{`Order ${selectedOrder.order_number}",
+      "open": "{showDetailModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1402,
+          "kind": "Button",
+          "label": "Create PO",
+          "handler": "() => handleCreatePO(selectedOrder)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreatePOFromOrder"
+          ]
+        },
+        {
+          "line": 1407,
+          "kind": "Button",
+          "label": "Create Delivery Note",
+          "handler": "() => handleCreateDeliveryNote(selectedOrder)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1412,
+          "kind": "Button",
+          "label": "Mark as Delivered",
+          "handler": "handleQuickMarkDelivered",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetOrderDeliveryStatus",
+            "ListCustomers",
+            "ListOrders",
+            "QuickMarkOrderDelivered"
+          ]
+        },
+        {
+          "line": 1417,
+          "kind": "Button",
+          "label": "Create Invoice",
+          "handler": "() => handleCreateInvoice(selectedOrder)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreateInvoiceFromOrder",
+            "GetOrderDeliveryStatus",
+            "ListCustomers",
+            "ListOrders"
+          ]
+        },
+        {
+          "line": 1420,
+          "kind": "Button",
+          "label": "Proforma",
+          "handler": "() => handleCreateProforma(selectedOrder)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreateProformaInvoice",
+            "GetOrderDeliveryStatus",
+            "ListCustomers",
+            "ListOrders"
+          ]
+        },
+        {
+          "line": 1424,
+          "kind": "Button",
+          "label": "Create Task",
+          "handler": "() => showTaskModal = true",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1427,
+          "kind": "Button",
+          "label": "Edit Order",
+          "handler": "() => void openEditModal(selectedOrder)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetOrder"
+          ]
+        },
+        {
+          "line": 1430,
+          "kind": "Button",
+          "label": "Delete Order",
+          "handler": "() => handleDeleteOrder(selectedOrder)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "DeleteOrder",
+            "GetOrderDeliveryStatus",
+            "ListCustomers",
+            "ListOrders"
+          ]
+        }
+      ],
+      "staticStatus": "No visible cancel/close footer button detected. Submit-like modal has no detected input fields."
+    },
+    {
+      "screen": "OrdersScreen",
+      "file": "frontend/src/lib/screens/OrdersScreen.svelte",
+      "line": 1439,
+      "type": "Modal",
+      "title": "{confirmDialogTitle}",
+      "open": "{confirmDialogOpen}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1448,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => resolveActionConfirmation(false)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1451,
+          "kind": "Button",
+          "label": "{confirmDialogConfirmLabel}",
+          "handler": "() => resolveActionConfirmation(true)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Has submit-like button but no mapped backend method in first two handler hops."
+    },
+    {
+      "screen": "OrdersScreen",
+      "file": "frontend/src/lib/screens/OrdersScreen.svelte",
+      "line": 1460,
+      "type": "ContextTaskModal",
+      "title": "Create Order Task",
+      "open": "{showTaskModal}",
+      "fields": [],
+      "buttons": [],
+      "staticStatus": "No visible cancel/close footer button detected."
+    },
+    {
+      "screen": "PaymentsScreen",
+      "file": "frontend/src/lib/screens/PaymentsScreen.svelte",
+      "line": 745,
+      "type": "Modal",
+      "title": "{paymentModalMode === 'create' ? 'Record Payment' : 'Edit Payment'}",
+      "open": "{showRecordModal}",
+      "fields": [
+        "{selectedInvoiceId}",
+        "{paymentMethod}"
+      ],
+      "buttons": [
+        {
+          "line": 816,
+          "kind": "button",
+          "label": "Pay Full Outstanding",
+          "handler": "selectFullOutstanding",
+          "type": "button",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 884,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showRecordModal = false; paymentModalMode = 'create'; editingPaymentId = ''; }",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 887,
+          "kind": "Button",
+          "label": "{#if recordLoading} {paymentModalMode === 'create' ? 'Recording...' : 'Saving...'} {:else} {paymentModalMode === 'create' ? 'Record Payment' : 'Save Changes'} {/if}",
+          "handler": "handleRecordPayment",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetAllPayments",
+            "GetPayment",
+            "ListCustomerInvoices",
+            "RecordPayment",
+            "UpdatePayment"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "PurchaseOrdersScreen",
+      "file": "frontend/src/lib/screens/PurchaseOrdersScreen.svelte",
+      "line": 924,
+      "type": "WabiModal",
+      "title": "Create Purchase Order",
+      "open": "{showCreateModal}",
+      "fields": [
+        "{formData.supplier_id}",
+        "{formData.order_id}",
+        "{formData.currency}",
+        "{formData.payment_terms}"
+      ],
+      "buttons": [
+        {
+          "line": 1063,
+          "kind": "button",
+          "label": "×",
+          "handler": "() => removeLineItem(index)",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1020,
+          "kind": "Button",
+          "label": "+ Add Item",
+          "handler": "addLineItem",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1096,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCreateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1103,
+          "kind": "Button",
+          "label": "Create PO",
+          "handler": "handleCreatePO",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreatePurchaseOrder",
+            "GetPurchaseOrders",
+            "ListOrders",
+            "ListSuppliers"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "PurchaseOrdersScreen",
+      "file": "frontend/src/lib/screens/PurchaseOrdersScreen.svelte",
+      "line": 1110,
+      "type": "WabiModal",
+      "title": "Edit Purchase Order",
+      "open": "{showEditModal}",
+      "fields": [
+        "{formData.supplier_id}",
+        "{formData.order_id}",
+        "{formData.currency}",
+        "{formData.payment_terms}"
+      ],
+      "buttons": [
+        {
+          "line": 1246,
+          "kind": "button",
+          "label": "×",
+          "handler": "() => removeLineItem(index)",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1203,
+          "kind": "Button",
+          "label": "+ Add Item",
+          "handler": "addLineItem",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1278,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showEditModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1285,
+          "kind": "Button",
+          "label": "Save Changes",
+          "handler": "handleEditPO",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetPurchaseOrders",
+            "ListOrders",
+            "ListSuppliers",
+            "UpdatePurchaseOrder"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "PurchaseOrdersScreen",
+      "file": "frontend/src/lib/screens/PurchaseOrdersScreen.svelte",
+      "line": 1293,
+      "type": "WabiModal",
+      "title": "Purchase Order Details",
+      "open": "{showViewModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1382,
+          "kind": "Button",
+          "label": "{status}",
+          "handler": "() => handleStatusChange(viewingPO.id, status)",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetPurchaseOrders",
+            "ListOrders",
+            "ListSuppliers",
+            "UpdatePOStatus"
+          ]
+        },
+        {
+          "line": 1391,
+          "kind": "Button",
+          "label": "Edit PO",
+          "handler": "() => openEditModal(viewingPO.id)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetPurchaseOrderByID"
+          ]
+        },
+        {
+          "line": 1394,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => showViewModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "RFQScreen",
+      "file": "frontend/src/lib/screens/RFQScreen.svelte",
+      "line": 599,
+      "type": "WabiModal",
+      "title": "Create New RFQ",
+      "open": "{showCreateModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 652,
+          "kind": "button",
+          "label": "Remove product",
+          "handler": "() => removeLineItem(index)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 621,
+          "kind": "Button",
+          "label": "+ Add Product",
+          "handler": "addLineItem",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 685,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "closeCreateModal",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 686,
+          "kind": "Button",
+          "label": "Create RFQ",
+          "handler": "handleCreateRFQ",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateRFQ",
+            "GetRFQs",
+            "ListCustomers"
+          ]
+        }
+      ],
+      "staticStatus": "Submit-like modal has no detected input fields."
+    },
+    {
+      "screen": "RFQScreen",
+      "file": "frontend/src/lib/screens/RFQScreen.svelte",
+      "line": 691,
+      "type": "WabiModal",
+      "title": "Edit RFQ",
+      "open": "{showEditModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 720,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "closeEditModal",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "ReportsScreen",
+      "file": "frontend/src/lib/screens/ReportsScreen.svelte",
+      "line": 219,
+      "type": "manual",
+      "title": "Export Report",
+      "open": "showExportModal",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 228,
+          "kind": "button",
+          "label": "PDF",
+          "handler": "() => (exportFormat = \"pdf\")",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 232,
+          "kind": "button",
+          "label": "Excel",
+          "handler": "() => (exportFormat = \"excel\")",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 238,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "() => (showExportModal = false)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 244,
+          "kind": "button",
+          "label": "{exporting ? \"Exporting...\" : \"Download\"}",
+          "handler": "handleExport",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "ExportReport"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierDetailView",
+      "file": "frontend/src/lib/screens/SupplierDetailView.svelte",
+      "line": 569,
+      "type": "manual",
+      "title": "Add Note",
+      "open": "showNoteModal",
+      "fields": [
+        "Type",
+        "Content",
+        "{newNoteType}",
+        "Enter note..."
+      ],
+      "buttons": [
+        {
+          "line": 589,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showNoteModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 590,
+          "kind": "Button",
+          "label": "Save Note",
+          "handler": "saveNote",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "AddSupplierNote",
+            "GetSupplierFullProfile"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierDetailView",
+      "file": "frontend/src/lib/screens/SupplierDetailView.svelte",
+      "line": 596,
+      "type": "manual",
+      "title": "Report Issue",
+      "open": "showIssueModal",
+      "fields": [
+        "Order Reference",
+        "Description",
+        "Cost Impact (BHD)",
+        "PO or order number",
+        "Describe the issue...",
+        "0.000"
+      ],
+      "buttons": [
+        {
+          "line": 615,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showIssueModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 601,
+          "kind": "Button",
+          "label": "Report Issue",
+          "handler": "saveIssue",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "AddSupplierIssue",
+            "GetSupplierFullProfile"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierDetailView",
+      "file": "frontend/src/lib/screens/SupplierDetailView.svelte",
+      "line": 622,
+      "type": "manual",
+      "title": "Add Contact",
+      "open": "showContactModal",
+      "fields": [
+        "Name *",
+        "Job Title",
+        "Email",
+        "Phone",
+        "Address",
+        "Primary Contact",
+        "Contact person name",
+        "e.g. Sales Manager",
+        "email@company.com",
+        "+49 123 456 7890",
+        "input:checkbox"
+      ],
+      "buttons": [
+        {
+          "line": 652,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showContactModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 653,
+          "kind": "Button",
+          "label": "Save Contact",
+          "handler": "saveContact",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "AddSupplierContact",
+            "ListSupplierContacts"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierInvoicesScreen",
+      "file": "frontend/src/lib/screens/SupplierInvoicesScreen.svelte",
+      "line": 1085,
+      "type": "WabiModal",
+      "title": "Create Supplier Invoice",
+      "open": "{showCreateModal}",
+      "fields": [
+        "{formData.supplier_id}",
+        "{formData.order_id}",
+        "{formData.currency}",
+        "Item description",
+        "{item.quantity}",
+        "{item.unit_price}"
+      ],
+      "buttons": [
+        {
+          "line": 1171,
+          "kind": "button",
+          "label": "+ Add Item",
+          "handler": "addLineItem",
+          "type": "button",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1100,
+          "kind": "button",
+          "label": "x",
+          "handler": "() => removeLineItem(i)",
+          "type": "button",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1243,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCreateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1250,
+          "kind": "Button",
+          "label": "Create Invoice",
+          "handler": "handleCreateInvoice",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateSupplierInvoice",
+            "GetSupplierInvoices",
+            "GetSupportedCurrencies",
+            "ListOrders",
+            "ListSuppliers"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierInvoicesScreen",
+      "file": "frontend/src/lib/screens/SupplierInvoicesScreen.svelte",
+      "line": 1257,
+      "type": "WabiModal",
+      "title": "Invoice Details",
+      "open": "{showDetailModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 1377,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => showDetailModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierInvoicesScreen",
+      "file": "frontend/src/lib/screens/SupplierInvoicesScreen.svelte",
+      "line": 1384,
+      "type": "WabiModal",
+      "title": "Performing 3-Way Match",
+      "open": "{showMatchModal}",
+      "fields": [],
+      "buttons": [],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierInvoicesScreen",
+      "file": "frontend/src/lib/screens/SupplierInvoicesScreen.svelte",
+      "line": 1392,
+      "type": "WabiModal",
+      "title": "Record Payment",
+      "open": "{showPaymentModal}",
+      "fields": [
+        "{paymentData.payment_method}"
+      ],
+      "buttons": [
+        {
+          "line": 1416,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showPaymentModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1423,
+          "kind": "Button",
+          "label": "Confirm Payment",
+          "handler": "submitPayment",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetSupplierInvoices",
+            "GetSupportedCurrencies",
+            "ListOrders",
+            "ListSuppliers",
+            "MarkSupplierInvoicePaid"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierInvoicesScreen",
+      "file": "frontend/src/lib/screens/SupplierInvoicesScreen.svelte",
+      "line": 1431,
+      "type": "WabiModal",
+      "title": "Edit Supplier Invoice",
+      "open": "{showEditModal}",
+      "fields": [
+        "Create supplier payment ledger entry from this payment info",
+        "{editingInvoice.supplier_id}",
+        "{editingInvoice.status}",
+        "{editingInvoice.payment_status}",
+        "{editingInvoice.payment_method}",
+        "input:checkbox"
+      ],
+      "buttons": [
+        {
+          "line": 1509,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showEditModal = false; editingInvoice = null; createPaymentEntry = false; existingPaymentCount = 0; existingPaymentTotalBhd = 0; }",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1510,
+          "kind": "Button",
+          "label": "Save Changes",
+          "handler": "saveEditInvoice",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "GetSupplierInvoices",
+            "GetSupportedCurrencies",
+            "ListOrders",
+            "ListSuppliers",
+            "UpdateSupplierInvoice",
+            "UpdateSupplierInvoiceWithPayment"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SupplierPaymentsScreen",
+      "file": "frontend/src/lib/screens/SupplierPaymentsScreen.svelte",
+      "line": 456,
+      "type": "manual",
+      "title": "{paymentModalMode === 'edit' ? 'Edit Supplier Payment' : 'Record Supplier Payment'}",
+      "open": "showPaymentModal",
+      "fields": [
+        "Supplier Invoice",
+        "Amount",
+        "Currency",
+        "Exchange Rate to BHD",
+        "Payment Method",
+        "Date",
+        "Reference",
+        "{paymentForm.invoice_id}",
+        "{paymentForm.amount}",
+        "{paymentForm.currency}",
+        "{paymentForm.exchange_rate}",
+        "{paymentForm.method}",
+        "{paymentForm.date}",
+        "Cheque/transfer reference"
+      ],
+      "buttons": [
+        {
+          "line": 538,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => { showPaymentModal = false; paymentModalMode = 'create'; editingPaymentId = ''; }",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 539,
+          "kind": "Button",
+          "label": "{paymentSaving ? (paymentModalMode === 'create' ? 'Recording...' : 'Saving...') : (paymentModalMode === 'create' ? 'Record Payment' : 'Save Changes')}",
+          "handler": "recordPayment",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "GetAllSupplierPayments",
+            "GetSupplierInvoices",
+            "GetSupplierPayment",
+            "RecordSupplierPayment",
+            "UpdateSupplierPayment"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SuppliersScreen",
+      "file": "frontend/src/lib/screens/SuppliersScreen.svelte",
+      "line": 377,
+      "type": "WabiModal",
+      "title": "Supplier Details",
+      "open": "{showDetailModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 502,
+          "kind": "Button",
+          "label": "Close",
+          "handler": "() => showDetailModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "SuppliersScreen",
+      "file": "frontend/src/lib/screens/SuppliersScreen.svelte",
+      "line": 509,
+      "type": "WabiModal",
+      "title": "New Supplier",
+      "open": "{showCreateModal}",
+      "fields": [
+        "Supplier Name *",
+        "Supplier Code",
+        "Supplier Type",
+        "Contact Person",
+        "Email",
+        "Phone",
+        "Country",
+        "Tax ID / TRN",
+        "Lead Time (days)",
+        "Address",
+        "Brands Handled",
+        "Company name",
+        "Auto-generated if empty",
+        "{newSupplier.supplier_type}",
+        "Primary contact name",
+        "supplier@example.com",
+        "+973 1234 5678",
+        "Bahrain",
+        "VAT registration number",
+        "{newSupplier.lead_time_days}",
+        "Full address",
+        "Rhine Instruments, Oxan Analytics, etc."
+      ],
+      "buttons": [
+        {
+          "line": 562,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showCreateModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 563,
+          "kind": "Button",
+          "label": "{creating ? 'Creating...' : 'Create Supplier'}",
+          "handler": "handleCreateSupplier",
+          "type": "",
+          "disabled": true,
+          "backendMethods": [
+            "CreateSupplier",
+            "ListSuppliers"
+          ]
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "WorkHub",
+      "file": "frontend/src/lib/screens/WorkHub.svelte",
+      "line": 1272,
+      "type": "Modal",
+      "title": "{selectedTask ? selectedTask.title : \"Task Detail\"}",
+      "open": "{taskModalOpen}",
+      "fields": [
+        "Title",
+        "Priority Low Medium High Urgent",
+        "Description",
+        "Task title",
+        "{selectedTaskPriorityDraft}",
+        "Context, outcome, or working notes",
+        "What is blocking this task? Include the dependency, owner, or next step.",
+        "{selectedTaskAssigneeDraft}",
+        "{selectedTaskDueDateDraft}",
+        "Add a progress note or blocker update"
+      ],
+      "buttons": [
+        {
+          "line": 1301,
+          "kind": "Button",
+          "label": "{savingTaskDetails ? \"Saving...\" : \"Save Details\"}",
+          "handler": "handleSaveTaskDetails",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1345,
+          "kind": "Button",
+          "label": "{savingAssignment ? \"Saving...\" : \"Save Assignee\"}",
+          "handler": "handleReassignSelectedTask",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1349,
+          "kind": "Button",
+          "label": "{savingDueDate ? \"Saving...\" : \"Save Due Date\"}",
+          "handler": "handleUpdateDueDate",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1356,
+          "kind": "Button",
+          "label": "Unblock",
+          "handler": "() => changeStatus(selectedTask, \"open\")",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1359,
+          "kind": "Button",
+          "label": "Start",
+          "handler": "() => changeStatus(selectedTask, \"in_progress\")",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1362,
+          "kind": "Button",
+          "label": "Complete",
+          "handler": "() => changeStatus(selectedTask, \"completed\")",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1328,
+          "kind": "Button",
+          "label": "Block",
+          "handler": "handleBlockSelectedTask",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 1367,
+          "kind": "Button",
+          "label": "{deletingTask ? \"Deleting...\" : confirmDeleteTask ? \"Confirm Delete\" : \"Delete\"}",
+          "handler": "handleDeleteSelectedTask",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        },
+        {
+          "line": 1375,
+          "kind": "Button",
+          "label": "Comment",
+          "handler": "handleAddComment",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "OfferCard",
+      "file": "frontend/src/lib/components/OfferCard.svelte",
+      "line": 205,
+      "type": "manual",
+      "title": "Why was this offer lost?",
+      "open": "showLostReasonModal",
+      "fields": [
+        "Please specify the reason..."
+      ],
+      "buttons": [
+        {
+          "line": 220,
+          "kind": "button",
+          "label": "&times;",
+          "handler": "() => (showLostReasonModal = false)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 230,
+          "kind": "button",
+          "label": "{reason}",
+          "handler": "() => (lostReason = reason)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 247,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "() => (showLostReasonModal = false)",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 254,
+          "kind": "button",
+          "label": "Mark as Lost",
+          "handler": "handleLostSubmit",
+          "type": "",
+          "disabled": true,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    },
+    {
+      "screen": "LayoutExample",
+      "file": "frontend/src/lib/components/layout/LayoutExample.svelte",
+      "line": 148,
+      "type": "Modal",
+      "title": "Example Modal",
+      "open": "{showModal}",
+      "fields": [],
+      "buttons": [
+        {
+          "line": 159,
+          "kind": "Button",
+          "label": "Cancel",
+          "handler": "() => showModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 160,
+          "kind": "Button",
+          "label": "Confirm",
+          "handler": "() => showModal = false",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "Has submit-like button but no mapped backend method in first two handler hops. Submit-like modal has no detected input fields."
+    },
+    {
+      "screen": "FocusCard",
+      "file": "frontend/src/lib/components/ui/FocusCard.svelte",
+      "line": 304,
+      "type": "manual",
+      "title": "Add Task",
+      "open": "showModal",
+      "fields": [
+        "What needs to be done?"
+      ],
+      "buttons": [
+        {
+          "line": 322,
+          "kind": "button",
+          "label": "High",
+          "handler": "() => selectedPriority = 'High'",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 327,
+          "kind": "button",
+          "label": "Medium",
+          "handler": "() => selectedPriority = 'Medium'",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 332,
+          "kind": "button",
+          "label": "Low",
+          "handler": "() => selectedPriority = 'Low'",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        },
+        {
+          "line": 307,
+          "kind": "button",
+          "label": "Add",
+          "handler": "addTask",
+          "type": "",
+          "disabled": false,
+          "backendMethods": [
+            "CreateQuickCapture"
+          ]
+        },
+        {
+          "line": 340,
+          "kind": "button",
+          "label": "Cancel",
+          "handler": "closeModal",
+          "type": "",
+          "disabled": false,
+          "backendMethods": []
+        }
+      ],
+      "staticStatus": "No static issue detected."
+    }
+  ]
+}

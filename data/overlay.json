@@ -1,0 +1,93 @@
+{
+  "_comment": "AsymmFlow company overlay — copy and edit this file to customise division profiles without recompiling. Place overlay.json next to the binary, in the data/ directory, or in the platform app-data directory. See pkg/overlay/overlay.go for field documentation.",
+  "schema_version": 1,
+  "default_division_key": "Acme Instrumentation",
+  "company_display_name": "Acme Instrumentation WLL",
+  "industry": "Process instrumentation",
+  "country": "Bahrain",
+  "_jurisdiction_comment": "ISO-3166 alpha-2 tax jurisdiction routing invoices to a pkg/compliance engine (BH, SA, IN). Optional: derived from country name when blank.",
+  "jurisdiction": "BH",
+  "currency": "BHD",
+  "currency_decimals": 3,
+  "default_vat_rate": 10.0,
+  "_exchange_rates_comment": "FX rates → base currency (BHD). One unit of each currency in BHD. Base currency is always 1.0. Single source of truth for both import-time and live conversion.",
+  "exchange_rates_to_base": {
+    "EUR": 0.45,
+    "USD": 0.376,
+    "GBP": 0.52,
+    "CHF": 0.425,
+    "SAR": 0.100,
+    "AED": 0.102
+  },
+  "divisions": [
+    {
+      "key": "Acme Instrumentation",
+      "legal_name": "ACME INSTRUMENTATION W.L.L",
+      "vat_number": "990000000000000",
+      "city": "Manama",
+      "address_lines": [
+        "PO Box 0000, Building 198",
+        "Road 2803, Block 428",
+        "Kingdom of Bahrain"
+      ],
+      "bank_details": [],
+      "letterhead_asset_name": "letterhead",
+      "letterhead_file": "Acme Instrumentation Letterhead.png",
+      "aliases": []
+    },
+    {
+      "key": "Beacon Controls",
+      "legal_name": "BEACON CONTROLS W.L.L.",
+      "vat_number": "990000000000001",
+      "city": "Manama",
+      "address_lines": [
+        "PO Box 0000, Manama",
+        "Kingdom of Bahrain"
+      ],
+      "bank_details": [
+        "1. Demo Bank B, A/c No: 00DEMO0000000002, IBAN: BH29BECN00000000000000, SWIFT: BECNBHBMXXX"
+      ],
+      "letterhead_asset_name": "letterhead_ahs",
+      "letterhead_file": "Beacon Controls Letterhead.jpg",
+      "aliases": [
+        "beacon controls wll",
+        "beacon controls w.l.l",
+        "beacon controls w.l.l."
+      ]
+    }
+  ],
+  "_business_rules_comment": "Costing/approval policy numbers. Margins/discounts are fractions (0.15 = 15%). These reproduce the built-in defaults; edit to ship a different vertical's policy without recompiling.",
+  "business_rules": {
+    "min_margin_pct": 0.08,
+    "abb_competition_min_margin": 0.15,
+    "emergency_min_margin_pct": 0.20,
+    "approval_threshold_margin": 0.20,
+    "large_order_threshold_bhd": 10000,
+    "monthly_operating_cost_bhd": 15000,
+    "named_competitors": ["ABB"],
+    "grade_payment_terms": {
+      "A": { "terms": "Net 45 days", "advance_pct": 0.0, "max_discount": 0.07, "max_days": 55 },
+      "B": { "terms": "Net 90 days", "advance_pct": 0.0, "max_discount": 0.03, "max_days": 100 },
+      "C": { "terms": "Net 120 days with 50% advance", "advance_pct": 0.50, "max_discount": 0.0, "max_days": 130 },
+      "D": { "terms": "100% advance or DECLINE", "advance_pct": 1.00, "max_discount": 0.0, "max_days": 0 }
+    }
+  },
+  "_supplier_aliases_comment": "Commercial supplier vocabulary for the pkg/crm/supplierlink resolution engine. canonical_codes maps variant supplier-code spellings to the canonical code on the supplier row; brand_aliases maps a brand token to the supplier search terms it implies. Omit the field to keep the built-in default; an explicit empty object clears it.",
+  "supplier_aliases": {
+    "canonical_codes": { "SVX": "SRVX" },
+    "brand_aliases": {}
+  },
+  "_license_key_prefix_comment": "Leading token of license keys ({PREFIX}-{ROLE}-{6-char}). Blank or omitted falls back to the built-in 'PH' so existing activations keep validating.",
+  "license_key_prefix": "PH",
+  "product_markup_rules": [
+    { "product_type": "Rhine Flow", "margin": 0.15 },
+    { "product_type": "Rhine Level", "margin": 0.18 },
+    { "product_type": "Rhine Instruments Pressure", "margin": 0.18 },
+    { "product_type": "Rhine Instruments Temperature", "margin": 0.15 },
+    { "product_type": "Rhine Analytics", "margin": 0.20 },
+    { "product_type": "Rhine Instruments General", "margin": 0.12 },
+    { "product_type": "Oxan Analytics", "margin": 0.25 },
+    { "product_type": "GIC", "margin": 0.10 }
+  ],
+  "default_product_margin": 0.12
+}

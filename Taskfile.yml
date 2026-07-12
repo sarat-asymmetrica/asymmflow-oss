@@ -1,0 +1,44 @@
+version: "3"
+
+tasks:
+  build:
+    desc: Build all Go packages.
+    cmds:
+      - go build ./...
+
+  test:
+    desc: Run the full Go test suite.
+    cmds:
+      - go test ./... -count=1 -timeout 300s
+
+  test:unit:
+    desc: Run the Go test suite in short mode.
+    cmds:
+      - go test ./... -count=1 -timeout 300s -short
+
+  lint:
+    desc: Run Go vet.
+    cmds:
+      - go vet ./...
+
+  clean:
+    desc: Remove generated build artifacts.
+    cmds:
+      - powershell -NoProfile -Command "Remove-Item -Recurse -Force build/bin, dist, frontend/dist -ErrorAction SilentlyContinue"
+
+  frontend:build:
+    desc: Build the frontend bundle.
+    dir: frontend
+    cmds:
+      - npm run build
+
+  frontend:dev:
+    desc: Start the frontend dev server.
+    dir: frontend
+    cmds:
+      - npm run dev
+
+  audit:
+    desc: Show the Wave 0 audit command reference.
+    cmds:
+      - powershell -NoProfile -Command "Write-Host 'See docs/WAVE0_AUDIT.md for Wave 0 audit commands and scripts.'"

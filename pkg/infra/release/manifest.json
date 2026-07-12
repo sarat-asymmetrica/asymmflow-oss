@@ -1,0 +1,10 @@
+{
+  "product": "AsymmFlow",
+  "version": "0.1.0-alpha.1",
+  "channel": "alpha",
+  "release_date": "2026-05-08",
+  "release_name": "v0.1 Productization",
+  "minimum_supported_version": "0.1.0-alpha.1",
+  "schema_version": "1",
+  "notes": "First v0.1 release-engineering baseline after Wave 15."
+}

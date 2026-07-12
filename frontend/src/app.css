@@ -1,0 +1,262 @@
+@font-face {
+  font-family: 'Rubik';
+  src: url('./assets/fonts/google/Rubik-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('./assets/fonts/google/Rubik-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('./assets/fonts/google/Rubik-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('./assets/fonts/google/Rubik-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('./assets/fonts/google/Rubik-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/google/SpaceGrotesk-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/google/SpaceGrotesk-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/google/SpaceGrotesk-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/google/SpaceGrotesk-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('./assets/fonts/google/SpaceGrotesk-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ================================================================
+   ENTERPRISE ERP/CRM DESIGN SYSTEM
+   Applied to AsymmFlow
+
+   Philosophy: Apple-level polish × Bloomberg-level data density
+   ================================================================ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: calc(16px * var(--ui-font-scale, 1));
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: calc(14px * var(--ui-font-scale, 1)); /* Base size for enterprise density */
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  background-color: var(--bg-base);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* HEADINGS - CLEAN & PROFESSIONAL */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: var(--line-height-tight);
+  color: var(--text-primary);
+  margin: 0 0 var(--section-spacing);
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: calc(24px * var(--ui-font-scale, 1)); }
+h2 { font-size: calc(20px * var(--ui-font-scale, 1)); }
+h3 { font-size: calc(18px * var(--ui-font-scale, 1)); }
+h4 { font-size: calc(16px * var(--ui-font-scale, 1)); }
+
+p {
+  margin: 0 0 12px;
+  font-family: var(--font-reading);
+}
+
+a {
+  color: var(--brand-indigo);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--brand-indigo-hover);
+}
+
+.card,
+.kpi-card,
+.modal,
+.modal-card,
+.modal-container,
+.modal-content {
+  font-family: var(--font-body);
+}
+
+.modal h1,
+.modal h2,
+.modal h3,
+.modal-card h1,
+.modal-card h2,
+.modal-card h3,
+.modal-title {
+  font-family: var(--font-display);
+  font-weight: var(--modal-title-weight, 500);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.modal p,
+.modal label,
+.modal input,
+.modal textarea,
+.modal select,
+.modal button,
+.modal-card p,
+.modal-card label,
+.modal-card input,
+.modal-card textarea,
+.modal-card select,
+.modal-card button,
+.modal-container p,
+.modal-container label,
+.modal-container input,
+.modal-container textarea,
+.modal-container select,
+.modal-container button {
+  font-family: var(--font-body);
+  font-size: var(--modal-body-size, 14px);
+  line-height: var(--modal-line-height, 1.6);
+}
+
+.modal label,
+.modal-card label,
+.modal-container label {
+  font-size: var(--modal-label-size, 12px);
+  font-weight: var(--modal-label-weight, 500);
+}
+
+.kpi-value,
+[data-numeric] {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+}
+
+html[data-text-scale="comfortable"] :is(.screen-content, .header, .sidebar, .modal, .modal-card, .modal-container) :is(p, span, label, li, td, th, input, select, textarea, button) {
+  font-size: max(1em, calc(12.5px * var(--ui-font-scale))) !important;
+}
+
+html[data-text-scale="large"] :is(.screen-content, .header, .sidebar, .modal, .modal-card, .modal-container) :is(p, span, label, li, td, th, input, select, textarea, button) {
+  font-size: max(1em, calc(13px * var(--ui-font-scale))) !important;
+}
+
+/* ========================================
+   UTILITY CLASSES (Mapped to Design Tokens)
+   ======================================== */
+
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-indigo { color: var(--brand-indigo); }
+
+.bg-surface { background-color: var(--surface); }
+.bg-base { background-color: var(--bg-base); }
+
+/* Spacing Utilities matching the 4px grid */
+.p-0 { padding: 0; }
+.p-1 { padding: 4px; }
+.p-2 { padding: 8px; }
+.p-3 { padding: 12px; }
+.p-4 { padding: 16px; }
+.p-5 { padding: 20px; }
+.p-6 { padding: 24px; }
+
+.m-0 { margin: 0; }
+.m-1 { margin: 4px; }
+.m-2 { margin: 8px; }
+.m-3 { margin: 12px; }
+.m-4 { margin: 16px; }
+
+.gap-1 { gap: 4px; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.gap-4 { gap: 16px; }
+
+/* Flexbox Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.flex-1 { flex: 1; }
+
+/* Grid Utilities */
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }

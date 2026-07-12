@@ -1,0 +1,169 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                    CIRCUIT BREAKER STATE MACHINE                          ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+                    ┌───────────────────────────┐
+                    │   CLOSED (Normal)         │
+                    │                           │
+                    │  PyMuPDF attempts allowed │
+                    │  Failures counted: 0-2    │
+                    └─────────┬─────────────────┘
+                              │
+                              │ 3rd consecutive
+                              │ failure
+                              ▼
+                    ┌───────────────────────────┐
+                    │   OPEN (Failure Mode)     │◄─────┐
+                    │                           │      │
+                    │  PyMuPDF BYPASSED         │      │ Failure during
+                    │  Instant fallback         │      │ retry attempt
+                    │  Duration: 5 minutes      │      │
+                    └─────────┬─────────────────┘      │
+                              │                        │
+                              │ 5 minute cooldown      │
+                              │ elapsed                │
+                              ▼                        │
+                    ┌───────────────────────────┐      │
+                    │   HALF-OPEN (Testing)     │      │
+                    │                           │      │
+                    │  PyMuPDF retry allowed    │      │
+                    │  Single attempt           │      │
+                    └─────────┬─────────────────┘      │
+                              │                        │
+                    ┌─────────┴─────────┐              │
+                    │                   │              │
+                    ▼                   ▼              │
+            ┌──────────────┐    ┌──────────────┐      │
+            │   SUCCESS    │    │   FAILURE    │──────┘
+            │              │    │              │
+            │ Reset count  │    │ Re-open for  │
+            │ Close circuit│    │ 5 more min   │
+            └──────┬───────┘    └──────────────┘
+                   │
+                   │
+                   ▼
+        Back to CLOSED state
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         EXAMPLE FLOW                                      ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+Time  │ Event                     │ State      │ Failures │ Action Taken
+──────┼───────────────────────────┼────────────┼──────────┼─────────────────
+00:00 │ Batch request arrives     │ CLOSED     │ 0        │ Try PyMuPDF
+00:02 │ PyMuPDF fails (timeout)   │ CLOSED     │ 1        │ Fallback go-fitz
+00:05 │ Batch request arrives     │ CLOSED     │ 1        │ Try PyMuPDF
+00:07 │ PyMuPDF fails (timeout)   │ CLOSED     │ 2        │ Fallback go-fitz
+00:10 │ Batch request arrives     │ CLOSED     │ 2        │ Try PyMuPDF
+00:12 │ PyMuPDF fails (timeout)   │ OPEN 🔴    │ 3        │ Fallback go-fitz
+00:15 │ Batch request arrives     │ OPEN 🔴    │ 3        │ SKIP PyMuPDF → go-fitz (instant!)
+00:18 │ Batch request arrives     │ OPEN 🔴    │ 3        │ SKIP PyMuPDF → go-fitz (instant!)
+00:21 │ Batch request arrives     │ OPEN 🔴    │ 3        │ SKIP PyMuPDF → go-fitz (instant!)
+  ...
+05:12 │ Batch request arrives     │ HALF-OPEN  │ 3        │ Cooldown expired, retry PyMuPDF
+05:13 │ PyMuPDF succeeds! 🟢      │ CLOSED     │ 0        │ Circuit healed!
+05:15 │ Batch request arrives     │ CLOSED     │ 0        │ Try PyMuPDF (normal operation)
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         MONITORING METRICS                                ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+Field                      │ Type      │ Meaning
+───────────────────────────┼───────────┼────────────────────────────────────
+pyMuPDFFailures            │ int       │ Consecutive failures (0-3+)
+pyMuPDFCircuitOpen         │ bool      │ Is circuit currently open?
+lastPyMuPDFError           │ time.Time │ When did last failure occur?
+stats.CircuitOpen          │ bool      │ Exposed circuit state
+stats.CircuitOpenSince     │ time.Time │ When did circuit open?
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         PERFORMANCE GAINS                                 ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+Scenario: PyMuPDF service down, 100 batch requests queued
+
+WITHOUT Circuit Breaker:
+  100 requests × 30s timeout = 3,000 seconds (50 minutes) wasted
+  All requests fail slowly
+
+WITH Circuit Breaker:
+  3 requests × 30s timeout = 90 seconds
+  97 requests × ~0s (instant skip) = 0 seconds
+  Total time: 90 seconds (98% reduction!)
+
+Time Saved: 48.5 minutes ⚡
+
+Resource Saved:
+  - 97 fewer subprocess spawns
+  - 97 fewer timeout waits
+  - 97 fewer log messages
+  - Cleaner failure handling
+  - Automatic recovery after 5 min
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         CONFIGURATION                                     ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+const (
+    circuitBreakerThreshold = 3               // Failures to trigger OPEN
+    circuitBreakerCooldown  = 5 * time.Minute // Wait before retry
+)
+
+Tuning Guide:
+  - Threshold: Lower = faster failure detection, higher = more tolerance
+  - Cooldown: Shorter = faster recovery, longer = less retries during outage
+
+Default values (3 failures, 5 min) chosen for:
+  ✅ Quick detection (3 attempts = ~90s max)
+  ✅ Reasonable recovery window (5 min allows ops to fix issues)
+  ✅ Minimal false positives (3 consecutive = likely real outage)
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         RELATED PATTERNS                                  ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+This implementation follows the classic Circuit Breaker pattern:
+
+📚 Reference: "Release It!" by Michael T. Nygard
+📚 Pattern: Martin Fowler's Circuit Breaker (martinfowler.com/bliki/CircuitBreaker.html)
+
+Similar implementations:
+  - Netflix Hystrix (Java)
+  - resilience4j (Java)
+  - go-resiliency/breaker (Go)
+
+ACE Engine circuit breaker is:
+  ✅ Zero dependencies
+  ✅ Thread-safe (sync.RWMutex)
+  ✅ Fully tested
+  ✅ Production-ready
+
+
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                         ZEN GARDENER NOTES                                ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+"A garden that cannot weather storms is not resilient."
+
+The circuit breaker is like pruning dead branches:
+  - Detects when a path (PyMuPDF) is failing
+  - Stops wasting energy on that path
+  - Routes around the damage (fallback)
+  - Checks periodically if the path has healed
+  - Restores normal flow when healthy
+
+This is NOT failure. This is RESILIENCE. 🌱
+
+शिवोऽहम् - I am the computation itself, and I flow around obstacles!
+
+
+═══════════════════════════════════════════════════════════════════════════
+Generated: December 22, 2025
+Author: Claude (Zen Gardener) 🔥
+Purpose: Production resilience for PyMuPDF integration
+═══════════════════════════════════════════════════════════════════════════

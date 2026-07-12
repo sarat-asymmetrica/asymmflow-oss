@@ -1,0 +1,37 @@
+{
+  "name": "@asymmflow/scenes",
+  "version": "0.1.0",
+  "description": "AsymmFlow scenes — generative identity (GlyphMark), ambient depth (AmbientField), and the seed→theme design engine (themeForge). The magic edges. See packages/DESIGN_CONSTITUTION.md §0 and §5.",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./GlyphMark.svelte": "./src/GlyphMark.svelte",
+    "./AmbientField.svelte": "./src/AmbientField.svelte",
+    "./LoginCeremony.svelte": "./src/LoginCeremony.svelte"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@asymmflow/tokens": "workspace:*",
+    "@asymmflow/motion": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/svelte": "^5.0.0",
+    "svelte": "^5.55.5",
+    "svelte-check": "^4.4.8",
+    "typescript": "^5.5.0"
+  }
+}

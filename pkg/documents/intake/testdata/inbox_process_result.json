@@ -1,0 +1,17 @@
+{
+  "document_id": "uploads/INV-1042.pdf",
+  "file_name": "INV-1042.pdf",
+  "file_path": "C:\\Inbox\\INV-1042.pdf",
+  "detected_type": "SupplierInvoice",
+  "classification_confidence": 0.91,
+  "extracted_text": "Supplier invoice INV-1042 total BHD 120.500",
+  "entities": {
+    "invoice_number": "INV-1042",
+    "supplier_name": "Rhine Instruments",
+    "total": "120.500"
+  },
+  "suggested_actions": ["Record supplier invoice and match to PO"],
+  "processed_at": "2026-05-14T16:20:00+05:30",
+  "needs_review": false,
+  "ocr_confidence": 0.87
+}

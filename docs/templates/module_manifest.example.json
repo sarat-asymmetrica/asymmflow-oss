@@ -1,0 +1,222 @@
+{
+  "module_id": "cashflow_evidence",
+  "name": "Cashflow Evidence",
+  "status": "planned",
+  "version": "0.1.0-draft",
+  "owner": "asymmflow",
+  "product_loop": {
+    "messy_input": [
+      "orders",
+      "customer_invoices",
+      "payments",
+      "bank_statements",
+      "documents",
+      "butler_context"
+    ],
+    "canonical_state": "cashflow_evidence_record",
+    "intelligence": [
+      "receivables_risk",
+      "missing_evidence_detection",
+      "posting_coverage",
+      "trial_balance_gate"
+    ],
+    "decision_or_action": [
+      "follow_up",
+      "draft_journal",
+      "evidence_pack_export",
+      "support_bundle"
+    ],
+    "audit_trail": "cashflow_evidence_audit"
+  },
+  "justification_filters": {
+    "roi_proof": "Reduce manual receivables chasing, reconciliation labor, and payment-evidence search time.",
+    "workflow_closure": "Operator can inspect evidence, correct links, approve follow-up or draft posting, and export an evidence pack.",
+    "engine_leverage": [
+      "finance_posting_kernel",
+      "bank_reconciliation_matching",
+      "document_classification",
+      "butler_grounded_context",
+      "local_first_sqlite"
+    ],
+    "operator_trust": [
+      "source_preview",
+      "confidence_status",
+      "correction_queue",
+      "approval_step",
+      "audit_trail",
+      "export"
+    ]
+  },
+  "contracts": {
+    "capnp_schemas": [
+      "schemas/finance.capnp",
+      "schemas/documents.capnp",
+      "schemas/butler.capnp",
+      "schemas/infra.capnp"
+    ],
+    "json_payloads": [
+      "frontend_command_payloads",
+      "manifest",
+      "third_party_interop"
+    ],
+    "toon_contexts": [
+      "butler_cashflow_briefing",
+      "codex_module_handoff",
+      "evidence_pack_summary"
+    ]
+  },
+  "kernels": [
+    {
+      "name": "posting_preview",
+      "path": "pkg/finance/posting",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/finance/posting -count=1"
+      ]
+    }
+  ],
+  "domain_services": [
+    {
+      "name": "cashflow_evidence_service",
+      "path": "pkg/cashflow/evidence/service.go",
+      "responsibilities": [
+        "load canonical evidence",
+        "enforce permissions",
+        "create correction tasks",
+        "request deterministic draft posting",
+        "emit events",
+        "write audit trail"
+      ]
+    }
+  ],
+  "storage_adapters": [
+    {
+      "name": "sqlite_cashflow_evidence_repository",
+      "path": "pkg/cashflow/evidence/sqlite_repository.go",
+      "migration_owner": "database.go or module migration registry",
+      "sync_impact": "module records require sync envelope when multi-device readiness is enabled"
+    }
+  ],
+  "viewmodels": [
+    {
+      "name": "CashflowEvidenceCommandCenterVM",
+      "path": "internal/viewmodel/cashflow/evidence_vm.go",
+      "commands": [
+        "inspect_source",
+        "correct_link",
+        "draft_follow_up",
+        "request_draft_journal",
+        "export_evidence_pack"
+      ]
+    }
+  ],
+  "ui_surfaces": [
+    {
+      "name": "CashflowEvidenceScreen",
+      "path": "frontend/src/lib/screens/CashflowEvidenceScreen.svelte",
+      "trust_surfaces": [
+        "source_preview",
+        "canonical_fields",
+        "status_confidence",
+        "correction_path",
+        "approval_step",
+        "audit_timeline"
+      ]
+    }
+  ],
+  "events": {
+    "publishes": [
+      "cashflow.evidence.created",
+      "cashflow.evidence.corrected",
+      "cashflow.evidence.exported"
+    ],
+    "subscribes": [
+      "finance.invoice.created",
+      "finance.invoice.updated",
+      "finance.payment.recorded",
+      "finance.bank_statement.imported",
+      "documents.document.classified"
+    ],
+    "correlation_id_required": true
+  },
+  "permissions": [
+    "cashflow_evidence:view",
+    "cashflow_evidence:create",
+    "cashflow_evidence:update",
+    "cashflow_evidence:approve",
+    "cashflow_evidence:export",
+    "cashflow_evidence:agent"
+  ],
+  "audit": {
+    "records": [
+      "cashflow_evidence_audit"
+    ],
+    "required_fields": [
+      "actor",
+      "action",
+      "source_type",
+      "source_id",
+      "correlation_id",
+      "performed_at",
+      "reason",
+      "before",
+      "after"
+    ],
+    "agent_suggestion_link_required": true
+  },
+  "agent_safe_apis": [
+    {
+      "name": "inspect_cashflow_evidence",
+      "mode": "inspect",
+      "mutates_state": false
+    },
+    {
+      "name": "draft_follow_up",
+      "mode": "draft",
+      "mutates_state": false
+    },
+    {
+      "name": "recommend_posting_action",
+      "mode": "recommend",
+      "mutates_state": false
+    }
+  ],
+  "forbidden_agent_operations": [
+    "approve",
+    "post",
+    "persist",
+    "delete",
+    "reverse",
+    "file_tax_return"
+  ],
+  "tests": {
+    "kernel": [
+      "go test ./pkg/finance/posting -count=1"
+    ],
+    "service": [
+      "go test . -run TestCashflowEvidence -count=1"
+    ],
+    "viewmodel": [
+      "go test ./internal/viewmodel/cashflow -count=1"
+    ],
+    "frontend": [
+      "cd frontend && npm run check",
+      "cd frontend && npm run build"
+    ],
+    "agent_api": [
+      "go test . -run TestCashflowEvidenceAgentAPIsAreDraftOnly -count=1"
+    ]
+  },
+  "launch_readiness": [
+    "closed_loop_documented",
+    "schemas_generated",
+    "kernel_tests_passing",
+    "service_permissions_enforced",
+    "audit_trail_queryable",
+    "viewmodel_available",
+    "ui_trust_surfaces_visible",
+    "agent_api_draft_only",
+    "exports_verified",
+    "baseline_warnings_recorded"
+  ]
+}

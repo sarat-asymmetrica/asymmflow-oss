@@ -1,0 +1,125 @@
+# =============================================
+# AsymmFlow - .gitignore
+# =============================================
+
+# === Secrets & local runtime state (NEVER commit) ===
+.auth_token.json
+*.auth_token.json
+.field_crypto_salt
+backups/
+*_BACKUP*.db
+SYNTHETIC_IDENTITY.local.md
+
+# === Build Artifacts ===
+build/
+*.exe
+*.dll
+
+# Ignore all build-output dist/ directories everywhere...
+dist/
+# ...but keep frontend/dist with a committed placeholder index.html so
+# `go:embed all:frontend/dist` in main.go compiles on a fresh clone before the
+# frontend has been built (`npm run build` / `wails build` regenerates the rest).
+!frontend/dist/
+frontend/dist/*
+!frontend/dist/index.html
+*.dylib
+*.so
+*.app
+
+# === Dependencies ===
+node_modules/
+frontend/node_modules/
+
+# === Environment & Secrets ===
+.env
+.env.local
+.env.production
+# .env.example is committed (template without secrets)
+
+# Hardware-ID sidecars — key-derivation material, must NEVER be tracked
+# (.hardware_id plaintext, .hardware_id.dpapi DPAPI-wrapped, .hardware_id.migrated backup)
+.hardware_id
+.hardware_id.*
+
+# === Databases ===
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# === IDE / Editor ===
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*~
+
+# === OS Files ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+
+# === Logs ===
+*.log
+*.out
+crash_log.*
+
+# === Test Artifacts ===
+coverage.out
+test-results/
+playwright-report/
+*.test.exe
+
+# === Vite Temp Files ===
+*.timestamp-*.mjs
+
+# === Generated Output ===
+exports/intelligence/
+batch_output/
+test_output/
+
+# === Archives & Packages ===
+*.zip
+*.7z
+*.tar.gz
+*.tar
+*.rar
+deploy_package/AsymmFlow_Deploy_*/
+deploy_package/AsymmFlow.app/
+deploy_package/AsymmFlow.exe
+deploy_package/.env
+deploy_package/ph_holdings.db
+deploy_package/data/ph_holdings.db
+
+# === Temporary Files ===
+*.tmp
+*.bak
+*.backup
+nul
+
+# === Business Documents (NEVER commit) ===
+Bank_Statements/
+Costing_Sheets/
+Offers*/
+
+# === Mac Dev Setup (local only) ===
+mac_dev_setup/
+
+# === AI Tool Config (local only) ===
+.agent/
+.claude/
+.gitnexus
+
+# Keep durable project-level Codex instructions/config trackable, but ignore runtime state.
+.codex/cache/
+.codex/logs/
+.codex/sessions/
+.codex/tmp/
+
+# Generated marketing PDFs (build artifacts of docs/marketing/generate_pdfs.py; regenerate from the scrubbed .md sources)
+docs/marketing/*.pdf

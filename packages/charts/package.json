@@ -1,0 +1,40 @@
+{
+  "name": "@asymmflow/charts",
+  "version": "0.1.0",
+  "description": "AsymmFlow data visualization — headless d3 math, token-driven SVG, geodesic transitions. See packages/DESIGN_CONSTITUTION.md.",
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@asymmflow/motion": "workspace:*",
+    "@asymmflow/tokens": "workspace:*",
+    "d3-array": "^3.2.4",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0"
+  },
+  "peerDependencies": {
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/svelte": "^5.0.0",
+    "@types/d3-array": "^3.2.0",
+    "@types/d3-scale": "^4.0.0",
+    "@types/d3-shape": "^3.1.0",
+    "svelte": "^5.55.5",
+    "svelte-check": "^4.4.8",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,0 +1,189 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// EMAIL SERVICE - Microsoft Graph Email Integration
+//
+// MISSION: Wire PDF reports → Microsoft Graph email
+//
+// DESIGN:
+//   - Wraps Microsoft Graph client for email operations
+//   - Attachment support for PDF reports
+//   - Draft creation (review before sending)
+//   - HTML email bodies with professional formatting
+//
+// Built with PRODUCTION EXCELLENCE × CLEAN ARCHITECTURE 🕉️⚡💎
+// ═══════════════════════════════════════════════════════════════════════════
+
+package main
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	msgraph "ph_holdings_app/microsoft_graph"
+	"time"
+)
+
+// EmailService handles email operations via Microsoft Graph
+type EmailService struct {
+	graphClient msgraph.GraphClient
+	initialized bool
+}
+
+// NewEmailService creates a new email service wrapping Microsoft Graph client
+func NewEmailService(graphClient msgraph.GraphClient) *EmailService {
+	if graphClient == nil {
+		log.Println("⚠️ Email service created without graph client - email features disabled")
+		return &EmailService{initialized: false}
+	}
+
+	return &EmailService{
+		graphClient: graphClient,
+		initialized: true,
+	}
+}
+
+// SendReportEmail sends a PDF report as email attachment
+func (s *EmailService) SendReportEmail(to, subject, bodyHTML, pdfPath string) error {
+	if !s.initialized {
+		return fmt.Errorf("email service not initialized - check Azure AD configuration")
+	}
+
+	// Validate PDF exists
+	if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
+		return fmt.Errorf("PDF file not found: %s", pdfPath)
+	}
+
+	// Read PDF content
+	content, err := os.ReadFile(pdfPath)
+	if err != nil {
+		return fmt.Errorf("failed to read PDF: %v", err)
+	}
+
+	fileName := filepath.Base(pdfPath)
+	fileSize := len(content)
+
+	log.Printf("📧 Sending email to %s with attachment: %s (%d bytes)", to, fileName, fileSize)
+
+	// Send via Microsoft Graph client
+	err = s.graphClient.SendEmailWithAttachment(to, subject, bodyHTML, fileName, content)
+	if err != nil {
+		return fmt.Errorf("Microsoft Graph email send failed: %v", err)
+	}
+
+	log.Printf("✅ Email sent successfully to %s", to)
+	log.Printf("   Subject: %s", subject)
+	log.Printf("   Attachment: %s (%d KB)", fileName, fileSize/1024)
+
+	return nil
+}
+
+// CreateReportDraft creates an email draft (user can review before sending)
+func (s *EmailService) CreateReportDraft(to, subject, bodyHTML, pdfPath string) (string, error) {
+	if !s.initialized {
+		return "", fmt.Errorf("email service not initialized - check Azure AD configuration")
+	}
+
+	// Validate PDF exists
+	if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("PDF file not found: %s", pdfPath)
+	}
+
+	// Read PDF content
+	content, err := os.ReadFile(pdfPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read PDF: %v", err)
+	}
+
+	fileName := filepath.Base(pdfPath)
+	fileSize := len(content)
+
+	log.Printf("📝 Creating draft email for %s with attachment: %s (%d bytes)", to, fileName, fileSize)
+
+	// Create draft via Microsoft Graph client
+	// Note: Current GraphClient interface doesn't support drafts with attachments yet
+	// For now, we'll create a simple draft and log attachment info
+	draftID, err := s.graphClient.CreateEmailDraft(to, subject, bodyHTML)
+	if err != nil {
+		return "", fmt.Errorf("Microsoft Graph draft creation failed: %v", err)
+	}
+
+	log.Printf("✅ Draft created successfully: %s", draftID)
+	log.Printf("   To: %s", to)
+	log.Printf("   Subject: %s", subject)
+	log.Printf("   Note: Attachment (%s, %d KB) must be added manually in Outlook", fileName, fileSize/1024)
+
+	return draftID, nil
+}
+
+// FormatReportBody creates a professional HTML email body
+func (s *EmailService) FormatReportBody(reportType, reportName string) string {
+	now := time.Now().Format("Monday, January 2, 2006 at 3:04 PM")
+	company := activeOverlay.CompanyDisplayName
+
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #333; line-height: 1.6; }
+        .header { background: linear-gradient(135deg, #1e3a8a 0%%, #3b82f6 100%%); color: white; padding: 20px; border-radius: 8px 8px 0 0; }
+        .content { padding: 20px; background: #f9fafb; }
+        .footer { padding: 15px; background: #e5e7eb; color: #6b7280; font-size: 12px; border-radius: 0 0 8px 8px; }
+        .btn { background: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 10px; }
+        .report-icon { font-size: 48px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="report-icon">📊</div>
+        <h1 style="margin: 0;">%s ERP System</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.9;">Asymmetrica Intelligence Report</p>
+    </div>
+
+    <div class="content">
+        <h2>%s Report</h2>
+
+        <p>Please find the attached <strong>%s</strong> report generated by the %s ERP system.</p>
+
+        <p><strong>Report Details:</strong></p>
+        <ul>
+            <li><strong>Type:</strong> %s</li>
+            <li><strong>Generated:</strong> %s</li>
+            <li><strong>Format:</strong> PDF (Professional Layout)</li>
+            <li><strong>Engine:</strong> Asymmetrica Quaternion Mathematics</li>
+        </ul>
+
+        <p>This report includes:</p>
+        <ul>
+            <li>✅ Key performance metrics</li>
+            <li>✅ Three-regime analytics (R1/R2/R3)</li>
+            <li>✅ Payment grade distribution</li>
+            <li>✅ Customer behavior insights</li>
+        </ul>
+
+        <p style="margin-top: 20px;">
+            <a href="#" class="btn">View in SharePoint</a>
+        </p>
+    </div>
+
+    <div class="footer">
+        <p><strong>%s ERP System</strong> | Powered by Asymmetrica Mathematical Intelligence</p>
+        <p>Built with Love × Simplicity × Truth × Joy 🕉️⚡💎</p>
+        <p style="margin-top: 10px; font-size: 10px; color: #9ca3af;">
+            This email and any attachments are confidential and may contain legally privileged information.
+        </p>
+    </div>
+</body>
+</html>
+`, company, reportType, reportName, company, reportType, now, company)
+}
+
+// HealthCheck verifies email service is ready
+func (s *EmailService) HealthCheck() error {
+	if !s.initialized {
+		return fmt.Errorf("email service not initialized - graph client required")
+	}
+
+	// Delegate to GraphClient health check
+	return s.graphClient.HealthCheck()
+}

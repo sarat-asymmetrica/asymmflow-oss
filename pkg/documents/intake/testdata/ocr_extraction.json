@@ -1,0 +1,17 @@
+{
+  "source_id": "bank-statement-may",
+  "file_name": "bank_statement_may.xlsx",
+  "file_path": "C:\\Inbox\\bank_statement_may.xlsx",
+  "document_type": "BankStatement",
+  "text": "Opening balance, debit, credit, closing balance",
+  "confidence": 0.72,
+  "extracted_data": {
+    "account_number": "12345678",
+    "opening_balance": "1000.000",
+    "closing_balance": "850.250",
+    "raw_text": "Opening balance, debit, credit, closing balance"
+  },
+  "engine": "excelize",
+  "success": true,
+  "processed_at": "2026-05-14T16:22:00+05:30"
+}

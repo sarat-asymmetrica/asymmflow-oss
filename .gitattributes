@@ -1,0 +1,63 @@
+# AsymmFlow line-ending policy (Wave 9.9 C2).
+# The repo is LF-normalized: everything is stored and checked out as LF, so a
+# contributor's local core.autocrlf can no longer introduce CRLF churn (this is
+# what produced the recurring no-op `wails generate` binding diffs pre-9.9).
+
+# Baseline: auto-detect text, store + check out as LF.
+* text=auto eol=lf
+
+# Explicit text types — always LF.
+*.go       text eol=lf
+*.mod      text eol=lf
+*.sum      text eol=lf
+*.svelte   text eol=lf
+*.ts       text eol=lf
+*.tsx      text eol=lf
+*.js       text eol=lf
+*.mjs      text eol=lf
+*.cjs      text eol=lf
+*.jsx      text eol=lf
+*.json     text eol=lf
+*.css      text eol=lf
+*.scss     text eol=lf
+*.html     text eol=lf
+*.md       text eol=lf
+*.yaml     text eol=lf
+*.yml      text eol=lf
+*.sql      text eol=lf
+*.sh       text eol=lf
+*.py       text eol=lf
+*.capnp    text eol=lf
+*.xml      text eol=lf
+*.txt      text eol=lf
+*.toml     text eol=lf
+*.ps1      text eol=lf
+*.svg      text eol=lf
+.gitignore     text eol=lf
+.gitattributes text eol=lf
+
+# Binary — never normalized, never diffed as text.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.otf   binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary
+*.eot   binary
+*.pdf   binary
+*.xlsx  binary
+*.xls   binary
+*.db    binary
+*.sqlite binary
+*.exe   binary
+*.dll   binary
+*.pem   binary
+
+# Generated frontend bundle may embed binary assets — leave untouched.
+frontend/dist/** binary
+
+# Keep raw audit-result captures out of whitespace checks.
+docs/audit_results/*.txt -whitespace

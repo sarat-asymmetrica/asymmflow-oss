@@ -1,0 +1,85 @@
+frontend/src/lib/components/layout/
+│
+├── 📄 index.ts (10 LOC)
+│   └── Export barrel for all layout components
+│
+├── 🎨 PageLayout.svelte (64 LOC)
+│   ├── Props: title, subtitle
+│   ├── Slots: header-actions, default
+│   └── Usage: Full page wrapper for Dashboard, Settings, Reports
+│
+├── 🎨 ModuleLayout.svelte (164 LOC)
+│   ├── Props: title, tabs[], activeTab
+│   ├── Events: tabChange
+│   ├── Slots: header-actions, default
+│   └── Usage: Standard module (Sales Hub, Operations, Finance)
+│
+├── 🎨 SplitView.svelte (90 LOC)
+│   ├── Props: listWidth, minListWidth
+│   ├── Slots: list, detail
+│   └── Usage: Master-detail views (Customers, Products)
+│
+├── 🎨 Modal.svelte (264 LOC)
+│   ├── Props: open, title, size, closable
+│   ├── Events: close
+│   ├── Slots: header, default, footer
+│   ├── Features:
+│   │   ├── Focus trap (Tab cycles within modal)
+│   │   ├── Escape key support
+│   │   ├── Focus restoration
+│   │   ├── Body scroll lock
+│   │   └── 4 sizes: sm, md, lg, full
+│   └── Usage: Forms, confirmations, detail views
+│
+├── 🎨 Sidebar.svelte (318 LOC)
+│   ├── Props: currentScreen, collapsed
+│   ├── Events: navigate
+│   ├── Features:
+│   │   ├── Nested navigation items
+│   │   ├── Collapsible (240px → 60px)
+│   │   ├── Icon + label (or icon only)
+│   │   └── Built-in nav structure
+│   └── Usage: Main app navigation
+│
+├── 📝 LayoutExample.svelte (245 LOC)
+│   └── Comprehensive demo of all 5 components
+│
+└── 📚 README.md (514 lines)
+    ├── Components Overview
+    ├── Detailed Usage
+    ├── Props/Events/Slots
+    ├── Accessibility Features
+    ├── Design System Integration
+    ├── Common Patterns
+    └── Quality Checklist
+
+═══════════════════════════════════════════════════════════════
+
+TOTAL: 1,155 LOC + 514 lines documentation = 1,669 total
+
+DESIGN SYSTEM TOKENS USED:
+  --page-padding: 16px
+  --header-height: 56px
+  --tab-height: 36px
+  --brand-indigo: #2F2DFF
+  --transition-base: 200ms
+  --border-radius: 10px
+
+ACCESSIBILITY FEATURES:
+  • Focus trap (Modal)
+  • Escape key support (Modal)
+  • Focus restoration (Modal)
+  • aria-current="page" (Sidebar, Tabs)
+  • Semantic HTML (all)
+  • Keyboard navigation (all)
+
+IMPORT USAGE:
+  import { 
+    PageLayout, 
+    ModuleLayout, 
+    SplitView, 
+    Modal, 
+    Sidebar 
+  } from '$lib/components/layout';
+
+STATUS: ✅ PRODUCTION-READY

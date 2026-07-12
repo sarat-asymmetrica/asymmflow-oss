@@ -1,0 +1,1761 @@
+-- index idx_actual_outcomes_customer_id
+CREATE INDEX `idx_actual_outcomes_customer_id` ON `actual_outcomes`(`customer_id`)
+
+-- index idx_actual_outcomes_deleted_at
+CREATE INDEX `idx_actual_outcomes_deleted_at` ON `actual_outcomes`(`deleted_at`)
+
+-- index idx_alerts_alert_type
+CREATE INDEX `idx_alerts_alert_type` ON `alerts`(`alert_type`)
+
+-- index idx_alerts_deleted_at
+CREATE INDEX `idx_alerts_deleted_at` ON `alerts`(`deleted_at`)
+
+-- index idx_alerts_is_acknowledged
+CREATE INDEX `idx_alerts_is_acknowledged` ON `alerts`(`is_acknowledged`)
+
+-- index idx_alerts_is_active
+CREATE INDEX `idx_alerts_is_active` ON `alerts`(`is_active`)
+
+-- index idx_alerts_severity
+CREATE INDEX `idx_alerts_severity` ON `alerts`(`severity`)
+
+-- index idx_ar_aging_buckets_customer_id
+CREATE INDEX `idx_ar_aging_buckets_customer_id` ON `ar_aging_buckets`(`customer_id`)
+
+-- index idx_ar_aging_buckets_customer_name
+CREATE INDEX `idx_ar_aging_buckets_customer_name` ON `ar_aging_buckets`(`customer_name`)
+
+-- index idx_ar_aging_buckets_deleted_at
+CREATE INDEX `idx_ar_aging_buckets_deleted_at` ON `ar_aging_buckets`(`deleted_at`)
+
+-- index idx_ar_aging_buckets_risk_tier
+CREATE INDEX `idx_ar_aging_buckets_risk_tier` ON `ar_aging_buckets`(`risk_tier`)
+
+-- index idx_ar_aging_buckets_snapshot_date
+CREATE INDEX `idx_ar_aging_buckets_snapshot_date` ON `ar_aging_buckets`(`snapshot_date`)
+
+-- index idx_audit_logs_action
+CREATE INDEX `idx_audit_logs_action` ON `audit_logs`(`action`)
+
+-- index idx_audit_logs_deleted_at
+CREATE INDEX `idx_audit_logs_deleted_at` ON `audit_logs`(`deleted_at`)
+
+-- index idx_audit_logs_resource
+CREATE INDEX `idx_audit_logs_resource` ON `audit_logs`(`resource`)
+
+-- index idx_audit_logs_resource_id
+CREATE INDEX `idx_audit_logs_resource_id` ON `audit_logs`(`resource_id`)
+
+-- index idx_audit_logs_user_id
+CREATE INDEX `idx_audit_logs_user_id` ON `audit_logs`(`user_id`)
+
+-- index idx_bank_line_payment_allocations_bank_statement_line_id
+CREATE INDEX `idx_bank_line_payment_allocations_bank_statement_line_id` ON `bank_line_payment_allocations`(`bank_statement_line_id`)
+
+-- index idx_bank_line_payment_allocations_deleted_at
+CREATE INDEX `idx_bank_line_payment_allocations_deleted_at` ON `bank_line_payment_allocations`(`deleted_at`)
+
+-- index idx_chat_messages_conversation_id
+CREATE INDEX `idx_chat_messages_conversation_id` ON `chat_messages`(`conversation_id`)
+
+-- index idx_chat_messages_deleted_at
+CREATE INDEX `idx_chat_messages_deleted_at` ON `chat_messages`(`deleted_at`)
+
+-- index idx_collaborative_pending_operations_deleted_at
+CREATE INDEX `idx_collaborative_pending_operations_deleted_at` ON `collaborative_pending_operations`(`deleted_at`)
+
+-- index idx_collaborative_pending_operations_entity_id
+CREATE INDEX `idx_collaborative_pending_operations_entity_id` ON `collaborative_pending_operations`(`entity_id`)
+
+-- index idx_collaborative_pending_operations_entity_type
+CREATE INDEX `idx_collaborative_pending_operations_entity_type` ON `collaborative_pending_operations`(`entity_type`)
+
+-- index idx_collaborative_pending_operations_operation
+CREATE INDEX `idx_collaborative_pending_operations_operation` ON `collaborative_pending_operations`(`operation`)
+
+-- index idx_collaborative_pending_operations_status
+CREATE INDEX `idx_collaborative_pending_operations_status` ON `collaborative_pending_operations`(`status`)
+
+-- index idx_contract_clauses_category
+CREATE INDEX `idx_contract_clauses_category` ON `contract_clauses`(`category`)
+
+-- index idx_contract_templates_category
+CREATE INDEX `idx_contract_templates_category` ON `contract_templates`(`category`)
+
+-- index idx_contract_templates_is_active
+CREATE INDEX `idx_contract_templates_is_active` ON `contract_templates`(`is_active`)
+
+-- index idx_contract_templates_name
+CREATE UNIQUE INDEX `idx_contract_templates_name` ON `contract_templates`(`name`)
+
+-- index idx_contracts_contract_no
+CREATE UNIQUE INDEX `idx_contracts_contract_no` ON `contracts`(`contract_no`)
+
+-- index idx_contracts_contract_type
+CREATE INDEX `idx_contracts_contract_type` ON `contracts`(`contract_type`)
+
+-- index idx_contracts_created_at
+CREATE INDEX `idx_contracts_created_at` ON `contracts`(`created_at`)
+
+-- index idx_contracts_customer_id
+CREATE INDEX `idx_contracts_customer_id` ON `contracts`(`customer_id`)
+
+-- index idx_contracts_customer_name
+CREATE INDEX `idx_contracts_customer_name` ON `contracts`(`customer_name`)
+
+-- index idx_contracts_deleted_at
+CREATE INDEX `idx_contracts_deleted_at` ON `contracts`(`deleted_at`)
+
+-- index idx_contracts_effective_date
+CREATE INDEX `idx_contracts_effective_date` ON `contracts`(`effective_date`)
+
+-- index idx_contracts_order_id
+CREATE INDEX `idx_contracts_order_id` ON `contracts`(`order_id`)
+
+-- index idx_contracts_payment_grade
+CREATE INDEX `idx_contracts_payment_grade` ON `contracts`(`payment_grade`)
+
+-- index idx_contracts_status
+CREATE INDEX `idx_contracts_status` ON `contracts`(`status`)
+
+-- index idx_contracts_template_id
+CREATE INDEX `idx_contracts_template_id` ON `contracts`(`template_id`)
+
+-- index idx_conversations_deleted_at
+CREATE INDEX `idx_conversations_deleted_at` ON `conversations`(`deleted_at`)
+
+-- index idx_conversations_is_active
+CREATE INDEX `idx_conversations_is_active` ON `conversations`(`is_active`)
+
+-- index idx_conversations_last_msg_at
+CREATE INDEX `idx_conversations_last_msg_at` ON `conversations`(`last_msg_at`)
+
+-- index idx_costing_histories_deleted_at
+CREATE INDEX `idx_costing_histories_deleted_at` ON `costing_histories`(`deleted_at`)
+
+-- index idx_costing_histories_product_id
+CREATE INDEX `idx_costing_histories_product_id` ON `costing_histories`(`product_id`)
+
+-- index idx_costing_line_item_data_costing_sheet_id
+CREATE INDEX `idx_costing_line_item_data_costing_sheet_id` ON `costing_line_item_data`(`costing_sheet_id`)
+
+-- index idx_costing_sheet_attachments_costing_number
+CREATE INDEX `idx_costing_sheet_attachments_costing_number` ON `costing_sheet_attachments`(`costing_number`)
+
+-- index idx_costing_sheet_attachments_deleted_at
+CREATE INDEX `idx_costing_sheet_attachments_deleted_at` ON `costing_sheet_attachments`(`deleted_at`)
+
+-- index idx_costing_sheet_attachments_file_hash
+CREATE INDEX `idx_costing_sheet_attachments_file_hash` ON `costing_sheet_attachments`(`file_hash`)
+
+-- index idx_costing_sheet_attachments_scope_id
+CREATE INDEX `idx_costing_sheet_attachments_scope_id` ON `costing_sheet_attachments`(`scope_id`)
+
+-- index idx_costing_sheet_data_is_active
+CREATE INDEX `idx_costing_sheet_data_is_active` ON `costing_sheet_data`(`is_active`)
+
+-- index idx_costing_sheet_data_opportunity_record_id
+CREATE INDEX `idx_costing_sheet_data_opportunity_record_id` ON `costing_sheet_data`(`opportunity_id`)
+
+-- index idx_costing_sheet_data_parent_costing_id
+CREATE INDEX `idx_costing_sheet_data_parent_costing_id` ON `costing_sheet_data`(`parent_costing_id`)
+
+-- index idx_costing_sheet_data_rfq_id
+CREATE INDEX `idx_costing_sheet_data_rfq_id` ON `costing_sheet_data`(`rfq_id`)
+
+-- index idx_credit_note_items_credit_note_id
+CREATE INDEX `idx_credit_note_items_credit_note_id` ON `credit_note_items`(`credit_note_id`)
+
+-- index idx_credit_note_items_deleted_at
+CREATE INDEX `idx_credit_note_items_deleted_at` ON `credit_note_items`(`deleted_at`)
+
+-- index idx_credit_notes_credit_note_date
+CREATE INDEX `idx_credit_notes_credit_note_date` ON `credit_notes`(`credit_note_date`)
+
+-- index idx_credit_notes_credit_note_number
+CREATE UNIQUE INDEX `idx_credit_notes_credit_note_number` ON `credit_notes`(`credit_note_number`)
+
+-- index idx_credit_notes_customer_id
+CREATE INDEX `idx_credit_notes_customer_id` ON `credit_notes`(`customer_id`)
+
+-- index idx_credit_notes_deleted_at
+CREATE INDEX `idx_credit_notes_deleted_at` ON `credit_notes`(`deleted_at`)
+
+-- index idx_credit_notes_invoice_id
+CREATE INDEX `idx_credit_notes_invoice_id` ON `credit_notes`(`invoice_id`)
+
+-- index idx_credit_notes_status
+CREATE INDEX `idx_credit_notes_status` ON `credit_notes`(`status`)
+
+-- index idx_customer_contacts_customer_id
+CREATE INDEX `idx_customer_contacts_customer_id` ON `customer_contacts`(`customer_id`)
+
+-- index idx_customer_contacts_deleted_at
+CREATE INDEX `idx_customer_contacts_deleted_at` ON `customer_contacts`(`deleted_at`)
+
+-- index idx_customer_receipt_allocations_allocation_date
+CREATE INDEX `idx_customer_receipt_allocations_allocation_date` ON `customer_receipt_allocations`(`allocation_date`)
+
+-- index idx_customer_receipt_allocations_deleted_at
+CREATE INDEX `idx_customer_receipt_allocations_deleted_at` ON `customer_receipt_allocations`(`deleted_at`)
+
+-- index idx_customer_receipt_allocations_invoice_id
+CREATE INDEX `idx_customer_receipt_allocations_invoice_id` ON `customer_receipt_allocations`(`invoice_id`)
+
+-- index idx_customer_receipt_allocations_invoice_number
+CREATE INDEX `idx_customer_receipt_allocations_invoice_number` ON `customer_receipt_allocations`(`invoice_number`)
+
+-- index idx_customer_receipt_allocations_payment_id
+CREATE INDEX `idx_customer_receipt_allocations_payment_id` ON `customer_receipt_allocations`(`payment_id`)
+
+-- index idx_customer_receipt_allocations_receipt_id
+CREATE INDEX `idx_customer_receipt_allocations_receipt_id` ON `customer_receipt_allocations`(`receipt_id`)
+
+-- index idx_customer_receipt_allocations_status
+CREATE INDEX `idx_customer_receipt_allocations_status` ON `customer_receipt_allocations`(`status`)
+
+-- index idx_customer_receipts_customer_id
+CREATE INDEX `idx_customer_receipts_customer_id` ON `customer_receipts`(`customer_id`)
+
+-- index idx_customer_receipts_customer_name
+CREATE INDEX `idx_customer_receipts_customer_name` ON `customer_receipts`(`customer_name`)
+
+-- index idx_customer_receipts_deleted_at
+CREATE INDEX `idx_customer_receipts_deleted_at` ON `customer_receipts`(`deleted_at`)
+
+-- index idx_customer_receipts_receipt_date
+CREATE INDEX `idx_customer_receipts_receipt_date` ON `customer_receipts`(`receipt_date`)
+
+-- index idx_customer_receipts_receipt_number
+CREATE UNIQUE INDEX `idx_customer_receipts_receipt_number` ON `customer_receipts`(`receipt_number`)
+
+-- index idx_customer_receipts_status
+CREATE INDEX `idx_customer_receipts_status` ON `customer_receipts`(`status`)
+
+-- index idx_customer_snapshots_customer_id
+CREATE INDEX `idx_customer_snapshots_customer_id` ON `customer_snapshots`(`customer_id`)
+
+-- index idx_customer_snapshots_deleted_at
+CREATE INDEX `idx_customer_snapshots_deleted_at` ON `customer_snapshots`(`deleted_at`)
+
+-- index idx_customers_ar_risk_tier
+CREATE INDEX `idx_customers_ar_risk_tier` ON `customers`(`ar_risk_tier`)
+
+-- index idx_customers_business_name
+CREATE INDEX `idx_customers_business_name` ON `customers`(`business_name`)
+
+-- index idx_customers_city
+CREATE INDEX `idx_customers_city` ON `customers`(`city`)
+
+-- index idx_customers_country
+CREATE INDEX `idx_customers_country` ON `customers`(`country`)
+
+-- index idx_customers_customer_code
+CREATE UNIQUE INDEX `idx_customers_customer_code` ON `customers`(`customer_code`)
+
+-- index idx_customers_customer_grade
+CREATE INDEX `idx_customers_customer_grade` ON `customers`(`customer_grade`)
+
+-- index idx_customers_customer_id
+CREATE UNIQUE INDEX `idx_customers_customer_id` ON `customers`(`customer_id`)
+
+-- index idx_customers_customer_type
+CREATE INDEX `idx_customers_customer_type` ON `customers`(`customer_type`)
+
+-- index idx_customers_deleted_at
+CREATE INDEX `idx_customers_deleted_at` ON `customers`(`deleted_at`)
+
+-- index idx_customers_industry
+CREATE INDEX `idx_customers_industry` ON `customers`(`industry`)
+
+-- index idx_customers_is_credit_blocked
+CREATE INDEX `idx_customers_is_credit_blocked` ON `customers`(`is_credit_blocked`)
+
+-- index idx_customers_overdue_days
+CREATE INDEX `idx_customers_overdue_days` ON `customers`(`overdue_days`)
+
+-- index idx_customers_payment_grade
+CREATE INDEX `idx_customers_payment_grade` ON `customers`(`payment_grade`)
+
+-- index idx_customers_payment_terms_days
+CREATE INDEX `idx_customers_payment_terms_days` ON `customers`(`payment_terms_days`)
+
+-- index idx_data_quality_reviews_deleted_at
+CREATE INDEX `idx_data_quality_reviews_deleted_at` ON `data_quality_reviews`(`deleted_at`)
+
+-- index idx_data_quality_reviews_entity_id
+CREATE INDEX `idx_data_quality_reviews_entity_id` ON `data_quality_reviews`(`entity_id`)
+
+-- index idx_data_quality_reviews_entity_type
+CREATE INDEX `idx_data_quality_reviews_entity_type` ON `data_quality_reviews`(`entity_type`)
+
+-- index idx_data_quality_reviews_issue_id
+CREATE UNIQUE INDEX `idx_data_quality_reviews_issue_id` ON `data_quality_reviews`(`issue_id`)
+
+-- index idx_data_quality_reviews_issue_type
+CREATE INDEX `idx_data_quality_reviews_issue_type` ON `data_quality_reviews`(`issue_type`)
+
+-- index idx_data_quality_reviews_reviewed_by_id
+CREATE INDEX `idx_data_quality_reviews_reviewed_by_id` ON `data_quality_reviews`(`reviewed_by_id`)
+
+-- index idx_data_quality_reviews_severity
+CREATE INDEX `idx_data_quality_reviews_severity` ON `data_quality_reviews`(`severity`)
+
+-- index idx_data_quality_reviews_status
+CREATE INDEX `idx_data_quality_reviews_status` ON `data_quality_reviews`(`status`)
+
+-- index idx_db_costing_additional_costs_costing_sheet_id
+CREATE INDEX `idx_db_costing_additional_costs_costing_sheet_id` ON `db_costing_additional_costs`(`costing_sheet_id`)
+
+-- index idx_db_costing_additional_costs_deleted_at
+CREATE INDEX `idx_db_costing_additional_costs_deleted_at` ON `db_costing_additional_costs`(`deleted_at`)
+
+-- index idx_db_costing_items_costing_sheet_id
+CREATE INDEX `idx_db_costing_items_costing_sheet_id` ON `db_costing_items`(`costing_sheet_id`)
+
+-- index idx_db_costing_items_deleted_at
+CREATE INDEX `idx_db_costing_items_deleted_at` ON `db_costing_items`(`deleted_at`)
+
+-- index idx_db_costing_sheets_costing_number
+CREATE UNIQUE INDEX `idx_db_costing_sheets_costing_number` ON `db_costing_sheets`(`costing_number`)
+
+-- index idx_db_costing_sheets_customer_id
+CREATE INDEX `idx_db_costing_sheets_customer_id` ON `db_costing_sheets`(`customer_id`)
+
+-- index idx_db_costing_sheets_deleted_at
+CREATE INDEX `idx_db_costing_sheets_deleted_at` ON `db_costing_sheets`(`deleted_at`)
+
+-- index idx_db_costing_sheets_status
+CREATE INDEX `idx_db_costing_sheets_status` ON `db_costing_sheets`(`status`)
+
+-- index idx_delete_approval_requests_deleted_at
+CREATE INDEX `idx_delete_approval_requests_deleted_at` ON `delete_approval_requests`(`deleted_at`)
+
+-- index idx_delete_approval_requests_entity_id
+CREATE INDEX `idx_delete_approval_requests_entity_id` ON `delete_approval_requests`(`entity_id`)
+
+-- index idx_delete_approval_requests_entity_type
+CREATE INDEX `idx_delete_approval_requests_entity_type` ON `delete_approval_requests`(`entity_type`)
+
+-- index idx_delete_approval_requests_requested_by
+CREATE INDEX `idx_delete_approval_requests_requested_by` ON `delete_approval_requests`(`requested_by`)
+
+-- index idx_delete_approval_requests_status
+CREATE INDEX `idx_delete_approval_requests_status` ON `delete_approval_requests`(`status`)
+
+-- index idx_delivery_note_items_deleted_at
+CREATE INDEX `idx_delivery_note_items_deleted_at` ON `delivery_note_items`(`deleted_at`)
+
+-- index idx_delivery_note_items_delivery_note_id
+CREATE INDEX `idx_delivery_note_items_delivery_note_id` ON `delivery_note_items`(`delivery_note_id`)
+
+-- index idx_delivery_note_items_order_item_id
+CREATE INDEX `idx_delivery_note_items_order_item_id` ON `delivery_note_items`(`order_item_id`)
+
+-- index idx_delivery_note_items_product_id
+CREATE INDEX `idx_delivery_note_items_product_id` ON `delivery_note_items`(`product_id`)
+
+-- index idx_delivery_notes_customer_id
+CREATE INDEX `idx_delivery_notes_customer_id` ON `delivery_notes`(`customer_id`)
+
+-- index idx_delivery_notes_deleted_at
+CREATE INDEX `idx_delivery_notes_deleted_at` ON `delivery_notes`(`deleted_at`)
+
+-- index idx_delivery_notes_delivery_date
+CREATE INDEX `idx_delivery_notes_delivery_date` ON `delivery_notes`(`delivery_date`)
+
+-- index idx_delivery_notes_dn_number
+CREATE UNIQUE INDEX `idx_delivery_notes_dn_number` ON `delivery_notes`(`dn_number`)
+
+-- index idx_device_user
+CREATE UNIQUE INDEX `idx_device_user` ON `device_users`(`device_id`,`user_id`)
+
+-- index idx_device_users_deleted_at
+CREATE INDEX `idx_device_users_deleted_at` ON `device_users`(`deleted_at`)
+
+-- index idx_device_users_device_id
+CREATE INDEX `idx_device_users_device_id` ON `device_users`(`device_id`)
+
+-- index idx_device_users_user_id
+CREATE INDEX `idx_device_users_user_id` ON `device_users`(`user_id`)
+
+-- index idx_devices_deleted_at
+CREATE INDEX `idx_devices_deleted_at` ON `devices`(`deleted_at`)
+
+-- index idx_devices_machine_id
+CREATE UNIQUE INDEX `idx_devices_machine_id` ON `devices`(`machine_id`)
+
+-- index idx_discount_recommendation_records_deleted_at
+CREATE INDEX `idx_discount_recommendation_records_deleted_at` ON `discount_recommendation_records`(`deleted_at`)
+
+-- index idx_discount_recommendation_records_offer_id
+CREATE INDEX `idx_discount_recommendation_records_offer_id` ON `discount_recommendation_records`(`offer_id`)
+
+-- index idx_dn_order_status
+CREATE INDEX `idx_dn_order_status` ON `delivery_notes`(`order_id`,`status`)
+
+-- index idx_employee_access_links_access_status
+CREATE INDEX `idx_employee_access_links_access_status` ON `employee_access_links`(`access_status`)
+
+-- index idx_employee_access_links_deleted_at
+CREATE INDEX `idx_employee_access_links_deleted_at` ON `employee_access_links`(`deleted_at`)
+
+-- index idx_employee_access_links_device_id
+CREATE INDEX `idx_employee_access_links_device_id` ON `employee_access_links`(`device_id`)
+
+-- index idx_employee_access_links_employee_id
+CREATE INDEX `idx_employee_access_links_employee_id` ON `employee_access_links`(`employee_id`)
+
+-- index idx_employee_access_links_license_key
+CREATE INDEX `idx_employee_access_links_license_key` ON `employee_access_links`(`license_key`)
+
+-- index idx_employee_access_links_user_id
+CREATE INDEX `idx_employee_access_links_user_id` ON `employee_access_links`(`user_id`)
+
+-- index idx_employee_archive_requests_deleted_at
+CREATE INDEX `idx_employee_archive_requests_deleted_at` ON `employee_archive_requests`(`deleted_at`)
+
+-- index idx_employee_archive_requests_employee_id
+CREATE INDEX `idx_employee_archive_requests_employee_id` ON `employee_archive_requests`(`employee_id`)
+
+-- index idx_employee_archive_requests_requested_by
+CREATE INDEX `idx_employee_archive_requests_requested_by` ON `employee_archive_requests`(`requested_by`)
+
+-- index idx_employee_archive_requests_status
+CREATE INDEX `idx_employee_archive_requests_status` ON `employee_archive_requests`(`status`)
+
+-- index idx_employee_documents_deleted_at
+CREATE INDEX `idx_employee_documents_deleted_at` ON `employee_documents`(`deleted_at`)
+
+-- index idx_employee_documents_doc_type
+CREATE INDEX `idx_employee_documents_doc_type` ON `employee_documents`(`doc_type`)
+
+-- index idx_employee_documents_employee_id
+CREATE INDEX `idx_employee_documents_employee_id` ON `employee_documents`(`employee_id`)
+
+-- index idx_employee_documents_expires_on
+CREATE INDEX `idx_employee_documents_expires_on` ON `employee_documents`(`expires_on`)
+
+-- index idx_employee_license
+CREATE UNIQUE INDEX `idx_employee_license` ON `employee_access_links`(`employee_id`,`license_key`)
+
+-- index idx_employees_deleted_at
+CREATE INDEX `idx_employees_deleted_at` ON `employees`(`deleted_at`)
+
+-- index idx_employees_department
+CREATE INDEX `idx_employees_department` ON `employees`(`department`)
+
+-- index idx_employees_email
+CREATE INDEX `idx_employees_email` ON `employees`(`email`)
+
+-- index idx_employees_employee_code
+CREATE UNIQUE INDEX `idx_employees_employee_code` ON `employees`(`employee_code`)
+
+-- index idx_employees_employment_status
+CREATE INDEX `idx_employees_employment_status` ON `employees`(`employment_status`)
+
+-- index idx_employees_full_name
+CREATE INDEX `idx_employees_full_name` ON `employees`(`full_name`)
+
+-- index idx_employees_is_active
+CREATE INDEX `idx_employees_is_active` ON `employees`(`is_active`)
+
+-- index idx_employees_manager_employee_id
+CREATE INDEX `idx_employees_manager_employee_id` ON `employees`(`manager_employee_id`)
+
+-- index idx_entity_notes_deleted_at
+CREATE INDEX `idx_entity_notes_deleted_at` ON `entity_notes`(`deleted_at`)
+
+-- index idx_entity_notes_entity_id
+CREATE INDEX `idx_entity_notes_entity_id` ON `entity_notes`(`entity_id`)
+
+-- index idx_entity_notes_entity_type
+CREATE INDEX `idx_entity_notes_entity_type` ON `entity_notes`(`entity_type`)
+
+-- index idx_entity_notes_note_type
+CREATE INDEX `idx_entity_notes_note_type` ON `entity_notes`(`note_type`)
+
+-- index idx_file_watch_events_deleted_at
+CREATE INDEX `idx_file_watch_events_deleted_at` ON `file_watch_events`(`deleted_at`)
+
+-- index idx_file_watch_events_file_path
+CREATE INDEX `idx_file_watch_events_file_path` ON `file_watch_events`(`file_path`)
+
+-- index idx_followup_tasks_customer_id
+CREATE INDEX `idx_followup_tasks_customer_id` ON `followup_tasks`(`customer_id`)
+
+-- index idx_followup_tasks_deleted_at
+CREATE INDEX `idx_followup_tasks_deleted_at` ON `followup_tasks`(`deleted_at`)
+
+-- index idx_followup_tasks_due_date
+CREATE INDEX `idx_followup_tasks_due_date` ON `followup_tasks`(`due_date`)
+
+-- index idx_followup_tasks_priority
+CREATE INDEX `idx_followup_tasks_priority` ON `followup_tasks`(`priority`)
+
+-- index idx_followup_tasks_status
+CREATE INDEX `idx_followup_tasks_status` ON `followup_tasks`(`status`)
+
+-- index idx_followup_tasks_type
+CREATE INDEX `idx_followup_tasks_type` ON `followup_tasks`(`type`)
+
+-- index idx_goods_received_notes_deleted_at
+CREATE INDEX `idx_goods_received_notes_deleted_at` ON `goods_received_notes`(`deleted_at`)
+
+-- index idx_goods_received_notes_grn_number
+CREATE UNIQUE INDEX `idx_goods_received_notes_grn_number` ON `goods_received_notes`(`grn_number`)
+
+-- index idx_goods_received_notes_purchase_order_id
+CREATE INDEX `idx_goods_received_notes_purchase_order_id` ON `goods_received_notes`(`purchase_order_id`)
+
+-- index idx_goods_received_notes_qc_status
+CREATE INDEX `idx_goods_received_notes_qc_status` ON `goods_received_notes`(`qc_status`)
+
+-- index idx_goods_received_notes_received_date
+CREATE INDEX `idx_goods_received_notes_received_date` ON `goods_received_notes`(`received_date`)
+
+-- index idx_goods_received_notes_warehouse_id
+CREATE INDEX `idx_goods_received_notes_warehouse_id` ON `goods_received_notes`(`warehouse_id`)
+
+-- index idx_grade_change_customer_grade
+CREATE INDEX `idx_grade_change_customer_grade` ON `grade_changes`(`customer_id`,`new_grade`)
+
+-- index idx_grade_changes_deleted_at
+CREATE INDEX `idx_grade_changes_deleted_at` ON `grade_changes`(`deleted_at`)
+
+-- index idx_graph_edges_created_at
+CREATE INDEX `idx_graph_edges_created_at` ON `graph_edges`(`created_at`)
+
+-- index idx_graph_edges_edge_type
+CREATE INDEX `idx_graph_edges_edge_type` ON `graph_edges`(`edge_type`)
+
+-- index idx_graph_edges_source_id
+CREATE INDEX `idx_graph_edges_source_id` ON `graph_edges`(`source_id`)
+
+-- index idx_graph_edges_target_id
+CREATE INDEX `idx_graph_edges_target_id` ON `graph_edges`(`target_id`)
+
+-- index idx_graph_edges_weight
+CREATE INDEX `idx_graph_edges_weight` ON `graph_edges`(`weight`)
+
+-- index idx_graph_nodes_created_at
+CREATE INDEX `idx_graph_nodes_created_at` ON `graph_nodes`(`created_at`)
+
+-- index idx_graph_nodes_external_id
+CREATE INDEX `idx_graph_nodes_external_id` ON `graph_nodes`(`external_id`)
+
+-- index idx_graph_nodes_node_type
+CREATE INDEX `idx_graph_nodes_node_type` ON `graph_nodes`(`node_type`)
+
+-- index idx_grn_items_deleted_at
+CREATE INDEX `idx_grn_items_deleted_at` ON `grn_items`(`deleted_at`)
+
+-- index idx_grn_items_grn_id
+CREATE INDEX `idx_grn_items_grn_id` ON `grn_items`(`grn_id`)
+
+-- index idx_grn_items_po_item_id
+CREATE INDEX `idx_grn_items_po_item_id` ON `grn_items`(`po_item_id`)
+
+-- index idx_grn_items_product_id
+CREATE INDEX `idx_grn_items_product_id` ON `grn_items`(`product_id`)
+
+-- index idx_inbox_documents_document_id
+CREATE INDEX `idx_inbox_documents_document_id` ON `inbox_documents`(`document_id`)
+
+-- index idx_inventory_items_deleted_at
+CREATE INDEX `idx_inventory_items_deleted_at` ON `inventory_items`(`deleted_at`)
+
+-- index idx_inventory_items_is_active
+CREATE INDEX `idx_inventory_items_is_active` ON `inventory_items`(`is_active`)
+
+-- index idx_inventory_items_product_code
+CREATE INDEX `idx_inventory_items_product_code` ON `inventory_items`(`product_code`)
+
+-- index idx_inventory_items_product_id
+CREATE INDEX `idx_inventory_items_product_id` ON `inventory_items`(`product_id`)
+
+-- index idx_inventory_items_stock_status
+CREATE INDEX `idx_inventory_items_stock_status` ON `inventory_items`(`stock_status`)
+
+-- index idx_inventory_items_warehouse_id
+CREATE INDEX `idx_inventory_items_warehouse_id` ON `inventory_items`(`warehouse_id`)
+
+-- index idx_invoice_ar_aging
+CREATE INDEX `idx_invoice_ar_aging` ON `invoices`(`customer_id`,`status`,`due_date`)
+
+-- index idx_invoice_customer_date
+CREATE INDEX `idx_invoice_customer_date` ON `invoices`(`customer_id`,`invoice_date`)
+
+-- index idx_invoice_items_deleted_at
+CREATE INDEX `idx_invoice_items_deleted_at` ON `invoice_items`(`deleted_at`)
+
+-- index idx_invoice_items_invoice_id
+CREATE INDEX `idx_invoice_items_invoice_id` ON `invoice_items`(`invoice_id`)
+
+-- index idx_invoice_items_product_id
+CREATE INDEX `idx_invoice_items_product_id` ON `invoice_items`(`product_id`)
+
+-- index idx_invoice_sequence_prefix_year
+CREATE UNIQUE INDEX `idx_invoice_sequence_prefix_year` ON `invoice_sequences`(`prefix`,`year`)
+
+-- index idx_invoices_customer_name
+CREATE INDEX `idx_invoices_customer_name` ON `invoices`(`customer_name`)
+
+-- index idx_invoices_customer_po_number
+CREATE INDEX `idx_invoices_customer_po_number` ON `invoices`(`customer_po_number`)
+
+-- index idx_invoices_deleted_at
+CREATE INDEX `idx_invoices_deleted_at` ON `invoices`(`deleted_at`)
+
+-- index idx_invoices_delivery_note_id
+CREATE INDEX `idx_invoices_delivery_note_id` ON `invoices`(`delivery_note_id`)
+
+-- index idx_invoices_invoice_number
+CREATE UNIQUE INDEX `idx_invoices_invoice_number` ON `invoices`(`invoice_number`)
+
+-- index idx_invoices_journal_entry_id
+CREATE INDEX `idx_invoices_journal_entry_id` ON `invoices`(`journal_entry_id`)
+
+-- index idx_invoices_offer_id
+CREATE INDEX `idx_invoices_offer_id` ON `invoices`(`offer_id`)
+
+-- index idx_invoices_order_id
+CREATE INDEX `idx_invoices_order_id` ON `invoices`(`order_id`)
+
+-- index idx_invoices_quote_id
+CREATE INDEX `idx_invoices_quote_id` ON `invoices`(`quote_id`)
+
+-- index idx_invoices_rfq_id
+CREATE INDEX `idx_invoices_rfq_id` ON `invoices`(`rfq_id`)
+
+-- index idx_notification_receipts_deleted_at
+CREATE INDEX `idx_notification_receipts_deleted_at` ON `notification_receipts`(`deleted_at`)
+
+-- index idx_notification_receipts_device_id
+CREATE INDEX `idx_notification_receipts_device_id` ON `notification_receipts`(`device_id`)
+
+-- index idx_notification_receipts_employee_id
+CREATE INDEX `idx_notification_receipts_employee_id` ON `notification_receipts`(`employee_id`)
+
+-- index idx_notification_receipts_notification_id
+CREATE INDEX `idx_notification_receipts_notification_id` ON `notification_receipts`(`notification_id`)
+
+-- index idx_notification_receipts_receipt_type
+CREATE INDEX `idx_notification_receipts_receipt_type` ON `notification_receipts`(`receipt_type`)
+
+-- index idx_notification_receipts_received_at
+CREATE INDEX `idx_notification_receipts_received_at` ON `notification_receipts`(`received_at`)
+
+-- index idx_notifications_deleted_at
+CREATE INDEX `idx_notifications_deleted_at` ON `notifications`(`deleted_at`)
+
+-- index idx_notifications_employee_id
+CREATE INDEX `idx_notifications_employee_id` ON `notifications`(`employee_id`)
+
+-- index idx_notifications_notification_type
+CREATE INDEX `idx_notifications_notification_type` ON `notifications`(`notification_type`)
+
+-- index idx_notifications_source_id
+CREATE INDEX `idx_notifications_source_id` ON `notifications`(`source_id`)
+
+-- index idx_notifications_source_type
+CREATE INDEX `idx_notifications_source_type` ON `notifications`(`source_type`)
+
+-- index idx_notifications_status
+CREATE INDEX `idx_notifications_status` ON `notifications`(`status`)
+
+-- index idx_ocr_documents_document_type
+CREATE INDEX `idx_ocr_documents_document_type` ON `ocr_documents`(`document_type`)
+
+-- index idx_offer_data_costing_id
+CREATE INDEX `idx_offer_data_costing_id` ON `offer_data`(`costing_id`)
+
+-- index idx_offer_follow_ups_deleted_at
+CREATE INDEX `idx_offer_follow_ups_deleted_at` ON `offer_follow_ups`(`deleted_at`)
+
+-- index idx_offer_follow_ups_follow_up_date
+CREATE INDEX `idx_offer_follow_ups_follow_up_date` ON `offer_follow_ups`(`follow_up_date`)
+
+-- index idx_offer_follow_ups_offer_id
+CREATE INDEX `idx_offer_follow_ups_offer_id` ON `offer_follow_ups`(`offer_id`)
+
+-- index idx_offer_follow_ups_status
+CREATE INDEX `idx_offer_follow_ups_status` ON `offer_follow_ups`(`status`)
+
+-- index idx_offer_items_deleted_at
+CREATE INDEX `idx_offer_items_deleted_at` ON `offer_items`(`deleted_at`)
+
+-- index idx_offer_items_offer_id
+CREATE INDEX `idx_offer_items_offer_id` ON `offer_items`(`offer_id`)
+
+-- index idx_offer_items_product_id
+CREATE INDEX `idx_offer_items_product_id` ON `offer_items`(`product_id`)
+
+-- index idx_offer_notes_deleted_at
+CREATE INDEX `idx_offer_notes_deleted_at` ON `offer_notes`(`deleted_at`)
+
+-- index idx_offer_notes_note_date
+CREATE INDEX `idx_offer_notes_note_date` ON `offer_notes`(`note_date`)
+
+-- index idx_offer_notes_offer_id
+CREATE INDEX `idx_offer_notes_offer_id` ON `offer_notes`(`offer_id`)
+
+-- index idx_offers_customer_id
+CREATE INDEX `idx_offers_customer_id` ON `offers`(`customer_id`)
+
+-- index idx_offers_customer_name
+CREATE INDEX `idx_offers_customer_name` ON `offers`(`customer_name`)
+
+-- index idx_offers_deleted_at
+CREATE INDEX `idx_offers_deleted_at` ON `offers`(`deleted_at`)
+
+-- index idx_offers_offer_number
+CREATE UNIQUE INDEX `idx_offers_offer_number` ON `offers`(`offer_number`)
+
+-- index idx_offers_quotation_date
+CREATE INDEX `idx_offers_quotation_date` ON `offers`(`quotation_date`)
+
+-- index idx_offers_revision_number
+CREATE INDEX `idx_offers_revision_number` ON `offers`(`revision_number`)
+
+-- index idx_offers_revision_of_offer_id
+CREATE INDEX `idx_offers_revision_of_offer_id` ON `offers`(`revision_of_offer_id`)
+
+-- index idx_offers_revision_root_offer_id
+CREATE INDEX `idx_offers_revision_root_offer_id` ON `offers`(`revision_root_offer_id`)
+
+-- index idx_offers_rfq_id
+CREATE INDEX `idx_offers_rfq_id` ON `offers`(`rfq_id`)
+
+-- index idx_offers_stage
+CREATE INDEX `idx_offers_stage` ON `offers`(`stage`)
+
+-- index idx_offers_superseded_by_offer_id
+CREATE INDEX `idx_offers_superseded_by_offer_id` ON `offers`(`superseded_by_offer_id`)
+
+-- index idx_opportunities_customer_id
+CREATE INDEX `idx_opportunities_customer_id` ON `opportunities`(`customer_id`)
+
+-- index idx_opportunities_customer_name
+CREATE INDEX `idx_opportunities_customer_name` ON `opportunities`(`customer_name`)
+
+-- index idx_opportunities_deleted_at
+CREATE INDEX `idx_opportunities_deleted_at` ON `opportunities`(`deleted_at`)
+
+-- index idx_opportunities_folder_number
+CREATE UNIQUE INDEX `idx_opportunities_folder_number` ON `opportunities`(`folder_number`)
+
+-- index idx_opportunities_offer_date
+CREATE INDEX `idx_opportunities_offer_date` ON `opportunities`(`offer_date`)
+
+-- index idx_opportunities_offer_id
+CREATE INDEX `idx_opportunities_offer_id` ON `opportunities`(`offer_id`)
+
+-- index idx_opportunities_product_type
+CREATE INDEX `idx_opportunities_product_type` ON `opportunities`(`product_type`)
+
+-- index idx_opportunities_regime
+CREATE INDEX `idx_opportunities_regime` ON `opportunities`(`regime`)
+
+-- index idx_opportunities_salesperson
+CREATE INDEX `idx_opportunities_salesperson` ON `opportunities`(`salesperson`)
+
+-- index idx_opportunities_source
+CREATE INDEX `idx_opportunities_source` ON `opportunities`(`source`)
+
+-- index idx_opportunities_spoc_status
+CREATE INDEX `idx_opportunities_spoc_status` ON `opportunities`(`spoc_status`)
+
+-- index idx_opportunities_stage
+CREATE INDEX `idx_opportunities_stage` ON `opportunities`(`stage`)
+
+-- index idx_opportunities_w_ip_status
+CREATE INDEX `idx_opportunities_w_ip_status` ON `opportunities`(`wip_status`)
+
+-- index idx_opportunities_year
+CREATE INDEX `idx_opportunities_year` ON `opportunities`(`year`)
+
+-- index idx_opportunity_comments_opportunity_id
+CREATE INDEX `idx_opportunity_comments_opportunity_id` ON `opportunity_comments`(`opportunity_id`)
+
+-- index idx_opportunity_edit_conflicts_attempted_by
+CREATE INDEX `idx_opportunity_edit_conflicts_attempted_by` ON `opportunity_edit_conflicts`(`attempted_by`)
+
+-- index idx_opportunity_edit_conflicts_attempted_role
+CREATE INDEX `idx_opportunity_edit_conflicts_attempted_role` ON `opportunity_edit_conflicts`(`attempted_role`)
+
+-- index idx_opportunity_edit_conflicts_deleted_at
+CREATE INDEX `idx_opportunity_edit_conflicts_deleted_at` ON `opportunity_edit_conflicts`(`deleted_at`)
+
+-- index idx_opportunity_edit_conflicts_folder_number
+CREATE INDEX `idx_opportunity_edit_conflicts_folder_number` ON `opportunity_edit_conflicts`(`folder_number`)
+
+-- index idx_opportunity_edit_conflicts_operation
+CREATE INDEX `idx_opportunity_edit_conflicts_operation` ON `opportunity_edit_conflicts`(`operation`)
+
+-- index idx_opportunity_edit_conflicts_opportunity_id
+CREATE INDEX `idx_opportunity_edit_conflicts_opportunity_id` ON `opportunity_edit_conflicts`(`opportunity_id`)
+
+-- index idx_opportunity_edit_conflicts_status
+CREATE INDEX `idx_opportunity_edit_conflicts_status` ON `opportunity_edit_conflicts`(`status`)
+
+-- index idx_order_customer_status
+CREATE INDEX `idx_order_customer_status` ON `orders`(`customer_id`,`status`)
+
+-- index idx_order_items_deleted_at
+CREATE INDEX `idx_order_items_deleted_at` ON `order_items`(`deleted_at`)
+
+-- index idx_order_items_order_id
+CREATE INDEX `idx_order_items_order_id` ON `order_items`(`order_id`)
+
+-- index idx_order_items_product_id
+CREATE INDEX `idx_order_items_product_id` ON `order_items`(`product_id`)
+
+-- index idx_orders_customer_name
+CREATE INDEX `idx_orders_customer_name` ON `orders`(`customer_name`)
+
+-- index idx_orders_customer_po_number
+CREATE INDEX `idx_orders_customer_po_number` ON `orders`(`customer_po_number`)
+
+-- index idx_orders_deleted_at
+CREATE INDEX `idx_orders_deleted_at` ON `orders`(`deleted_at`)
+
+-- index idx_orders_offer_id
+CREATE INDEX `idx_orders_offer_id` ON `orders`(`offer_id`)
+
+-- index idx_orders_order_date
+CREATE INDEX `idx_orders_order_date` ON `orders`(`order_date`)
+
+-- index idx_orders_order_number
+CREATE UNIQUE INDEX `idx_orders_order_number` ON `orders`(`order_number`)
+
+-- index idx_orders_rfq_id
+CREATE INDEX `idx_orders_rfq_id` ON `orders`(`rfq_id`)
+
+-- index idx_payment_invoice_date
+CREATE INDEX `idx_payment_invoice_date` ON `payments`(`invoice_id`,`payment_date`)
+
+-- index idx_payment_prediction_accuracies_customer_id
+CREATE INDEX `idx_payment_prediction_accuracies_customer_id` ON `payment_prediction_accuracies`(`customer_id`)
+
+-- index idx_payment_prediction_accuracies_deleted_at
+CREATE INDEX `idx_payment_prediction_accuracies_deleted_at` ON `payment_prediction_accuracies`(`deleted_at`)
+
+-- index idx_payments_bank_account_id
+CREATE INDEX `idx_payments_bank_account_id` ON `payments`(`bank_account_id`)
+
+-- index idx_payments_days_to_payment
+CREATE INDEX `idx_payments_days_to_payment` ON `payments`(`days_to_payment`)
+
+-- index idx_payments_deleted_at
+CREATE INDEX `idx_payments_deleted_at` ON `payments`(`deleted_at`)
+
+-- index idx_payments_idempotency_key
+CREATE UNIQUE INDEX `idx_payments_idempotency_key` ON `payments`(`idempotency_key`)
+
+-- index idx_payments_invoice_number
+CREATE INDEX `idx_payments_invoice_number` ON `payments`(`invoice_number`)
+
+-- index idx_payments_journal_entry_id
+CREATE INDEX `idx_payments_journal_entry_id` ON `payments`(`journal_entry_id`)
+
+-- index idx_payments_receipt_id
+CREATE INDEX `idx_payments_receipt_id` ON `payments`(`receipt_id`)
+
+-- index idx_po_supplier_date
+CREATE INDEX `idx_po_supplier_date` ON `purchase_orders`(`supplier_id`,`po_date`)
+
+-- index idx_post_sale_notes_deleted_at
+CREATE INDEX `idx_post_sale_notes_deleted_at` ON `post_sale_notes`(`deleted_at`)
+
+-- index idx_post_sale_notes_note_date
+CREATE INDEX `idx_post_sale_notes_note_date` ON `post_sale_notes`(`note_date`)
+
+-- index idx_post_sale_notes_note_type
+CREATE INDEX `idx_post_sale_notes_note_type` ON `post_sale_notes`(`note_type`)
+
+-- index idx_post_sale_notes_order_id
+CREATE INDEX `idx_post_sale_notes_order_id` ON `post_sale_notes`(`order_id`)
+
+-- index idx_post_sale_notes_order_number
+CREATE INDEX `idx_post_sale_notes_order_number` ON `post_sale_notes`(`order_number`)
+
+-- index idx_prediction_customer_grade
+CREATE INDEX `idx_prediction_customer_grade` ON `prediction_records`(`customer_id`,`grade`)
+
+-- index idx_prediction_records_deleted_at
+CREATE INDEX `idx_prediction_records_deleted_at` ON `prediction_records`(`deleted_at`)
+
+-- index idx_products_deleted_at
+CREATE INDEX `idx_products_deleted_at` ON `products`(`deleted_at`)
+
+-- index idx_products_is_active
+CREATE INDEX `idx_products_is_active` ON `products`(`is_active`)
+
+-- index idx_products_product_category
+CREATE INDEX `idx_products_product_category` ON `products`(`product_category`)
+
+-- index idx_products_product_code
+CREATE UNIQUE INDEX `idx_products_product_code` ON `products`(`product_code`)
+
+-- index idx_products_product_name
+CREATE INDEX `idx_products_product_name` ON `products`(`product_name`)
+
+-- index idx_products_sku
+CREATE INDEX `idx_products_sku` ON `products`(`sku`)
+
+-- index idx_products_supplier_code
+CREATE INDEX `idx_products_supplier_code` ON `products`(`supplier_code`)
+
+-- index idx_products_supplier_id
+CREATE INDEX `idx_products_supplier_id` ON `products`(`supplier_id`)
+
+-- index idx_project_member
+CREATE UNIQUE INDEX `idx_project_member` ON `project_members`(`project_id`,`employee_id`)
+
+-- index idx_project_members_deleted_at
+CREATE INDEX `idx_project_members_deleted_at` ON `project_members`(`deleted_at`)
+
+-- index idx_project_members_employee_id
+CREATE INDEX `idx_project_members_employee_id` ON `project_members`(`employee_id`)
+
+-- index idx_project_members_is_active
+CREATE INDEX `idx_project_members_is_active` ON `project_members`(`is_active`)
+
+-- index idx_project_members_project_id
+CREATE INDEX `idx_project_members_project_id` ON `project_members`(`project_id`)
+
+-- index idx_projects_customer_id
+CREATE INDEX `idx_projects_customer_id` ON `projects`(`customer_id`)
+
+-- index idx_projects_deleted_at
+CREATE INDEX `idx_projects_deleted_at` ON `projects`(`deleted_at`)
+
+-- index idx_projects_name
+CREATE INDEX `idx_projects_name` ON `projects`(`name`)
+
+-- index idx_projects_opportunity_id
+CREATE INDEX `idx_projects_opportunity_id` ON `projects`(`opportunity_id`)
+
+-- index idx_projects_opportunity_key
+CREATE INDEX `idx_projects_opportunity_key` ON `projects`(`opportunity_key`)
+
+-- index idx_projects_order_id
+CREATE INDEX `idx_projects_order_id` ON `projects`(`order_id`)
+
+-- index idx_projects_project_type
+CREATE INDEX `idx_projects_project_type` ON `projects`(`project_type`)
+
+-- index idx_projects_status
+CREATE INDEX `idx_projects_status` ON `projects`(`status`)
+
+-- index idx_purchase_order_items_deleted_at
+CREATE INDEX `idx_purchase_order_items_deleted_at` ON `purchase_order_items`(`deleted_at`)
+
+-- index idx_purchase_order_items_order_item_id
+CREATE INDEX `idx_purchase_order_items_order_item_id` ON `purchase_order_items`(`order_item_id`)
+
+-- index idx_purchase_order_items_product_id
+CREATE INDEX `idx_purchase_order_items_product_id` ON `purchase_order_items`(`product_id`)
+
+-- index idx_purchase_order_items_purchase_order_id
+CREATE INDEX `idx_purchase_order_items_purchase_order_id` ON `purchase_order_items`(`purchase_order_id`)
+
+-- index idx_purchase_orders_deleted_at
+CREATE INDEX `idx_purchase_orders_deleted_at` ON `purchase_orders`(`deleted_at`)
+
+-- index idx_purchase_orders_order_id
+CREATE INDEX `idx_purchase_orders_order_id` ON `purchase_orders`(`order_id`)
+
+-- index idx_purchase_orders_po_number
+CREATE UNIQUE INDEX `idx_purchase_orders_po_number` ON `purchase_orders`(`po_number`)
+
+-- index idx_purchase_orders_rfq_id
+CREATE INDEX `idx_purchase_orders_rfq_id` ON `purchase_orders`(`rfq_id`)
+
+-- index idx_purchase_orders_status
+CREATE INDEX `idx_purchase_orders_status` ON `purchase_orders`(`status`)
+
+-- index idx_purchase_orders_supplier_name
+CREATE INDEX `idx_purchase_orders_supplier_name` ON `purchase_orders`(`supplier_name`)
+
+-- index idx_rfq_comments_rfq_id
+CREATE INDEX `idx_rfq_comments_rfq_id` ON `rfq_comments`(`rfq_id`)
+
+-- index idx_rfq_data_rfq_number
+CREATE UNIQUE INDEX `idx_rfq_data_rfq_number` ON `rfq_data`(`rfq_number`)
+
+-- index idx_rfq_data_stage
+CREATE INDEX `idx_rfq_data_stage` ON `rfq_data`(`stage`)
+
+-- index idx_roles_deleted_at
+CREATE INDEX `idx_roles_deleted_at` ON `roles`(`deleted_at`)
+
+-- index idx_roles_is_active
+CREATE INDEX `idx_roles_is_active` ON `roles`(`is_active`)
+
+-- index idx_roles_name
+CREATE UNIQUE INDEX `idx_roles_name` ON `roles`(`name`)
+
+-- index idx_serial_numbers_customer_id
+CREATE INDEX `idx_serial_numbers_customer_id` ON `serial_numbers`(`customer_id`)
+
+-- index idx_serial_numbers_deleted_at
+CREATE INDEX `idx_serial_numbers_deleted_at` ON `serial_numbers`(`deleted_at`)
+
+-- index idx_serial_numbers_dn_item_id
+CREATE INDEX `idx_serial_numbers_dn_item_id` ON `serial_numbers`(`dn_item_id`)
+
+-- index idx_serial_numbers_grn_item_id
+CREATE INDEX `idx_serial_numbers_grn_item_id` ON `serial_numbers`(`grn_item_id`)
+
+-- index idx_serial_numbers_invoice_id
+CREATE INDEX `idx_serial_numbers_invoice_id` ON `serial_numbers`(`invoice_id`)
+
+-- index idx_serial_numbers_lot_number
+CREATE INDEX `idx_serial_numbers_lot_number` ON `serial_numbers`(`lot_number`)
+
+-- index idx_serial_numbers_po_id
+CREATE INDEX `idx_serial_numbers_po_id` ON `serial_numbers`(`po_id`)
+
+-- index idx_serial_numbers_product_code
+CREATE INDEX `idx_serial_numbers_product_code` ON `serial_numbers`(`product_code`)
+
+-- index idx_serial_numbers_product_id
+CREATE INDEX `idx_serial_numbers_product_id` ON `serial_numbers`(`product_id`)
+
+-- index idx_serial_numbers_serial_no
+CREATE UNIQUE INDEX `idx_serial_numbers_serial_no` ON `serial_numbers`(`serial_no`)
+
+-- index idx_serial_numbers_status
+CREATE INDEX `idx_serial_numbers_status` ON `serial_numbers`(`status`)
+
+-- index idx_settings_category
+CREATE INDEX `idx_settings_category` ON `settings`(`category`)
+
+-- index idx_settings_deleted_at
+CREATE INDEX `idx_settings_deleted_at` ON `settings`(`deleted_at`)
+
+-- index idx_settings_key
+CREATE UNIQUE INDEX `idx_settings_key` ON `settings`(`key`)
+
+-- index idx_shipments_deleted_at
+CREATE INDEX `idx_shipments_deleted_at` ON `shipments`(`deleted_at`)
+
+-- index idx_shipments_order_id
+CREATE INDEX `idx_shipments_order_id` ON `shipments`(`order_id`)
+
+-- index idx_shipments_order_number
+CREATE INDEX `idx_shipments_order_number` ON `shipments`(`order_number`)
+
+-- index idx_shipments_status
+CREATE INDEX `idx_shipments_status` ON `shipments`(`status`)
+
+-- index idx_status_first_seen
+CREATE INDEX `idx_status_first_seen` ON `devices`(`first_seen_at`,`status`)
+
+-- index idx_stock_adjustments_adjustment_number
+CREATE UNIQUE INDEX `idx_stock_adjustments_adjustment_number` ON `stock_adjustments`(`adjustment_number`)
+
+-- index idx_stock_adjustments_deleted_at
+CREATE INDEX `idx_stock_adjustments_deleted_at` ON `stock_adjustments`(`deleted_at`)
+
+-- index idx_stock_adjustments_inventory_item_id
+CREATE INDEX `idx_stock_adjustments_inventory_item_id` ON `stock_adjustments`(`inventory_item_id`)
+
+-- index idx_stock_movements_counterparty_id
+CREATE INDEX `idx_stock_movements_counterparty_id` ON `stock_movements`(`counterparty_id`)
+
+-- index idx_stock_movements_deleted_at
+CREATE INDEX `idx_stock_movements_deleted_at` ON `stock_movements`(`deleted_at`)
+
+-- index idx_stock_movements_inventory_item_id
+CREATE INDEX `idx_stock_movements_inventory_item_id` ON `stock_movements`(`inventory_item_id`)
+
+-- index idx_stock_movements_reference_id
+CREATE INDEX `idx_stock_movements_reference_id` ON `stock_movements`(`reference_id`)
+
+-- index idx_stock_movements_reference_type
+CREATE INDEX `idx_stock_movements_reference_type` ON `stock_movements`(`reference_type`)
+
+-- index idx_supplier_contacts_deleted_at
+CREATE INDEX `idx_supplier_contacts_deleted_at` ON `supplier_contacts`(`deleted_at`)
+
+-- index idx_supplier_contacts_supplier_id
+CREATE INDEX `idx_supplier_contacts_supplier_id` ON `supplier_contacts`(`supplier_id`)
+
+-- index idx_supplier_inv_date
+CREATE INDEX `idx_supplier_inv_date` ON `supplier_invoices`(`supplier_id`,`invoice_date`)
+
+-- index idx_supplier_inv_status
+CREATE INDEX `idx_supplier_inv_status` ON `supplier_invoices`(`supplier_id`,`status`)
+
+-- index idx_supplier_invoice_items_deleted_at
+CREATE INDEX `idx_supplier_invoice_items_deleted_at` ON `supplier_invoice_items`(`deleted_at`)
+
+-- index idx_supplier_invoice_items_supplier_invoice_id
+CREATE INDEX `idx_supplier_invoice_items_supplier_invoice_id` ON `supplier_invoice_items`(`supplier_invoice_id`)
+
+-- index idx_supplier_invoices_deleted_at
+CREATE INDEX `idx_supplier_invoices_deleted_at` ON `supplier_invoices`(`deleted_at`)
+
+-- index idx_supplier_invoices_due_date
+CREATE INDEX `idx_supplier_invoices_due_date` ON `supplier_invoices`(`due_date`)
+
+-- index idx_supplier_invoices_grn_id
+CREATE INDEX `idx_supplier_invoices_grn_id` ON `supplier_invoices`(`grn_id`)
+
+-- index idx_supplier_invoices_invoice_number
+CREATE INDEX `idx_supplier_invoices_invoice_number` ON `supplier_invoices`(`invoice_number`)
+
+-- index idx_supplier_invoices_journal_entry_id
+CREATE INDEX `idx_supplier_invoices_journal_entry_id` ON `supplier_invoices`(`journal_entry_id`)
+
+-- index idx_supplier_invoices_match_status
+CREATE INDEX `idx_supplier_invoices_match_status` ON `supplier_invoices`(`match_status`)
+
+-- index idx_supplier_invoices_order_id
+CREATE INDEX `idx_supplier_invoices_order_id` ON `supplier_invoices`(`order_id`)
+
+-- index idx_supplier_invoices_purchase_order_id
+CREATE INDEX `idx_supplier_invoices_purchase_order_id` ON `supplier_invoices`(`purchase_order_id`)
+
+-- index idx_supplier_invoices_supplier_name
+CREATE INDEX `idx_supplier_invoices_supplier_name` ON `supplier_invoices`(`supplier_name`)
+
+-- index idx_supplier_issues_deleted_at
+CREATE INDEX `idx_supplier_issues_deleted_at` ON `supplier_issues`(`deleted_at`)
+
+-- index idx_supplier_issues_status
+CREATE INDEX `idx_supplier_issues_status` ON `supplier_issues`(`status`)
+
+-- index idx_supplier_issues_supplier_id
+CREATE INDEX `idx_supplier_issues_supplier_id` ON `supplier_issues`(`supplier_id`)
+
+-- index idx_supplier_payments_bank_account_id
+CREATE INDEX `idx_supplier_payments_bank_account_id` ON `supplier_payments`(`bank_account_id`)
+
+-- index idx_supplier_payments_deleted_at
+CREATE INDEX `idx_supplier_payments_deleted_at` ON `supplier_payments`(`deleted_at`)
+
+-- index idx_supplier_payments_journal_entry_id
+CREATE INDEX `idx_supplier_payments_journal_entry_id` ON `supplier_payments`(`journal_entry_id`)
+
+-- index idx_supplier_payments_payment_date
+CREATE INDEX `idx_supplier_payments_payment_date` ON `supplier_payments`(`payment_date`)
+
+-- index idx_supplier_payments_supplier_id
+CREATE INDEX `idx_supplier_payments_supplier_id` ON `supplier_payments`(`supplier_id`)
+
+-- index idx_supplier_payments_supplier_invoice_id
+CREATE INDEX `idx_supplier_payments_supplier_invoice_id` ON `supplier_payments`(`supplier_invoice_id`)
+
+-- index idx_suppliers_country
+CREATE INDEX `idx_suppliers_country` ON `suppliers`(`country`)
+
+-- index idx_suppliers_deleted_at
+CREATE INDEX `idx_suppliers_deleted_at` ON `suppliers`(`deleted_at`)
+
+-- index idx_suppliers_is_active
+CREATE INDEX `idx_suppliers_is_active` ON `suppliers`(`is_active`)
+
+-- index idx_suppliers_payment_terms
+CREATE INDEX `idx_suppliers_payment_terms` ON `suppliers`(`payment_terms`)
+
+-- index idx_suppliers_rating
+CREATE INDEX `idx_suppliers_rating` ON `suppliers`(`rating`)
+
+-- index idx_suppliers_supplier_code
+CREATE UNIQUE INDEX `idx_suppliers_supplier_code` ON `suppliers`(`supplier_code`)
+
+-- index idx_suppliers_supplier_name
+CREATE INDEX `idx_suppliers_supplier_name` ON `suppliers`(`supplier_name`)
+
+-- index idx_suppliers_supplier_type
+CREATE INDEX `idx_suppliers_supplier_type` ON `suppliers`(`supplier_type`)
+
+-- index idx_sync_records_deleted_at
+CREATE INDEX `idx_sync_records_deleted_at` ON `sync_records`(`deleted_at`)
+
+-- index idx_sync_records_record_id
+CREATE INDEX `idx_sync_records_record_id` ON `sync_records`(`record_id`)
+
+-- index idx_sync_records_sync_table
+CREATE INDEX `idx_sync_records_sync_table` ON `sync_records`(`sync_table`)
+
+-- index idx_sync_records_synced_at
+CREATE INDEX `idx_sync_records_synced_at` ON `sync_records`(`synced_at`)
+
+-- index idx_sync_status_deleted_at
+CREATE INDEX `idx_sync_status_deleted_at` ON `sync_status`(`deleted_at`)
+
+-- index idx_sync_status_file_path
+CREATE UNIQUE INDEX `idx_sync_status_file_path` ON `sync_status`(`file_path`)
+
+-- index idx_sync_status_status
+CREATE INDEX `idx_sync_status_status` ON `sync_status`(`status`)
+
+-- index idx_tally_invoice_imports_customer_name
+CREATE INDEX `idx_tally_invoice_imports_customer_name` ON `tally_invoice_imports`(`customer_name`)
+
+-- index idx_tally_invoice_imports_deleted_at
+CREATE INDEX `idx_tally_invoice_imports_deleted_at` ON `tally_invoice_imports`(`deleted_at`)
+
+-- index idx_tally_invoice_imports_import_batch
+CREATE INDEX `idx_tally_invoice_imports_import_batch` ON `tally_invoice_imports`(`import_batch`)
+
+-- index idx_tally_invoice_imports_invoice_number
+CREATE INDEX `idx_tally_invoice_imports_invoice_number` ON `tally_invoice_imports`(`invoice_number`)
+
+-- index idx_tally_invoice_imports_matched_customer_id
+CREATE INDEX `idx_tally_invoice_imports_matched_customer_id` ON `tally_invoice_imports`(`matched_customer_id`)
+
+-- index idx_tally_invoice_imports_status
+CREATE INDEX `idx_tally_invoice_imports_status` ON `tally_invoice_imports`(`status`)
+
+-- index idx_tally_invoice_imports_year
+CREATE INDEX `idx_tally_invoice_imports_year` ON `tally_invoice_imports`(`year`)
+
+-- index idx_tally_purchase_imports_deleted_at
+CREATE INDEX `idx_tally_purchase_imports_deleted_at` ON `tally_purchase_imports`(`deleted_at`)
+
+-- index idx_tally_purchase_imports_import_batch
+CREATE INDEX `idx_tally_purchase_imports_import_batch` ON `tally_purchase_imports`(`import_batch`)
+
+-- index idx_tally_purchase_imports_invoice_number
+CREATE INDEX `idx_tally_purchase_imports_invoice_number` ON `tally_purchase_imports`(`invoice_number`)
+
+-- index idx_tally_purchase_imports_matched_supplier_id
+CREATE INDEX `idx_tally_purchase_imports_matched_supplier_id` ON `tally_purchase_imports`(`matched_supplier_id`)
+
+-- index idx_tally_purchase_imports_status
+CREATE INDEX `idx_tally_purchase_imports_status` ON `tally_purchase_imports`(`status`)
+
+-- index idx_tally_purchase_imports_supplier_name
+CREATE INDEX `idx_tally_purchase_imports_supplier_name` ON `tally_purchase_imports`(`supplier_name`)
+
+-- index idx_tally_purchase_imports_year
+CREATE INDEX `idx_tally_purchase_imports_year` ON `tally_purchase_imports`(`year`)
+
+-- index idx_task_activity_activity_type
+CREATE INDEX `idx_task_activity_activity_type` ON `task_activity`(`activity_type`)
+
+-- index idx_task_activity_deleted_at
+CREATE INDEX `idx_task_activity_deleted_at` ON `task_activity`(`deleted_at`)
+
+-- index idx_task_activity_employee_id
+CREATE INDEX `idx_task_activity_employee_id` ON `task_activity`(`employee_id`)
+
+-- index idx_task_activity_task_id
+CREATE INDEX `idx_task_activity_task_id` ON `task_activity`(`task_id`)
+
+-- index idx_task_comments_deleted_at
+CREATE INDEX `idx_task_comments_deleted_at` ON `task_comments`(`deleted_at`)
+
+-- index idx_task_comments_employee_id
+CREATE INDEX `idx_task_comments_employee_id` ON `task_comments`(`employee_id`)
+
+-- index idx_task_comments_task_id
+CREATE INDEX `idx_task_comments_task_id` ON `task_comments`(`task_id`)
+
+-- index idx_task_items_assignee_employee_id
+CREATE INDEX `idx_task_items_assignee_employee_id` ON `task_items`(`assignee_employee_id`)
+
+-- index idx_task_items_creator_employee_id
+CREATE INDEX `idx_task_items_creator_employee_id` ON `task_items`(`creator_employee_id`)
+
+-- index idx_task_items_customer_id
+CREATE INDEX `idx_task_items_customer_id` ON `task_items`(`customer_id`)
+
+-- index idx_task_items_deleted_at
+CREATE INDEX `idx_task_items_deleted_at` ON `task_items`(`deleted_at`)
+
+-- index idx_task_items_due_date
+CREATE INDEX `idx_task_items_due_date` ON `task_items`(`due_date`)
+
+-- index idx_task_items_legacy_follow_up_id
+CREATE INDEX `idx_task_items_legacy_follow_up_id` ON `task_items`(`legacy_follow_up_id`)
+
+-- index idx_task_items_opportunity_id
+CREATE INDEX `idx_task_items_opportunity_id` ON `task_items`(`opportunity_id`)
+
+-- index idx_task_items_order_id
+CREATE INDEX `idx_task_items_order_id` ON `task_items`(`order_id`)
+
+-- index idx_task_items_priority
+CREATE INDEX `idx_task_items_priority` ON `task_items`(`priority`)
+
+-- index idx_task_items_project_id
+CREATE INDEX `idx_task_items_project_id` ON `task_items`(`project_id`)
+
+-- index idx_task_items_status
+CREATE INDEX `idx_task_items_status` ON `task_items`(`status`)
+
+-- index idx_task_items_task_type
+CREATE INDEX `idx_task_items_task_type` ON `task_items`(`task_type`)
+
+-- index idx_task_items_title
+CREATE INDEX `idx_task_items_title` ON `task_items`(`title`)
+
+-- index idx_user_activity_events_category
+CREATE INDEX `idx_user_activity_events_category` ON `user_activity_events`(`category`)
+
+-- index idx_user_activity_events_deleted_at
+CREATE INDEX `idx_user_activity_events_deleted_at` ON `user_activity_events`(`deleted_at`)
+
+-- index idx_user_activity_events_device_hash
+CREATE INDEX `idx_user_activity_events_device_hash` ON `user_activity_events`(`device_hash`)
+
+-- index idx_user_activity_events_employee_id
+CREATE INDEX `idx_user_activity_events_employee_id` ON `user_activity_events`(`employee_id`)
+
+-- index idx_user_activity_events_employee_name
+CREATE INDEX `idx_user_activity_events_employee_name` ON `user_activity_events`(`employee_name`)
+
+-- index idx_user_activity_events_event_time
+CREATE INDEX `idx_user_activity_events_event_time` ON `user_activity_events`(`event_time`)
+
+-- index idx_user_activity_events_event_type
+CREATE INDEX `idx_user_activity_events_event_type` ON `user_activity_events`(`event_type`)
+
+-- index idx_user_activity_events_license_key_hash
+CREATE INDEX `idx_user_activity_events_license_key_hash` ON `user_activity_events`(`license_key_hash`)
+
+-- index idx_user_activity_events_license_role
+CREATE INDEX `idx_user_activity_events_license_role` ON `user_activity_events`(`license_role`)
+
+-- index idx_user_activity_events_resource_id
+CREATE INDEX `idx_user_activity_events_resource_id` ON `user_activity_events`(`resource_id`)
+
+-- index idx_user_activity_events_resource_type
+CREATE INDEX `idx_user_activity_events_resource_type` ON `user_activity_events`(`resource_type`)
+
+-- index idx_user_activity_events_screen
+CREATE INDEX `idx_user_activity_events_screen` ON `user_activity_events`(`screen`)
+
+-- index idx_user_activity_events_session_id
+CREATE INDEX `idx_user_activity_events_session_id` ON `user_activity_events`(`session_id`)
+
+-- index idx_user_activity_events_user_id
+CREATE INDEX `idx_user_activity_events_user_id` ON `user_activity_events`(`user_id`)
+
+-- index idx_user_activity_sessions_deleted_at
+CREATE INDEX `idx_user_activity_sessions_deleted_at` ON `user_activity_sessions`(`deleted_at`)
+
+-- index idx_user_activity_sessions_device_hash
+CREATE INDEX `idx_user_activity_sessions_device_hash` ON `user_activity_sessions`(`device_hash`)
+
+-- index idx_user_activity_sessions_employee_id
+CREATE INDEX `idx_user_activity_sessions_employee_id` ON `user_activity_sessions`(`employee_id`)
+
+-- index idx_user_activity_sessions_employee_name
+CREATE INDEX `idx_user_activity_sessions_employee_name` ON `user_activity_sessions`(`employee_name`)
+
+-- index idx_user_activity_sessions_ended_at
+CREATE INDEX `idx_user_activity_sessions_ended_at` ON `user_activity_sessions`(`ended_at`)
+
+-- index idx_user_activity_sessions_is_open
+CREATE INDEX `idx_user_activity_sessions_is_open` ON `user_activity_sessions`(`is_open`)
+
+-- index idx_user_activity_sessions_last_seen_at
+CREATE INDEX `idx_user_activity_sessions_last_seen_at` ON `user_activity_sessions`(`last_seen_at`)
+
+-- index idx_user_activity_sessions_license_key_hash
+CREATE INDEX `idx_user_activity_sessions_license_key_hash` ON `user_activity_sessions`(`license_key_hash`)
+
+-- index idx_user_activity_sessions_license_role
+CREATE INDEX `idx_user_activity_sessions_license_role` ON `user_activity_sessions`(`license_role`)
+
+-- index idx_user_activity_sessions_session_id
+CREATE UNIQUE INDEX `idx_user_activity_sessions_session_id` ON `user_activity_sessions`(`session_id`)
+
+-- index idx_user_activity_sessions_started_at
+CREATE INDEX `idx_user_activity_sessions_started_at` ON `user_activity_sessions`(`started_at`)
+
+-- index idx_user_activity_sessions_user_id
+CREATE INDEX `idx_user_activity_sessions_user_id` ON `user_activity_sessions`(`user_id`)
+
+-- index idx_user_activity_weekly_summaries_deleted_at
+CREATE INDEX `idx_user_activity_weekly_summaries_deleted_at` ON `user_activity_weekly_summaries`(`deleted_at`)
+
+-- index idx_user_activity_weekly_summaries_device_hash
+CREATE INDEX `idx_user_activity_weekly_summaries_device_hash` ON `user_activity_weekly_summaries`(`device_hash`)
+
+-- index idx_user_activity_weekly_summaries_employee_id
+CREATE INDEX `idx_user_activity_weekly_summaries_employee_id` ON `user_activity_weekly_summaries`(`employee_id`)
+
+-- index idx_user_activity_weekly_summaries_employee_name
+CREATE INDEX `idx_user_activity_weekly_summaries_employee_name` ON `user_activity_weekly_summaries`(`employee_name`)
+
+-- index idx_user_activity_weekly_summaries_generated_at
+CREATE INDEX `idx_user_activity_weekly_summaries_generated_at` ON `user_activity_weekly_summaries`(`generated_at`)
+
+-- index idx_user_activity_weekly_summaries_license_key_hash
+CREATE INDEX `idx_user_activity_weekly_summaries_license_key_hash` ON `user_activity_weekly_summaries`(`license_key_hash`)
+
+-- index idx_user_activity_weekly_summaries_license_role
+CREATE INDEX `idx_user_activity_weekly_summaries_license_role` ON `user_activity_weekly_summaries`(`license_role`)
+
+-- index idx_user_activity_weekly_summaries_user_id
+CREATE INDEX `idx_user_activity_weekly_summaries_user_id` ON `user_activity_weekly_summaries`(`user_id`)
+
+-- index idx_user_activity_weekly_summaries_user_key
+CREATE INDEX `idx_user_activity_weekly_summaries_user_key` ON `user_activity_weekly_summaries`(`user_key`)
+
+-- index idx_user_activity_weekly_summaries_week_end
+CREATE INDEX `idx_user_activity_weekly_summaries_week_end` ON `user_activity_weekly_summaries`(`week_end`)
+
+-- index idx_user_activity_weekly_summaries_week_start
+CREATE INDEX `idx_user_activity_weekly_summaries_week_start` ON `user_activity_weekly_summaries`(`week_start`)
+
+-- index idx_user_sessions_access_token_expiry
+CREATE INDEX `idx_user_sessions_access_token_expiry` ON `user_sessions`(`access_token_expiry`)
+
+-- index idx_user_sessions_deleted_at
+CREATE INDEX `idx_user_sessions_deleted_at` ON `user_sessions`(`deleted_at`)
+
+-- index idx_user_sessions_is_active
+CREATE INDEX `idx_user_sessions_is_active` ON `user_sessions`(`is_active`)
+
+-- index idx_user_sessions_last_activity_at
+CREATE INDEX `idx_user_sessions_last_activity_at` ON `user_sessions`(`last_activity_at`)
+
+-- index idx_user_sessions_refresh_token
+CREATE UNIQUE INDEX `idx_user_sessions_refresh_token` ON `user_sessions`(`refresh_token`)
+
+-- index idx_user_sessions_refresh_token_expiry
+CREATE INDEX `idx_user_sessions_refresh_token_expiry` ON `user_sessions`(`refresh_token_expiry`)
+
+-- index idx_user_sessions_token
+CREATE UNIQUE INDEX `idx_user_sessions_token` ON `user_sessions`(`token`)
+
+-- index idx_user_sessions_user_id
+CREATE INDEX `idx_user_sessions_user_id` ON `user_sessions`(`user_id`)
+
+-- index idx_users_deleted_at
+CREATE INDEX `idx_users_deleted_at` ON `users`(`deleted_at`)
+
+-- index idx_users_email
+CREATE UNIQUE INDEX `idx_users_email` ON `users`(`email`)
+
+-- index idx_users_is_active
+CREATE INDEX `idx_users_is_active` ON `users`(`is_active`)
+
+-- index idx_users_role_id
+CREATE INDEX `idx_users_role_id` ON `users`(`role_id`)
+
+-- index idx_users_username
+CREATE UNIQUE INDEX `idx_users_username` ON `users`(`username`)
+
+-- index idx_warehouses_code
+CREATE UNIQUE INDEX `idx_warehouses_code` ON `warehouses`(`code`)
+
+-- index idx_warehouses_deleted_at
+CREATE INDEX `idx_warehouses_deleted_at` ON `warehouses`(`deleted_at`)
+
+-- index idx_win_probability_predictions_deleted_at
+CREATE INDEX `idx_win_probability_predictions_deleted_at` ON `win_probability_predictions`(`deleted_at`)
+
+-- index idx_win_probability_predictions_offer_id
+CREATE INDEX `idx_win_probability_predictions_offer_id` ON `win_probability_predictions`(`offer_id`)
+
+-- table actual_outcomes
+CREATE TABLE `actual_outcomes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`was_paid` numeric,PRIMARY KEY (`id`))
+
+-- table alerts
+CREATE TABLE `alerts` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`alert_type` text,`severity` text,`title` text,`message` varchar(2000),`is_active` numeric DEFAULT true,`is_acknowledged` numeric DEFAULT false,PRIMARY KEY (`id`),CONSTRAINT `chk_alerts_severity` CHECK (severity IN ('low','medium','high','critical')))
+
+-- table ar_aging_buckets
+CREATE TABLE `ar_aging_buckets` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`customer_name` text,`snapshot_date` datetime,`less15_days` real,`days16_30` real,`days31_60` real,`days61_90` real,`over90_days` real,`total_outstanding` real,`total_overdue` real,`risk_tier` text,`risk_score` real,`overdue_days` integer,PRIMARY KEY (`id`),CONSTRAINT `chk_ar_aging_buckets_overdue_days` CHECK (overdue_days >= 0),CONSTRAINT `chk_ar_aging_buckets_risk_score` CHECK (risk_score >= 0 AND risk_score <= 1),CONSTRAINT `chk_ar_aging_buckets_risk_tier` CHECK (risk_tier IN ('Low','Medium','High','Critical')))
+
+-- table audit_logs
+CREATE TABLE `audit_logs` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`user_id` text,`action` text,`resource` text,`resource_id` text,`description` text,PRIMARY KEY (`id`))
+
+-- table bank_line_payment_allocations
+CREATE TABLE `bank_line_payment_allocations` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`bank_statement_line_id` text,`allocation_type` text,`customer_invoice_id` text,`supplier_invoice_id` text,`expense_entry_id` text,`allocated_amount` decimal(15,3),`currency` text DEFAULT "BHD",`status` text DEFAULT "Allocated",PRIMARY KEY (`id`))
+
+-- table chat_messages
+CREATE TABLE `chat_messages` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`conversation_id` text,`role` text,`content` text,`tokens_used` integer,`message_type` text DEFAULT "chat",`action_type` text,`action_target` text,`action_label` text,`action_data` text,`action_status` text DEFAULT "none",`action_metadata` text,PRIMARY KEY (`id`),CONSTRAINT `chk_chat_messages_role` CHECK (role IN ('user','assistant','system')),CONSTRAINT `chk_chat_messages_tokens_used` CHECK (tokens_used >= 0))
+
+-- table collaborative_pending_operations
+CREATE TABLE `collaborative_pending_operations` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`entity_type` text,`entity_id` text,`operation` text,`payload` text,`status` text DEFAULT "pending",`attempts` integer DEFAULT 0,`last_attempt_at` datetime,`next_attempt_at` datetime,`error_message` text,PRIMARY KEY (`id`))
+
+-- table contract_clauses
+CREATE TABLE `contract_clauses` (`id` text,`category` text,`title` text,`text` text,`is_optional` numeric,`payment_grade_minimum` text,`is_protective` numeric,`display_order` integer,`created_at` datetime,`updated_at` datetime,PRIMARY KEY (`id`))
+
+-- table contract_templates
+CREATE TABLE `contract_templates` (`id` text,`name` text,`category` text,`description` text,`content` text,`is_active` numeric,`created_at` datetime,`updated_at` datetime,PRIMARY KEY (`id`))
+
+-- table contracts
+CREATE TABLE `contracts` (`id` text,`contract_no` text,`customer_id` text,`customer_name` text,`template_id` text,`template_name` text,`contract_type` text,`contract_value_bhd` real,`payment_terms` text,`payment_grade` text,`advance_percent` real,`effective_date` datetime,`expiry_date` datetime,`status` text,`pdf_path` text,`selected_clauses` text,`order_id` text,`created_at` datetime,`updated_at` datetime,`created_by` text,`deleted_at` datetime,PRIMARY KEY (`id`))
+
+-- table conversations
+CREATE TABLE `conversations` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`title` text,`summary` varchar(2000),`is_active` numeric DEFAULT true,`last_msg_at` datetime,PRIMARY KEY (`id`))
+
+-- table costing_histories
+CREATE TABLE `costing_histories` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`product_id` text,`cost_bhd` real,PRIMARY KEY (`id`))
+
+-- table costing_line_item_data
+CREATE TABLE `costing_line_item_data` (`id` text,`costing_sheet_id` integer,`product_number` integer,`equipment` text,`model` text,`specification` text,`supplier` text,`quantity` real,`fob_eur` real,`exchange_rate` real,`total_cost_bhd` real,`markup_percent` real,`selling_price_bhd` real,`total_suggested_bhd` real,`created_at` datetime,`updated_at` datetime,PRIMARY KEY (`id`))
+
+-- table costing_sheet_attachments
+CREATE TABLE `costing_sheet_attachments` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`scope_id` text,`costing_number` text,`file_name` text,`file_ext` text,`mime_type` text,`file_size` integer,`file_hash` text,`storage_mode` text DEFAULT "database",`local_path` varchar(1000),`content_base64` text,`notes` text,`uploaded_by` text,PRIMARY KEY (`id`))
+
+-- table costing_sheet_data
+CREATE TABLE `costing_sheet_data` (`id` integer PRIMARY KEY AUTOINCREMENT,`rfq_id` integer,`rfq_name` text,`opportunity_id` text,`revision_number` integer DEFAULT 1,`parent_costing_id` integer,`is_active` numeric DEFAULT true,`items` text,`subtotal` real,`total_markup` real,`final_price` real,`margin_percent` real,`status` text DEFAULT "draft",`created_by` text,`approved_by` text,`approval_required` numeric,`risk_warnings` text,`created_at` datetime,`updated_at` datetime,`offer_number` text,`customer_name` text,`product_type` text,`total_value_bhd` real,`line_item_count` integer,`source_file_path` text,`extracted_at` datetime)
+
+-- table credit_note_items
+CREATE TABLE `credit_note_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`credit_note_id` text,`line_number` integer,`description` varchar(2000),`quantity` real,`rate` real,`total_bhd` decimal(15,3),PRIMARY KEY (`id`))
+
+-- table credit_notes
+CREATE TABLE "credit_notes"  (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`credit_note_number` text,`credit_note_date` datetime,`invoice_id` text,`invoice_number` text,`customer_id` text,`customer_name` text,`reason` varchar(2000),`subtotal_bhd` decimal(15,3),`vatbhd` decimal(15,3),`vat_percent` real,`grand_total_bhd` decimal(15,3),`status` text DEFAULT "Draft",`division` text,`applied_at` datetime,`credit_note_hash` text,PRIMARY KEY (`id`))
+
+-- table customer_contacts
+CREATE TABLE `customer_contacts` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`contact_name` text,`job_title` text,`email` text,`phone` text,`address` varchar(1000),`is_primary_contact` numeric,`is_primary` numeric,`salutation` text,PRIMARY KEY (`id`))
+
+-- table customer_receipt_allocations
+CREATE TABLE `customer_receipt_allocations` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`receipt_id` text,`invoice_id` text,`invoice_number` text,`payment_id` text,`allocated_amount_bhd` decimal(15,3) NOT NULL DEFAULT 0,`allocation_date` datetime,`status` text DEFAULT "Applied",`updated_by` text,PRIMARY KEY (`id`),CONSTRAINT `chk_customer_receipt_allocations_allocated_amount_bhd` CHECK (allocated_amount_bhd >= 0))
+
+-- table customer_receipts
+CREATE TABLE `customer_receipts` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`receipt_number` text,`customer_id` text,`customer_name` text,`division` text DEFAULT "PH Trading",`receipt_date` datetime,`amount_bhd` decimal(15,3) NOT NULL DEFAULT 0,`applied_amount_bhd` decimal(15,3) NOT NULL DEFAULT 0,`unapplied_amount_bhd` decimal(15,3) NOT NULL DEFAULT 0,`payment_method` text,`reference` text,`status` text DEFAULT "OnAccount",`notes` text,`updated_by` text,PRIMARY KEY (`id`),CONSTRAINT `chk_customer_receipts_amount_bhd` CHECK (amount_bhd >= 0),CONSTRAINT `chk_customer_receipts_applied_amount_bhd` CHECK (applied_amount_bhd >= 0),CONSTRAINT `chk_customer_receipts_unapplied_amount_bhd` CHECK (unapplied_amount_bhd >= 0))
+
+-- table customer_snapshots
+CREATE TABLE `customer_snapshots` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`order_value` real,PRIMARY KEY (`id`))
+
+-- table customers
+CREATE TABLE `customers` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`customer_code` text,`customer_type` text,`business_name` text,`short_code` text,`trading_name` text,`cr_number` text,`status` text DEFAULT "Active",`primary_phone` text,`primary_email` text,`website` text,`address_line1` text,`city` text,`country` text,`trn` text,`mobile_number` text,`tax_code` text,`address` text,`phone` text,`email` text,`industry` text,`relation_years` integer,`payment_grade` text DEFAULT "C",`customer_grade` text DEFAULT "C",`payment_terms_days` integer,`avg_payment_days` real,`dispute_count` integer,`total_orders_value` real,`total_orders_count` integer,`avg_order_value` real,`last_order_date` datetime,`ar_risk_tier` text,`outstanding_bhd` real,`overdue_days` integer,`credit_limit_bhd` real DEFAULT 50000,`is_credit_blocked` numeric DEFAULT false,`requires_prepayment` numeric DEFAULT false,`has_abb_competition` numeric DEFAULT false,`is_emergency_only` numeric DEFAULT false,PRIMARY KEY (`id`))
+
+-- table data_quality_reviews
+CREATE TABLE `data_quality_reviews` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`issue_id` text,`issue_type` text,`severity` text,`entity_type` text,`entity_id` text,`summary` text,`detail` text,`primary_action` text,`status` text,`review_note` text,`reviewed_by_id` text,`reviewed_by` text,`reviewed_at` datetime,PRIMARY KEY (`id`))
+
+-- table db_costing_additional_costs
+CREATE TABLE `db_costing_additional_costs` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`costing_sheet_id` text,`description` text,`amount_bhd` real NOT NULL DEFAULT 0,PRIMARY KEY (`id`),CONSTRAINT `chk_db_costing_additional_costs_amount_bhd` CHECK (amount_bhd >= 0))
+
+-- table db_costing_items
+CREATE TABLE `db_costing_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`costing_sheet_id` text,`line_number` integer,`product_id` text,`product_type` text,`description` varchar(2000),`quantity` real NOT NULL DEFAULT 0,`unit_cost_bhd` real NOT NULL DEFAULT 0,`margin_percent` real NOT NULL DEFAULT 0,`unit_price_bhd` real NOT NULL DEFAULT 0,`line_total_bhd` real NOT NULL DEFAULT 0,PRIMARY KEY (`id`),CONSTRAINT `chk_db_costing_items_line_total_bhd` CHECK (line_total_bhd >= 0),CONSTRAINT `chk_db_costing_items_quantity` CHECK (quantity >= 0),CONSTRAINT `chk_db_costing_items_unit_cost_bhd` CHECK (unit_cost_bhd >= 0),CONSTRAINT `chk_db_costing_items_unit_price_bhd` CHECK (unit_price_bhd >= 0))
+
+-- table db_costing_sheets
+CREATE TABLE `db_costing_sheets` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`costing_number` text,`customer_id` text,`customer_name` text,`costing_date` datetime,`valid_until` datetime,`subtotal_bhd` real NOT NULL DEFAULT 0,`total_margin_bhd` real NOT NULL DEFAULT 0,`shipping_cost_bhd` real NOT NULL DEFAULT 0,`customs_duty_bhd` real NOT NULL DEFAULT 0,`clearance_cost_bhd` real NOT NULL DEFAULT 0,`handling_cost_bhd` real NOT NULL DEFAULT 0,`additional_costs_bhd` real NOT NULL DEFAULT 0,`grand_total_bhd` real NOT NULL DEFAULT 0,`status` text DEFAULT "Draft",`converted_to_offer_id` text,PRIMARY KEY (`id`),CONSTRAINT `chk_db_costing_sheets_additional_costs_bhd` CHECK (additional_costs_bhd >= 0),CONSTRAINT `chk_db_costing_sheets_clearance_cost_bhd` CHECK (clearance_cost_bhd >= 0),CONSTRAINT `chk_db_costing_sheets_customs_duty_bhd` CHECK (customs_duty_bhd >= 0),CONSTRAINT `chk_db_costing_sheets_grand_total_bhd` CHECK (grand_total_bhd >= 0),CONSTRAINT `chk_db_costing_sheets_handling_cost_bhd` CHECK (handling_cost_bhd >= 0),CONSTRAINT `chk_db_costing_sheets_shipping_cost_bhd` CHECK (shipping_cost_bhd >= 0),CONSTRAINT `chk_db_costing_sheets_status` CHECK (status IN ('Draft','Approved','Converted','Rejected')),CONSTRAINT `chk_db_costing_sheets_subtotal_bhd` CHECK (subtotal_bhd >= 0))
+
+-- table delete_approval_requests
+CREATE TABLE `delete_approval_requests` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`entity_type` text,`entity_id` text,`entity_label` text,`requested_by` text,`requested_by_name` text,`requested_role` text,`reason` text,`status` text DEFAULT "pending",`reviewed_by` text,`reviewed_by_name` text,`reviewed_at` datetime,`review_notes` text,PRIMARY KEY (`id`))
+
+-- table delivery_note_items
+CREATE TABLE `delivery_note_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`delivery_note_id` text,`order_item_id` text,`product_id` text,`product_code` text,`description` varchar(2000),`quantity_ordered` real,`quantity_delivered` real,`quantity_remaining` real,PRIMARY KEY (`id`))
+
+-- table delivery_notes
+CREATE TABLE `delivery_notes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`order_id` text,`customer_id` text,`dn_number` text,`delivery_date` datetime,`delivery_address` varchar(1000),`contact_person` text,`contact_phone` text,`driver_name` text,`vehicle_number` text,`transport_method` text,`status` text DEFAULT "Prepared",`updated_by` text,`signed_by` text,`signed_at` datetime,`signature_image` text,`is_partial_delivery` numeric,`delivery_sequence` integer,`total_deliveries` integer,PRIMARY KEY (`id`),CONSTRAINT `chk_delivery_notes_status` CHECK (status IN ('Prepared','Dispatched','InTransit','Delivered','Signed','Cancelled')))
+
+-- table device_users
+CREATE TABLE `device_users` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`device_id` text,`user_id` text,`is_primary` numeric DEFAULT false,PRIMARY KEY (`id`))
+
+-- table devices
+CREATE TABLE `devices` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`machine_id` text,`device_name` text,`os_info` text,`first_seen_at` datetime,`last_seen_at` datetime,`status` text DEFAULT "pending",`approved_by` text,`approved_at` datetime,`is_admin_device` numeric DEFAULT false,`notes` varchar(2000),PRIMARY KEY (`id`),CONSTRAINT `chk_devices_status` CHECK (status IN ('first_setup','pending','approved','blocked','revoked')))
+
+-- table discount_recommendation_records
+CREATE TABLE `discount_recommendation_records` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`offer_id` text,`recommended_discount` real,PRIMARY KEY (`id`))
+
+-- table employee_access_links
+CREATE TABLE `employee_access_links` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`employee_id` text,`license_key` text,`user_id` text,`device_id` text,`access_status` text DEFAULT "active",`is_primary` numeric DEFAULT true,PRIMARY KEY (`id`))
+
+-- table employee_archive_requests
+CREATE TABLE `employee_archive_requests` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`employee_id` text,`employee_name` text,`requested_by` text,`requested_by_name` text,`reason` text,`status` text DEFAULT "pending",`required_approvals` integer DEFAULT 1,`first_approved_by` text,`first_approved_by_name` text,`first_approved_at` datetime,`second_approved_by` text,`second_approved_by_name` text,`second_approved_at` datetime,`rejected_by` text,`rejected_by_name` text,`rejected_at` datetime,`review_notes` text,PRIMARY KEY (`id`))
+
+-- table employee_documents
+CREATE TABLE `employee_documents` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`employee_id` text,`doc_type` text,`permit_subtype` text,`doc_number_encrypted` text,`expires_on` datetime,`notes` text,`notified_at` datetime,PRIMARY KEY (`id`))
+
+-- table employees
+CREATE TABLE `employees` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`employee_code` text,`full_name` text,`preferred_name` text,`email` text,`phone` text,`department` text,`job_title` text,`employment_status` text DEFAULT "active",`manager_employee_id` text,`start_date` datetime,`end_date` datetime,`emergency_contact` varchar(500),`notes` text,`is_active` numeric DEFAULT true,`archived_at` datetime,`archived_by` text,`archive_reason` text,`archive_request_id` text,PRIMARY KEY (`id`))
+
+-- table entity_notes
+CREATE TABLE `entity_notes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`entity_type` text,`entity_id` text,`note_type` text,`content` varchar(5000),PRIMARY KEY (`id`),CONSTRAINT `chk_entity_notes_entity_type` CHECK (entity_type IN ('customer','supplier')),CONSTRAINT `chk_entity_notes_note_type` CHECK (note_type IN ('delivery','issue','general','payment','commercial','technical')))
+
+-- table file_watch_events
+CREATE TABLE `file_watch_events` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`file_path` text,`event_type` text,PRIMARY KEY (`id`))
+
+-- table followup_tasks
+CREATE TABLE `followup_tasks` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`title` text,`description` varchar(2000),`due_date` datetime,`status` text,`priority` text,`type` text,`amount` real,`contact` text,`notes` varchar(2000),`completed_at` datetime,PRIMARY KEY (`id`),CONSTRAINT `chk_followup_tasks_amount` CHECK (amount >= 0),CONSTRAINT `chk_followup_tasks_priority` CHECK (priority IN ('low','medium','high','urgent')),CONSTRAINT `chk_followup_tasks_status` CHECK (status IN ('pending','in_progress','completed','cancelled','overdue')))
+
+-- table goods_received_notes
+CREATE TABLE `goods_received_notes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`purchase_order_id` text,`grn_number` text,`received_date` datetime,`received_by` text,`warehouse_id` text,`supplier_dn_number` text,`qc_status` text DEFAULT "Pending",`qc_notes` varchar(5000),`qc_date` datetime,`qc_by` text,`completed_at` datetime,`updated_by` text,PRIMARY KEY (`id`),CONSTRAINT `chk_goods_received_notes_qc_status` CHECK (qc_status IN ('Pending','Passed','Failed','Partial')))
+
+-- table grade_changes
+CREATE TABLE `grade_changes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`new_grade` text,PRIMARY KEY (`id`))
+
+-- table graph_edges
+CREATE TABLE `graph_edges` (`id` integer PRIMARY KEY AUTOINCREMENT,`source_id` integer,`target_id` integer,`edge_type` text,`properties` text,`weight` real,`created_at` datetime,`updated_at` datetime)
+
+-- table graph_nodes
+CREATE TABLE `graph_nodes` (`id` integer PRIMARY KEY AUTOINCREMENT,`node_type` text,`external_id` text,`label` text,`properties` text,`created_at` datetime,`updated_at` datetime)
+
+-- table grn_items
+CREATE TABLE `grn_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`grn_id` text,`po_item_id` text,`product_id` text,`quantity_ordered` real NOT NULL DEFAULT 0,`quantity_received` real NOT NULL DEFAULT 0,`quantity_accepted` real NOT NULL DEFAULT 0,`quantity_rejected` real NOT NULL DEFAULT 0,`rejection_reason` varchar(2000),PRIMARY KEY (`id`),CONSTRAINT `chk_grn_items_quantity_accepted` CHECK (quantity_accepted >= 0),CONSTRAINT `chk_grn_items_quantity_ordered` CHECK (quantity_ordered >= 0),CONSTRAINT `chk_grn_items_quantity_received` CHECK (quantity_received >= 0),CONSTRAINT `chk_grn_items_quantity_rejected` CHECK (quantity_rejected >= 0))
+
+-- table inbox_documents
+CREATE TABLE `inbox_documents` (`id` integer PRIMARY KEY AUTOINCREMENT,`document_id` text,`file_name` text,`file_path` text,`document_type` text,`status` text,`confidence` real,`extracted_data` text,`suggested_actions` text,`processed_at` datetime,`created_at` datetime)
+
+-- table inventory_items
+CREATE TABLE `inventory_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`product_id` text,`product_code` text,`warehouse_id` text,`quantity_on_hand` decimal(15,3) DEFAULT 0,`quantity_reserved` decimal(15,3) DEFAULT 0,`quantity_available` decimal(15,3) DEFAULT 0,`unit_cost` decimal(15,2),`stock_status` text,`is_active` numeric,`reorder_point` real,`minimum_stock` real,`maximum_stock` real,`total_value` real,`last_purchase_cost` real,`last_movement_at` datetime,PRIMARY KEY (`id`))
+
+-- table invoice_items
+CREATE TABLE `invoice_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`invoice_id` text,`line_number` integer,`description` varchar(2000),`quantity` real NOT NULL DEFAULT 0,`rate` real NOT NULL DEFAULT 0,`total_bhd` real NOT NULL DEFAULT 0,`product_id` text,`product_code` text,`equipment` text,`model` text,`specification` varchar(2000),`detailed_description` varchar(5000),`currency` text,`fob` real NOT NULL DEFAULT 0,`freight` real NOT NULL DEFAULT 0,`total_cost` real NOT NULL DEFAULT 0,`margin_percent` real NOT NULL DEFAULT 0,`total_price` real NOT NULL DEFAULT 0,PRIMARY KEY (`id`),CONSTRAINT `chk_invoice_items_fob` CHECK (fob >= 0),CONSTRAINT `chk_invoice_items_freight` CHECK (freight >= 0),CONSTRAINT `chk_invoice_items_quantity` CHECK (quantity >= 0),CONSTRAINT `chk_invoice_items_rate` CHECK (rate >= 0),CONSTRAINT `chk_invoice_items_total_bhd` CHECK (total_bhd >= 0),CONSTRAINT `chk_invoice_items_total_cost` CHECK (total_cost >= 0),CONSTRAINT `chk_invoice_items_total_price` CHECK (total_price >= 0))
+
+-- table invoice_sequences
+CREATE TABLE `invoice_sequences` (`id` integer PRIMARY KEY AUTOINCREMENT,`prefix` text,`year` integer,`last_number` integer NOT NULL DEFAULT 0,`updated_at` datetime)
+
+-- table invoices
+CREATE TABLE `invoices` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`invoice_number` text,`invoice_date` datetime,`customer_id` text,`customer_name` text,`order_id` text,`customer_po_number` text,`grand_total_bhd` decimal(15,3) NOT NULL DEFAULT 0,`status` text DEFAULT "Sent",`outstanding_bhd` decimal(15,3) NOT NULL DEFAULT 0,`subtotal_bhd` decimal(15,3) NOT NULL DEFAULT 0,`due_date` datetime,`updated_by` text,`rfq_id` text,`quote_id` text,`offer_id` text,`offer_number` text,`delivery_note_id` text,`delivery_note_number` text,`total_supplier_cost_bhd` real NOT NULL DEFAULT 0,`gross_margin_bhd` real NOT NULL DEFAULT 0,`gross_margin_percent` real NOT NULL DEFAULT 0,`customer_reference` text,`attention_person` text,`attention_company` text,`attention_phone` text,`attention_address` varchar(1000),`delivery_weeks` text,`country_of_origin` text,`issued_by` text,`contact_phone` text,`discount_percent` real,`payment_terms` varchar(500),`delivery_terms` varchar(500),`division` text,`field_visibility` varchar(1000),`delivery_note_ref` text,`mode_of_payment` text,`suppliers_ref` text,`other_references` text,`buyers_order_number` text,`buyers_order_date` datetime,`despatch_document_no` text,`delivery_note_date` datetime,`despatched_through` text DEFAULT "Direct",`destination` text DEFAULT "Bahrain",`place_of_supply` text DEFAULT "Kingdom of Bahrain",`terms_of_delivery` text DEFAULT "Direct Bank Transfer",`vatbhd` decimal(15,3) NOT NULL DEFAULT 0,`vat_percent` real NOT NULL DEFAULT 0,`journal_entry_id` text,`invoice_hash` text,`notes` text,PRIMARY KEY (`id`),CONSTRAINT `chk_invoices_grand_total_bhd` CHECK (grand_total_bhd >= 0),CONSTRAINT `chk_invoices_outstanding_bhd` CHECK (outstanding_bhd >= 0),CONSTRAINT `chk_invoices_status` CHECK (status IN ('Draft','Sent','Paid','PartiallyPaid','Overdue','Cancelled','Void','Proforma')),CONSTRAINT `chk_invoices_subtotal_bhd` CHECK (subtotal_bhd >= 0),CONSTRAINT `chk_invoices_total_supplier_cost_bhd` CHECK (total_supplier_cost_bhd >= 0),CONSTRAINT `chk_invoices_vat_percent` CHECK (vat_percent >= 0),CONSTRAINT `chk_invoices_vatbhd` CHECK (vatbhd >= 0))
+
+-- table notification_receipts
+CREATE TABLE `notification_receipts` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`notification_id` text,`employee_id` text,`device_id` text,`receipt_type` text,`received_at` datetime,PRIMARY KEY (`id`))
+
+-- table notifications
+CREATE TABLE `notifications` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`employee_id` text,`notification_type` text,`title` text,`message` text,`status` text DEFAULT "unread",`source_type` text,`source_id` text,`action_route` text,`action_payload` text,`read_at` datetime,`delivered_at` datetime,PRIMARY KEY (`id`))
+
+-- table ocr_documents
+CREATE TABLE `ocr_documents` (`id` integer PRIMARY KEY AUTOINCREMENT,`file_name` text NOT NULL,`file_path` text NOT NULL,`document_type` text,`extracted_text` text,`extracted_data_json` text,`confidence` real,`processing_time_ms` integer,`engine` text,`tier_used` text,`cost` real,`dna_cache_hit` numeric,`table_detected` numeric,`gpu_used` numeric,`processed_at` datetime,`created_at` datetime)
+
+-- table offer_data
+CREATE TABLE `offer_data` (`id` text,`costing_id` text,`customer_name` text,`project_name` text,`amount` real,`status` text DEFAULT "draft",`pdf_path` text,`sent_at` datetime,`created_at` datetime,`updated_at` datetime,PRIMARY KEY (`id`))
+
+-- table offer_follow_ups
+CREATE TABLE `offer_follow_ups` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`offer_id` text,`follow_up_date` datetime,`notes` varchar(2000),`status` text DEFAULT "pending",`completed_at` datetime,`completed_by` text,PRIMARY KEY (`id`),CONSTRAINT `chk_offer_follow_ups_status` CHECK (status IN ('pending','completed','cancelled','overdue')))
+
+-- table offer_items
+CREATE TABLE `offer_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`offer_id` text,`line_number` integer,`product_id` text,`product_code` text,`model` text,`description` varchar(2000),`quantity` real,`unit_price` real,`long_code` varchar(500),`equipment` text,`specification` varchar(2000),`detailed_description` varchar(5000),`currency` text,`fob` real,`freight` real,`total_cost` real,`margin_percent` real,`total_price` real,`exchange_rate` real,`fob_bhd` real,`freight_bhd` real,`insurance` real,`customs_percent` real,`customs_bhd` real,`handling_percent` real,`handling_bhd` real,`finance_percent` real,`finance_bhd` real,`other_costs` real,`user_price` real,`user_price_set` numeric,PRIMARY KEY (`id`))
+
+-- table offer_notes
+CREATE TABLE `offer_notes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`offer_id` text,`note_date` datetime,`content` text,PRIMARY KEY (`id`))
+
+-- table offers
+CREATE TABLE `offers` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`offer_number` text,`revision_number` integer,`revision_of_offer_id` text,`revision_root_offer_id` text,`superseded_by_offer_id` text,`superseded_at` datetime,`rfq_id` text,`customer_id` text,`customer_name` text,`quotation_date` datetime,`validity_date` datetime,`total_value_bhd` real NOT NULL DEFAULT 0,`estimated_margin` real NOT NULL DEFAULT 0,`stage` text,`has_abb_competition` numeric,`lost_reason` varchar(2000),`payment_terms` varchar(500) DEFAULT "30 days from Date of Delivery",`delivery_terms` varchar(500) DEFAULT "DAP Bahrain at your store or Acme Instrumentation",`delivery_weeks` text DEFAULT "4-6 weeks",`country_of_origin` text DEFAULT "Germany / USA",`issued_by` text,`contact_phone` text,`customer_reference` text,`attention_person` text,`attention_company` text,`attention_phone` text,`attention_address` varchar(1000),`discount_percent` real,`quote_type` text DEFAULT "Quotation",`vat_rate` real DEFAULT 10,`attachment_scope_id` text,`division` text,`terms_and_conditions` text,`subject` varchar(1000),`body` text,`coc_coo` text,`test_certificate` varchar(500),`installation` text,`commissioning` text,`testing` varchar(500),PRIMARY KEY (`id`),CONSTRAINT `chk_offers_stage` CHECK (stage IN ('RFQ','Quoted','Won','Lost','Expired')),CONSTRAINT `chk_offers_total_value_bhd` CHECK (total_value_bhd >= 0))
+
+-- table opportunities
+CREATE TABLE `opportunities` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`folder_number` text,`offer_id` text,`customer_id` text,`customer_name` text,`customer_grade` text,`salesperson` text,`division` text,`year` integer,`opp_number` integer,`folder_name` text,`title` text,`eh_ref` text,`source` text,`comment` varchar(2000),`owner_notes` varchar(2000),`product_details` text,`offer_date` datetime,`order_date` datetime,`expected_date` datetime,`closed_date` datetime,`delivery_terms` text,`payment_terms` text,`revenue_bhd` real,`cost_bhd` real,`profit_bhd` real,`spoc_status` text,`wip_status` text,`stage` text,`regime` integer,`confidence` real,`r1` real,`r2` real,`r3` real,`has_abb_competition` numeric,`product_type` text,`won_reason` varchar(2000),`lost_reason` varchar(2000),PRIMARY KEY (`id`))
+
+-- table opportunity_comments
+CREATE TABLE `opportunity_comments` (`id` integer PRIMARY KEY AUTOINCREMENT,`opportunity_id` text,`comment` text,`created_by` text,`created_at` datetime)
+
+-- table opportunity_edit_conflicts
+CREATE TABLE `opportunity_edit_conflicts` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`opportunity_id` text,`folder_number` text,`operation` text,`status` text DEFAULT "pending",`expected_version` integer,`current_version` integer,`attempted_by` text,`attempted_role` text,`proposed_changes_json` text,`current_snapshot_json` text,`base_snapshot_json` text,`resolution_action` text,`resolution_note` text,`resolved_by` text,`resolved_at` datetime,PRIMARY KEY (`id`))
+
+-- table order_items
+CREATE TABLE `order_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`order_id` text,`line_number` integer,`product_id` text,`product_code` text,`description` varchar(2000),`quantity` real,`unit_price` real,`quantity_shipped` real,`quantity_invoiced` real,`equipment` text,`model` text,`specification` varchar(2000),`detailed_description` varchar(5000),`currency` text,`fob` real,`freight` real,`total_cost` real,`margin_percent` real,`total_price` real,`unit_price_bhd` decimal(15,3),`brand` text,`token` text,PRIMARY KEY (`id`))
+
+-- table orders
+CREATE TABLE `orders` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`order_number` text,`customer_po_number` text,`customer_id` text,`customer_name` text,`order_date` datetime,`required_date` datetime,`total_value_bhd` decimal(15,3) NOT NULL DEFAULT 0,`grand_total_bhd` decimal(15,3) NOT NULL DEFAULT 0,`status` text DEFAULT "Processing",`updated_by` text,`payment_terms` varchar(500),`delivery_terms` varchar(500),`offer_id` text,`offer_number` text,`rfq_id` text,`customer_reference` text,`attention_person` text,`attention_company` text,`attention_phone` text,`attention_address` varchar(1000),`delivery_weeks` text,`country_of_origin` text,`issued_by` text,`contact_phone` text,`discount_percent` real,`division` text,PRIMARY KEY (`id`),CONSTRAINT `chk_orders_grand_total_bhd` CHECK (grand_total_bhd >= 0),CONSTRAINT `chk_orders_total_value_bhd` CHECK (total_value_bhd >= 0))
+
+-- table payment_prediction_accuracies
+CREATE TABLE `payment_prediction_accuracies` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`was_accurate` numeric,PRIMARY KEY (`id`))
+
+-- table payments
+CREATE TABLE `payments` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`invoice_id` text,`invoice_number` text,`amount_bhd` decimal(15,3) NOT NULL DEFAULT 0,`payment_date` datetime,`payment_method` text,`days_to_payment` integer,`idempotency_key` text,`journal_entry_id` text,`bank_account_id` text,`receipt_id` text,`reference` text,`division` text,`updated_by` text,PRIMARY KEY (`id`),CONSTRAINT `chk_payments_amount_bhd` CHECK (amount_bhd >= 0),CONSTRAINT `chk_payments_days_to_payment` CHECK (days_to_payment >= 0),CONSTRAINT `chk_payments_payment_method` CHECK (payment_method IN ('Cash','Cheque','Bank Transfer','Credit Card','LC','PDC','Other')))
+
+-- table post_sale_notes
+CREATE TABLE `post_sale_notes` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`order_id` text,`order_number` text,`note_type` text,`description` varchar(5000),`cost_bhd` real,`note_date` datetime,`resolved_at` datetime,`resolution` varchar(5000),PRIMARY KEY (`id`),CONSTRAINT `chk_post_sale_notes_cost_bhd` CHECK (cost_bhd >= 0),CONSTRAINT `chk_post_sale_notes_note_type` CHECK (note_type IN ('repair','replace','reinstall','warranty','refund','calibration','other')))
+
+-- table prediction_records
+CREATE TABLE `prediction_records` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`customer_id` text,`customer_name` text,`grade` text,`predicted_days` integer,`confidence` real,`r1` real,`r2` real,`r3` real,PRIMARY KEY (`id`))
+
+-- table products
+CREATE TABLE `products` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`product_code` text,`product_name` text,`product_category` text,`supplier_id` text,`supplier_code` text,`standard_cost_bhd` real,`standard_price_bhd` real,`description` text,`is_active` numeric,`stock_quantity` integer,`sku` text,`part_number` text,`hs_code` text,`unit_of_measure` text,`datasheet_url` varchar(2000),`specifications` varchar(5000),`requires_serial_tracking` numeric DEFAULT false,PRIMARY KEY (`id`))
+
+-- table project_members
+CREATE TABLE `project_members` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`project_id` text,`employee_id` text,`role` text,`allocation_percent` real DEFAULT 100,`is_active` numeric DEFAULT true,`joined_at` datetime,`left_at` datetime,PRIMARY KEY (`id`))
+
+-- table projects
+CREATE TABLE `projects` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`name` text,`project_type` text DEFAULT "internal",`description` text,`status` text DEFAULT "active",`customer_id` text,`opportunity_id` text,`order_id` text,`customer_name` text,`end_user_name` text,`opportunity_key` text,`customer_poc_name` text,`customer_poc_email` text,`customer_poc_phone` text,`starts_on` datetime,`ends_on` datetime,PRIMARY KEY (`id`))
+
+-- table purchase_order_items
+CREATE TABLE `purchase_order_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`purchase_order_id` text,`order_item_id` text,`product_id` text,`product_code` text,`supplier_part_number` text,`description` varchar(2000),`quantity` real,`unit_price_foreign` real,`unit_price_bhd` real,`total_foreign` real,`total_bhd` real,`quantity_received` real,PRIMARY KEY (`id`))
+
+-- table purchase_orders
+CREATE TABLE `purchase_orders` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`order_id` text,`rfq_id` text,`supplier_id` text,`supplier_name` text,`po_number` text,`po_date` datetime,`expected_delivery` datetime,`currency` text,`exchange_rate` real NOT NULL DEFAULT 1,`subtotal_foreign` real NOT NULL DEFAULT 0,`subtotal_bhd` decimal(15,3) NOT NULL DEFAULT 0,`vat_amount` decimal(15,3) NOT NULL DEFAULT 0,`total_foreign` real NOT NULL DEFAULT 0,`total_bhd` decimal(15,3) NOT NULL DEFAULT 0,`payment_terms` varchar(500),`payment_due_date` datetime,`status` text DEFAULT "Draft",`approved_by` text,`approved_at` datetime,`updated_by` text,`division` text,PRIMARY KEY (`id`),CONSTRAINT `chk_purchase_orders_exchange_rate` CHECK (exchange_rate > 0),CONSTRAINT `chk_purchase_orders_status` CHECK (status IN ('Draft','Pending Approval','Approved','Sent','Acknowledged','Partially Received','Received','Cancelled','Closed')),CONSTRAINT `chk_purchase_orders_subtotal_bhd` CHECK (subtotal_bhd >= 0),CONSTRAINT `chk_purchase_orders_subtotal_foreign` CHECK (subtotal_foreign >= 0),CONSTRAINT `chk_purchase_orders_total_bhd` CHECK (total_bhd >= 0),CONSTRAINT `chk_purchase_orders_total_foreign` CHECK (total_foreign >= 0),CONSTRAINT `chk_purchase_orders_vat_amount` CHECK (vat_amount >= 0))
+
+-- table quick_captures
+CREATE TABLE `quick_captures` (`id` integer PRIMARY KEY AUTOINCREMENT,`title` text,`content` text,`tags` text,`priority` text,`status` text,`created_at` datetime,`updated_at` datetime)
+
+-- table rfq_comments
+CREATE TABLE `rfq_comments` (`id` integer PRIMARY KEY AUTOINCREMENT,`rfq_id` integer,`comment` text,`created_by` text,`created_at` datetime)
+
+-- table rfq_data
+CREATE TABLE `rfq_data` (`id` integer PRIMARY KEY AUTOINCREMENT,`rfq_number` text,`rfq_ref` text,`client` text,`project` text,`value` real,`notes` text,`status` text DEFAULT "pending",`stage` text DEFAULT "RFQ Received",`created_at` datetime,`updated_at` datetime,`document_hash` text,`visit_locations` text,`product_details` text,`source_doc_path` text)
+
+-- table roles
+CREATE TABLE `roles` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`name` text,`display_name` text,`description` varchar(1000),`permissions` text,`is_active` numeric DEFAULT true,`is_system` numeric DEFAULT false,PRIMARY KEY (`id`))
+
+-- table serial_numbers
+CREATE TABLE `serial_numbers` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`product_id` text,`product_code` text,`serial_no` text,`lot_number` text,`status` text DEFAULT "Available",`po_id` text,`po_number` text,`grn_item_id` text,`grn_number` text,`dn_item_id` text,`dn_number` text,`invoice_id` text,`invoice_number` text,`customer_id` text,`customer_name` text,`received_date` datetime,`shipped_date` datetime,`warranty_start_date` datetime,`warranty_end_date` datetime,`warranty_months` integer,`calibration_date` datetime,`calibration_due_date` datetime,`calibration_cert_path` text,`notes` varchar(2000),PRIMARY KEY (`id`))
+
+-- table settings
+CREATE TABLE `settings` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`key` text,`value` varchar(5000),`category` text,`description` varchar(1000),`is_encrypted` numeric DEFAULT false,PRIMARY KEY (`id`))
+
+-- table shipments
+CREATE TABLE `shipments` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`order_id` text,`order_number` text,`status` text,`shipment_date` datetime,`delivered_date` datetime,`courier_name` text,`tracking_number` text,PRIMARY KEY (`id`),CONSTRAINT `chk_shipments_status` CHECK (status IN ('Pending','In Transit','Delivered','Failed','Cancelled')))
+
+-- table stock_adjustments
+CREATE TABLE `stock_adjustments` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`inventory_item_id` text,`adjustment_date` datetime,`adjustment_type` text,`reason` text,`variance` real,`system_quantity` real,`physical_quantity` real,`unit_cost` real,`value_impact` real,`notes` text,`status` text,`adjustment_number` text,`approved_by` text,`approved_at` datetime,PRIMARY KEY (`id`))
+
+-- table stock_movements
+CREATE TABLE `stock_movements` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`inventory_item_id` text,`movement_type` text,`movement_number` text,`quantity` real,`direction` text,`balance_before` real,`balance_after` real,`movement_date` datetime,`reference_type` text,`reference_id` text,`reference_number` text,`counterparty_id` text,`counterparty_name` text,`notes` varchar(2000),`unit_cost` real,`total_value` real,PRIMARY KEY (`id`))
+
+-- table supplier_contacts
+CREATE TABLE `supplier_contacts` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`supplier_id` text,`contact_name` text,`job_title` text,`email` text,`phone` text,`address` varchar(1000),`is_primary_contact` numeric,PRIMARY KEY (`id`))
+
+-- table supplier_invoice_items
+CREATE TABLE `supplier_invoice_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`supplier_invoice_id` text,`line_number` integer,`description` varchar(2000),`quantity` real,`unit_price` real,`total_price` real,`currency` text,PRIMARY KEY (`id`))
+
+-- table supplier_invoices
+CREATE TABLE `supplier_invoices` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`supplier_id` text,`supplier_name` text,`purchase_order_id` text,`po_number` text,`grn_id` text,`order_id` text,`invoice_number` text,`invoice_date` datetime,`due_date` datetime,`currency` text,`exchange_rate` real NOT NULL DEFAULT 1,`subtotal_foreign` real NOT NULL DEFAULT 0,`subtotal_bhd` decimal(15,3) NOT NULL DEFAULT 0,`vat_foreign` real NOT NULL DEFAULT 0,`vatbhd` decimal(15,3) NOT NULL DEFAULT 0,`total_foreign` real NOT NULL DEFAULT 0,`total_bhd` decimal(15,3) NOT NULL DEFAULT 0,`match_status` text DEFAULT "Pending",`po_match_ok` numeric,`grn_match_ok` numeric,`status` text DEFAULT "Pending",`approved_by` text,`approved_at` datetime,`updated_by` text,`payment_status` text,`payment_date` datetime,`payment_ref` text,`payment_method` text,`ocr_document_id` text,`ocr_confidence` real,`division` text,`discrepancy_reason` varchar(2000),`dispute_reason` varchar(2000),`journal_entry_id` text,PRIMARY KEY (`id`),CONSTRAINT `chk_supplier_invoices_exchange_rate` CHECK (exchange_rate > 0),CONSTRAINT `chk_supplier_invoices_match_status` CHECK (match_status IN ('Pending','Matched','Discrepancy','Review Required','Dispute')),CONSTRAINT `chk_supplier_invoices_status` CHECK (status IN ('Pending','Approved','Rejected','Paid','Verified','Disputed','Dispute')),CONSTRAINT `chk_supplier_invoices_subtotal_bhd` CHECK (subtotal_bhd >= 0),CONSTRAINT `chk_supplier_invoices_subtotal_foreign` CHECK (subtotal_foreign >= 0),CONSTRAINT `chk_supplier_invoices_total_bhd` CHECK (total_bhd >= 0),CONSTRAINT `chk_supplier_invoices_total_foreign` CHECK (total_foreign >= 0),CONSTRAINT `chk_supplier_invoices_vat_foreign` CHECK (vat_foreign >= 0),CONSTRAINT `chk_supplier_invoices_vatbhd` CHECK (vatbhd >= 0))
+
+-- table supplier_issues
+CREATE TABLE `supplier_issues` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`supplier_id` text,`order_ref` text,`description` varchar(5000),`status` text,`resolution` varchar(5000),`cost_bhd` real,`resolved_at` datetime,PRIMARY KEY (`id`),CONSTRAINT `chk_supplier_issues_cost_bhd` CHECK (cost_bhd >= 0),CONSTRAINT `chk_supplier_issues_status` CHECK (status IN ('open','pending','resolved','escalated')))
+
+-- table supplier_payments
+CREATE TABLE `supplier_payments` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`supplier_invoice_id` text,`supplier_id` text,`amount_foreign` real NOT NULL DEFAULT 0,`currency` text,`exchange_rate` real NOT NULL DEFAULT 1,`amount_bhd` decimal(15,3) NOT NULL DEFAULT 0,`payment_date` datetime,`payment_method` text,`reference` text,`notes` varchar(2000),`payment_number` text,`journal_entry_id` text,`bank_account_id` text,`updated_by` text,`division` text,`supplier_name` text,`invoice_number` text,PRIMARY KEY (`id`),CONSTRAINT `chk_supplier_payments_amount_bhd` CHECK (amount_bhd >= 0),CONSTRAINT `chk_supplier_payments_amount_foreign` CHECK (amount_foreign >= 0),CONSTRAINT `chk_supplier_payments_exchange_rate` CHECK (exchange_rate > 0),CONSTRAINT `chk_supplier_payments_payment_method` CHECK (payment_method IN ('Bank Transfer','Cheque','LC','Cash','Wire Transfer','PDC','Other')))
+
+-- table suppliers
+CREATE TABLE `suppliers` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`supplier_code` text,`supplier_name` text,`country` text,`lead_time_days` integer,`tax_id` text,`supplier_type` text,`brands_handled` varchar(2000),`product_types` varchar(2000),`primary_contact` text,`email` text,`phone` text,`address` varchar(1000),`bank_name` text,`account_number` text,`iban` text,`swift_code` text,`payment_terms` text DEFAULT "Net 30",`rating` integer DEFAULT 3,`notes` varchar(5000),`is_active` numeric,PRIMARY KEY (`id`))
+
+-- table sync_records
+CREATE TABLE `sync_records` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`sync_table` text,`record_id` text,`synced_at` datetime,`direction` text,`remote_version` integer,`local_version` integer,`conflict_state` text,PRIMARY KEY (`id`),CONSTRAINT `chk_sync_records_conflict_state` CHECK (conflict_state IN ('none','local_wins','remote_wins')),CONSTRAINT `chk_sync_records_direction` CHECK (direction IN ('push','pull')),CONSTRAINT `chk_sync_records_local_version` CHECK (local_version >= 0),CONSTRAINT `chk_sync_records_remote_version` CHECK (remote_version >= 0))
+
+-- table sync_status
+CREATE TABLE `sync_status` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`file_path` text,`status` text,`last_sync_time` datetime,PRIMARY KEY (`id`))
+
+-- table tally_invoice_imports
+CREATE TABLE `tally_invoice_imports` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`import_batch` text,`year` integer,`invoice_number` text,`customer_name` text,`matched_customer_id` text,`invoice_date` datetime,`amount` real,`currency` text,`status` text,`raw_data` varchar(5000),PRIMARY KEY (`id`),CONSTRAINT `chk_tally_invoice_imports_amount` CHECK (amount >= 0),CONSTRAINT `chk_tally_invoice_imports_status` CHECK (status IN ('imported','matched','duplicate','error','pending')),CONSTRAINT `chk_tally_invoice_imports_year` CHECK (year >= 2000 AND year <= 2100))
+
+-- table tally_purchase_imports
+CREATE TABLE `tally_purchase_imports` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`import_batch` text,`year` integer,`invoice_number` text,`supplier_name` text,`matched_supplier_id` text,`invoice_date` datetime,`amount` real,`currency` text,`status` text,`raw_data` varchar(5000),PRIMARY KEY (`id`),CONSTRAINT `chk_tally_purchase_imports_amount` CHECK (amount >= 0),CONSTRAINT `chk_tally_purchase_imports_status` CHECK (status IN ('imported','matched','duplicate','error','pending')),CONSTRAINT `chk_tally_purchase_imports_year` CHECK (year >= 2000 AND year <= 2100))
+
+-- table task_activity
+CREATE TABLE `task_activity` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`task_id` text,`employee_id` text,`activity_type` text,`detail` text,`metadata_json` text,PRIMARY KEY (`id`))
+
+-- table task_comments
+CREATE TABLE `task_comments` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`task_id` text,`employee_id` text,`body` text,PRIMARY KEY (`id`))
+
+-- table task_items
+CREATE TABLE `task_items` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`title` text,`description` text,`task_type` text DEFAULT "general",`legacy_follow_up_id` text,`status` text DEFAULT "open",`blocked_reason` text,`priority` text DEFAULT "medium",`due_date` datetime,`customer_id` text,`opportunity_id` text,`order_id` text,`project_id` text,`creator_employee_id` text,`assignee_employee_id` text,`watchers_json` text,`started_at` datetime,`completed_at` datetime,`last_comment_at` datetime,PRIMARY KEY (`id`))
+
+-- table user_activity_events
+CREATE TABLE `user_activity_events` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`event_time` datetime,`event_type` text,`category` text,`screen` text,`route` text,`action_label` text,`action_key` text,`resource_type` text,`resource_id` text,`search_text` text,`search_hash` text,`search_redacted` numeric DEFAULT false,`metadata_json` text,`user_id` text,`employee_id` text,`employee_name` text,`license_key_hash` text,`license_role` text,`device_hash` text,`session_id` text,`active_seconds` integer,`meaningful_seconds` integer,`idle_seconds` integer,PRIMARY KEY (`id`))
+
+-- table user_activity_sessions
+CREATE TABLE `user_activity_sessions` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`session_id` text,`started_at` datetime,`ended_at` datetime,`last_seen_at` datetime,`user_id` text,`employee_id` text,`employee_name` text,`license_key_hash` text,`license_role` text,`device_hash` text,`source` text,`primary_screen` text,`is_open` numeric DEFAULT true,`active_seconds` integer,`meaningful_seconds` integer,`idle_seconds` integer,`event_count` integer,`search_count` integer,`create_count` integer,`update_count` integer,`export_count` integer,`navigation_count` integer,PRIMARY KEY (`id`))
+
+-- table user_activity_weekly_summaries
+CREATE TABLE `user_activity_weekly_summaries` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`week_start` datetime,`week_end` datetime,`generated_at` datetime,`user_key` text,`user_id` text,`employee_id` text,`employee_name` text,`license_key_hash` text,`license_role` text,`device_hash` text,`active_seconds` integer,`meaningful_seconds` integer,`idle_seconds` integer,`event_count` integer,`search_count` integer,`create_count` integer,`update_count` integer,`export_count` integer,`navigation_count` integer,`efficiency_score` real,`top_screens_json` text,`top_actions_json` text,`top_searches_json` text,PRIMARY KEY (`id`))
+
+-- table user_sessions
+CREATE TABLE `user_sessions` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`user_id` text,`token` text,`refresh_token` text,`access_token_expiry` datetime,`refresh_token_expiry` datetime,`last_activity_at` datetime,`is_active` numeric DEFAULT true,`invalidated_at` datetime,`invalidated_reason` text,PRIMARY KEY (`id`))
+
+-- table users
+CREATE TABLE `users` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`username` text,`email` text,`password_hash` text,`role_id` text,`full_name` text,`display_name` text,`department` text,`job_title` text,`is_active` numeric DEFAULT true,`last_login_at` datetime,`password_changed_at` datetime,`must_change_password` numeric DEFAULT false,PRIMARY KEY (`id`))
+
+-- table warehouses
+CREATE TABLE `warehouses` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`code` text,`name` text,`is_active` numeric DEFAULT true,PRIMARY KEY (`id`))
+
+-- table win_probability_predictions
+CREATE TABLE `win_probability_predictions` (`id` text,`created_at` datetime,`updated_at` datetime,`deleted_at` datetime,`version` integer DEFAULT 1,`created_by` text,`offer_id` text,`predicted_probability` real,PRIMARY KEY (`id`))
+

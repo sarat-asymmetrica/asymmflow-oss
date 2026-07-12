@@ -1,0 +1,392 @@
+{
+  "module_id": "business_memory_intake",
+  "name": "Business Memory Intake",
+  "status": "durable_contract_ladder_complete_source_registry_runtime_visible",
+  "version": "0.1.0-draft",
+  "owner": "asymmflow",
+  "next_goal": {
+    "handoff": "docs/CODEX_GOAL_BUSINESS_MEMORY_SOURCE_REGISTRY_DURABILITY_HANDOFF.md",
+    "execution_model": "checkpoint ladder for source registry durability, Inbox provenance surfacing, and optional cashflow allocation preflight promotion",
+    "primary_gap": "Business Memory source asset durability, runtime surfacing, and documentation are current; the next implementation gap is the Cashflow Evidence allocation-aware preflight promotion."
+  },
+  "product_loop": {
+    "messy_input": [
+      "messages",
+      "emails",
+      "pdfs",
+      "scans",
+      "screenshots",
+      "excel_files",
+      "folders",
+      "inbox_records"
+    ],
+    "canonical_state": "reviewable_intake_candidate",
+    "intelligence": [
+      "document_classification",
+      "field_extraction_status",
+      "source_provenance",
+      "confidence_mapping",
+      "deterministic_link_proposals"
+    ],
+    "decision_or_action": [
+      "review_candidate",
+      "correct_field",
+      "request_deterministic_link",
+      "assemble_butler_context"
+    ],
+    "audit_trail": "intake_candidate_audit_refs"
+  },
+  "justification_filters": {
+    "roi_proof": "Reduce document hunting, data retyping, accountant/operator context loss, follow-up reconstruction, and evidence chaos across importable business sources.",
+    "workflow_closure": "The first slice ends with a canonical candidate that is reviewable, correctable, link-proposed, and auditable before any authoritative business mutation.",
+    "engine_leverage": [
+      "runtime InboxProcessResult",
+      "stored InboxDocument",
+      "OCR/extraction maps",
+      "document classifier confidence",
+      "future Butler TOON context"
+    ],
+    "operator_trust": [
+      "source_kind",
+      "source_ref",
+      "field_status",
+      "confidence",
+      "warnings",
+      "suggested_deterministic_service",
+      "audit_refs"
+    ]
+  },
+  "contracts": {
+    "capnp_schemas": [
+      "schemas/documents.capnp (current durable/cross-module Business Memory contract; additive structs/enums cover candidates, context packs, review records, and batch wrappers)"
+    ],
+    "generated_surfaces": [
+      "schemas/go/documents/documents.capnp.go",
+      "frontend/src/lib/types/schemas/index.ts"
+    ],
+    "adapter_bridge": [
+      "pkg/adapter/documents/business_memory.go"
+    ],
+    "json_payloads": [
+      "pkg/documents/intake.Candidate",
+      "pkg/documents/intake.SourceRef",
+      "pkg/documents/intake.ExtractedField",
+      "pkg/documents/intake.SuggestedLink",
+      "pkg/documents/intake.SourceAsset",
+      "manifest"
+    ],
+    "toon_contexts": [
+      "business_memory_intake_candidate_context (checkpoint C)"
+    ]
+  },
+  "kernels": [
+    {
+      "name": "canonical_intake_candidate",
+      "path": "pkg/documents/intake/model.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/documents/... -count=1"
+      ]
+    },
+    {
+      "name": "inbox_and_ocr_normalization",
+      "path": "pkg/documents/intake/normalize.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/documents/... -count=1"
+      ]
+    },
+    {
+      "name": "butler_context_pack",
+      "path": "pkg/documents/intake/context_pack.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/documents/... -count=1",
+        "go build ./..."
+      ]
+    },
+    {
+      "name": "review_queue_preparation",
+      "path": "pkg/documents/intake/review_queue.go",
+      "side_effects": false,
+      "required_tests": [
+        "go test ./pkg/documents/... -count=1",
+        "go build ./..."
+      ]
+    }
+  ],
+  "domain_services": [
+    {
+      "name": "documents_intake_review_service",
+      "path": "pkg/documents/intake/review_service.go",
+      "responsibilities": [
+        "persist review decisions",
+        "enforce permissions",
+        "route deterministic link requests",
+        "write audit records"
+      ]
+    }
+  ],
+  "storage_adapters": [
+    {
+      "name": "intake_review_queue_storage",
+      "path": "pkg/documents/intake/review_repository.go and pkg/adapter/documents/business_memory_storage.go",
+      "migration_owner": "GORMBusinessMemoryReviewRepository.Migrate(ctx)",
+      "sync_impact": "future durable reviews should use module-aware sync envelopes"
+    },
+    {
+      "name": "source_asset_registry_repository",
+      "path": "pkg/documents/intake/source_repository.go and pkg/adapter/documents/business_memory_source_storage.go",
+      "migration_owner": "GORMBusinessMemorySourceAssetRepository.Migrate(ctx)",
+      "sync_impact": "future durable source assets should use module-aware sync envelopes and conflict policy"
+    }
+  ],
+  "source_track_acceptance_constraints": [
+    {
+      "name": "revision_provenance",
+      "status": "carried_as_acceptance_constraint",
+      "note": "Commercial document revision identity must be durable before operator-visible truth claims."
+    },
+    {
+      "name": "allocation_aware_evidence",
+      "status": "next_cashflow_preflight",
+      "note": "Cashflow matching must support customer invoices, supplier invoices, expenses, partial allocations, and mixed matches."
+    },
+    {
+      "name": "approval_queues",
+      "status": "future_authority_surface_constraint",
+      "note": "Destructive or authoritative actions require explicit operator approval states."
+    },
+    {
+      "name": "sync_conflict_policy",
+      "status": "future_sync_contract_constraint",
+      "note": "Durable review and source records need module-aware sync envelopes before distributed merge promises."
+    },
+    {
+      "name": "ui_backend_action_inventory",
+      "status": "launch_readiness_constraint",
+      "note": "Action surfaces should expose command ownership, backend support, and authority level."
+    }
+  ],
+  "source_registries": [
+    {
+      "name": "business_memory_source_asset_registry",
+      "path": "pkg/documents/intake/source_registry.go, pkg/documents/intake/source_repository.go, and pkg/adapter/documents/business_memory_source_storage.go",
+      "status": "checkpoint_4_runtime_viewmodel_surface",
+      "tracks": [
+        "source_id",
+        "kind",
+        "path",
+        "label",
+        "hash",
+        "import_batch",
+        "privacy_class",
+        "processing_status",
+        "candidate_ids",
+        "audit_refs",
+        "runtime_queue_visibility",
+        "export_bundle_visibility"
+      ]
+    }
+  ],
+  "runtime_methods": [
+    {
+      "name": "GetBusinessMemoryReviewQueue",
+      "path": "business_memory_review_runtime.go",
+      "permission": "documents:view",
+      "status": "source_registry_runtime_visible"
+    },
+    {
+      "name": "RecordBusinessMemoryReviewDecision",
+      "path": "business_memory_review_runtime.go",
+      "permission": "documents:classify",
+      "status": "source_registry_runtime_visible"
+    },
+    {
+      "name": "GenerateBusinessMemoryContextPack",
+      "path": "business_memory_review_runtime.go",
+      "permission": "documents:view",
+      "status": "checkpoint_e"
+    },
+    {
+      "name": "ExportBusinessMemoryReviewBundle",
+      "path": "business_memory_review_runtime.go",
+      "permission": "documents:view",
+      "status": "source_registry_runtime_visible"
+    }
+  ],
+  "viewmodels": [
+    {
+      "name": "BusinessMemoryIntakeReviewVM",
+      "path": "internal/viewmodel/documents/documents_vm.go",
+      "status": "source_registry_runtime_visible"
+    }
+  ],
+  "ui_surfaces": [
+    {
+      "name": "InboxBusinessMemoryReviewSurface",
+      "path": "frontend/src/lib/screens/InboxScreen.svelte",
+      "status": "source_registry_runtime_visible"
+    }
+  ],
+  "events": {
+    "publishes": [
+      "documents.intake.candidate_reviewed",
+      "documents.intake.link_requested",
+      "documents.intake.context_assembled"
+    ],
+    "subscribes": [
+      "documents.inbox.processed",
+      "documents.ocr.extracted",
+      "documents.classifier.classified"
+    ],
+    "correlation_id_required": true
+  },
+  "permissions": [
+    "documents:view",
+    "documents:classify",
+    "documents:intake_review",
+    "documents:intake_agent"
+  ],
+  "audit": {
+    "records": [
+      "intake_candidate_audit_refs",
+      "future_intake_review_decision"
+    ],
+    "required_fields": [
+      "actor",
+      "action",
+      "source_kind",
+      "source_id",
+      "candidate_id",
+      "correlation_id",
+      "performed_at",
+      "reason"
+    ],
+    "agent_suggestion_link_required": true
+  },
+  "agent_safe_apis": [
+    {
+      "name": "inspect_intake_candidate",
+      "path": "pkg/documents/intake",
+      "mode": "inspect",
+      "mutates_state": false
+    },
+    {
+      "name": "explain_intake_candidate",
+      "path": "pkg/documents/intake",
+      "mode": "explain",
+      "mutates_state": false
+    },
+    {
+      "name": "draft_review_summary",
+      "path": "pkg/documents/intake",
+      "mode": "draft",
+      "mutates_state": false
+    },
+    {
+      "name": "recommend_deterministic_link",
+      "path": "pkg/documents/intake",
+      "mode": "recommend",
+      "mutates_state": false
+    }
+  ],
+  "action_inventory": {
+    "business_memory_operator_visible": [
+      "businessMemory.review.accept",
+      "businessMemory.review.requestLink",
+      "businessMemory.review.correctField",
+      "businessMemory.review.archive",
+      "businessMemory.exportReviewBundle"
+    ],
+    "business_memory_agent_safe": [
+      "inspect_intake_candidate",
+      "explain_intake_candidate",
+      "draft_review_summary",
+      "recommend_deterministic_link"
+    ],
+    "authority_boundary": "Agents may inspect, explain, draft, recommend, and assemble context; operators retain approve/link/post/delete authority."
+  },
+  "forbidden_agent_operations": [
+    "approve",
+    "link",
+    "post",
+    "delete",
+    "create_authoritative_business_records"
+  ],
+  "tests": {
+    "kernel": [
+      "go test ./pkg/documents/... -count=1"
+    ],
+    "schema": [
+      "powershell -ExecutionPolicy Bypass -NoProfile -File schemas/generate.ps1 -CheckOnly"
+    ],
+    "adapter": [
+      "go test ./pkg/adapter/documents -count=1",
+      "go test ./pkg/adapter/documents ./pkg/documents/... -count=1"
+    ],
+    "storage": [
+      "go test ./pkg/documents/... -count=1",
+      "go test ./pkg/adapter/documents -count=1"
+    ],
+    "source_registry": [
+      "go test ./pkg/documents/... -count=1",
+      "go test ./pkg/adapter/documents -count=1",
+      "source repository tests cover stable ID persistence, duplicate merge, candidate/audit reference merge, seen-time preservation, filters, durable SQLite persistence, and invalid input rejection"
+    ],
+    "service": [
+      "go test ./pkg/documents/... -count=1",
+      "go build ./..."
+    ],
+    "export_replay": [
+      "go test ./pkg/documents/... -count=1",
+      "go test ./pkg/adapter/documents -count=1",
+      "wails generate module",
+      "ReviewExportBundle preserves source registry provenance in JSON replay and TOON exports"
+    ],
+    "runtime_wails_viewmodel": [
+      "go test ./internal/viewmodel/documents -count=1",
+      "go test . -run \"TestParseBusinessMemoryReviewDecision|TestInboxDocumentToBusinessMemoryCandidate|TestCandidateToBusinessMemorySourceAsset\" -count=1",
+      "go build ./...",
+      "wails generate module",
+      "npm.cmd --prefix frontend run check",
+      "Inbox Business Memory review surface displays source ID, kind, label/path, privacy class, processing status, candidate count, and audit ref count"
+    ],
+    "docs": [
+      "Get-Content docs/modules/business_memory_intake.manifest.json | ConvertFrom-Json | Out-Null"
+    ]
+  },
+  "launch_readiness": [
+    "canonical_candidate_contract",
+    "source_kind_enum",
+    "review_status_enum",
+    "field_status_enum",
+    "inbox_process_result_normalizer",
+    "inbox_document_normalizer",
+    "ocr_extraction_map_normalizer",
+    "fixture_backed_tests",
+    "agent_api_draft_only",
+    "capnp_durable_contract",
+    "generated_go_schema_surface",
+    "generated_typescript_schema_surface",
+    "adapter_roundtrip_tests",
+    "durable_review_repository_boundary",
+    "gorm_review_storage_adapter",
+    "review_idempotency_tests",
+    "deterministic_review_service",
+    "agent_mutation_rejection_tests",
+    "wails_review_queue_methods",
+    "persisted_review_state_viewmodel",
+    "inbox_review_commands_backed_by_service",
+    "operator_review_command_set",
+    "json_review_bundle_export",
+    "json_review_bundle_replay",
+    "toon_review_bundle_export",
+    "source_asset_registry",
+    "source_asset_repository_boundary",
+    "source_asset_durable_adapter",
+    "source_asset_export_provenance",
+    "source_asset_runtime_viewmodel_surface",
+    "source_asset_inbox_operator_visibility"
+  ]
+}

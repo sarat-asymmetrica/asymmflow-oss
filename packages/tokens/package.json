@@ -1,0 +1,24 @@
+{
+  "name": "@asymmflow/tokens",
+  "version": "0.1.0",
+  "description": "AsymmFlow design tokens — the single token source and theme contract. See packages/DESIGN_CONSTITUTION.md.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./css/base.css": "./css/base.css",
+    "./css/themes/onyx-ether.css": "./css/themes/onyx-ether.css"
+  },
+  "files": [
+    "src",
+    "css"
+  ],
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

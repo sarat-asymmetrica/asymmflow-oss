@@ -1,0 +1,42 @@
+{
+  "version": "QGIF/1.0",
+  "metadata": {
+    "title": "Regime 1",
+    "author": "",
+    "description": "",
+    "duration": 3,
+    "fps": 60
+  },
+  "tracks": [
+    {
+      "name": "rotation",
+      "type": "quaternion",
+      "interpolation": "slerp",
+      "keyframes": [
+        {
+          "time": 0,
+          "value": {
+            "W": 1,
+            "X": 0,
+            "Y": 0,
+            "Z": 0
+          }
+        },
+        {
+          "time": 3,
+          "value": {
+            "W": -1,
+            "X": 1.2246467991473515e-16,
+            "Y": 0,
+            "Z": 0
+          }
+        }
+      ]
+    }
+  ],
+  "geometry": {
+    "type": "tetrahedron",
+    "scale": 1,
+    "color": "#06b6d4"
+  }
+}

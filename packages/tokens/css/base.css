@@ -1,0 +1,132 @@
+/**
+ * @asymmflow/tokens — base grammar.
+ *
+ * Theme-agnostic rules that hold under EVERY theme: reset, typography roles,
+ * the accessibility floor, and the reduced-motion contract.
+ * Import a theme (e.g. themes/onyx-ether.css) alongside this file.
+ * Constitution: packages/DESIGN_CONSTITUTION.md
+ */
+
+/* ===== RESET (lean) ===== */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+html {
+  font-family: var(--af-font-body);
+  font-size: 16px;
+  line-height: var(--af-leading-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  touch-action: manipulation;
+}
+
+body {
+  background: var(--af-bg);
+  color: var(--af-text);
+  overflow-x: hidden;
+}
+
+img, svg, video, canvas {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ===== TYPOGRAPHY ROLES ===== */
+.af-page-title {
+  font-family: var(--af-font-display);
+  font-size: var(--af-text-2xl);
+  font-weight: var(--af-weight-bold);
+  letter-spacing: var(--af-title-tracking);
+  line-height: var(--af-leading-tight);
+  color: var(--af-text);
+}
+
+.af-section-title {
+  font-family: var(--af-font-display);
+  font-size: var(--af-text-lg);
+  font-weight: var(--af-weight-semibold);
+  letter-spacing: -0.01em;
+  line-height: var(--af-leading-tight);
+  color: var(--af-text);
+}
+
+.af-label {
+  font-family: var(--af-font-body);
+  font-size: var(--af-text-xs);
+  font-weight: var(--af-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--af-label-tracking);
+  color: var(--af-text-secondary);
+}
+
+.af-meta {
+  font-family: var(--af-font-body);
+  font-size: var(--af-text-xs);
+  /* Medium, not regular: DirectWrite renders 400-weight at 11px anemic. */
+  font-weight: var(--af-weight-medium);
+  color: var(--af-text-muted);
+}
+
+/* Every financial figure. Always. (§4a) */
+.af-numeric, [data-af-numeric] {
+  font-family: var(--af-font-numeric);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: var(--af-numeric-features);
+}
+
+/* ===== ACCESSIBILITY FLOOR (§2.6) ===== */
+:focus-visible {
+  outline: 2px solid var(--af-focus-ring);
+  outline-offset: 2px;
+}
+
+.af-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.af-skip-link {
+  position: absolute;
+  top: -48px;
+  left: 0;
+  background: var(--af-inverse-surface);
+  color: var(--af-text-inverse);
+  padding: var(--af-space-2) var(--af-space-4);
+  z-index: var(--af-z-tooltip);
+  transition: top var(--af-motion-optimize-duration) var(--af-motion-optimize-ease);
+}
+
+.af-skip-link:focus {
+  top: 0;
+}
+
+/* ===== REDUCED-MOTION CONTRACT (§2.5) =====
+   Components define their reduced variants; this is the global backstop. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

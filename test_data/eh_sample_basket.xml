@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<basket positionsCount="4">
+  <header>
+    <customer>
+      <number>9000000</number>
+      <name>Acme Instrumentation Test Customer</name>
+    </customer>
+    <pricing>
+      <totalsSales>
+        <netValue currency="EUR">6595.06</netValue>
+        <freight currency="EUR">0.00</freight>
+        <grossValue currency="EUR">6595.06</grossValue>
+      </totalsSales>
+    </pricing>
+  </header>
+
+  <item>
+    <product>
+      <orderCode>CM442-AAM1A2F010A+AK</orderCode>
+      <orderCodeLong>CM442-AAM1A2F010A+AK</orderCodeLong>
+      <quantity unit="EA">1</quantity>
+      <texts>
+        <shortDescription>Liquiline CM442 transmitter</shortDescription>
+      </texts>
+    </product>
+    <itemPricing>
+      <itemListPrice currency="EUR">1500.00</itemListPrice>
+      <itemDiscount currency="EUR">0.00</itemDiscount>
+      <unitSalesPrice currency="EUR">1500.00</unitSalesPrice>
+      <itemSalesPrice currency="EUR">1500.00</itemSalesPrice>
+    </itemPricing>
+    <delivery>
+      <productionTime>19</productionTime>
+    </delivery>
+  </item>
+
+  <item>
+    <product>
+      <orderCode>FMU90-R11CA131AA3A</orderCode>
+      <orderCodeLong>FMU90-R11CA131AA3A</orderCodeLong>
+      <quantity unit="EA">1</quantity>
+      <texts>
+        <shortDescription>Prosonic FMU90 level transmitter</shortDescription>
+      </texts>
+    </product>
+    <itemPricing>
+      <itemListPrice currency="EUR">2000.00</itemListPrice>
+      <itemDiscount currency="EUR">0.00</itemDiscount>
+      <unitSalesPrice currency="EUR">2000.00</unitSalesPrice>
+      <itemSalesPrice currency="EUR">2000.00</itemSalesPrice>
+    </itemPricing>
+    <delivery>
+      <productionTime>21</productionTime>
+    </delivery>
+  </item>
+
+  <item>
+    <product>
+      <orderCode>PMC51-AA11JA1HGCGJA</orderCode>
+      <orderCodeLong>PMC51-AA11JA1HGCGJA</orderCodeLong>
+      <quantity unit="EA">1</quantity>
+      <texts>
+        <shortDescription>Cerabar PMC pressure transmitter</shortDescription>
+      </texts>
+    </product>
+    <itemPricing>
+      <itemListPrice currency="EUR">1800.06</itemListPrice>
+      <itemDiscount currency="EUR">0.00</itemDiscount>
+      <unitSalesPrice currency="EUR">1800.06</unitSalesPrice>
+      <itemSalesPrice currency="EUR">1800.06</itemSalesPrice>
+    </itemPricing>
+    <delivery>
+      <productionTime>18</productionTime>
+    </delivery>
+  </item>
+
+  <item>
+    <product>
+      <orderCode>TMT142R-A1A</orderCode>
+      <orderCodeLong>TMT142R-A1A</orderCodeLong>
+      <quantity unit="EA">1</quantity>
+      <texts>
+        <shortDescription>iTHERM TMT temperature transmitter</shortDescription>
+      </texts>
+    </product>
+    <itemPricing>
+      <itemListPrice currency="EUR">1295.00</itemListPrice>
+      <itemDiscount currency="EUR">0.00</itemDiscount>
+      <unitSalesPrice currency="EUR">1295.00</unitSalesPrice>
+      <itemSalesPrice currency="EUR">1295.00</itemSalesPrice>
+    </itemPricing>
+    <delivery>
+      <productionTime>14</productionTime>
+    </delivery>
+  </item>
+</basket>

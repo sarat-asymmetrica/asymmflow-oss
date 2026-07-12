@@ -1,0 +1,32 @@
+{
+  "id": "ocr-77",
+  "fileName": "supplier_invoice_scan.png",
+  "filePath": "C:/PH/Inbox/supplier_invoice_scan.png",
+  "documentType": "SupplierInvoice",
+  "source_type": "image",
+  "text": "Supplier invoice SI-8841 for PO-771",
+  "confidence": 72,
+  "engine": "mistral-vision",
+  "needsReview": true,
+  "error": "partial image crop detected",
+  "extractedData": {
+    "invoice_number": {
+      "value": "SI-8841",
+      "status": "extracted",
+      "confidence": 0.91
+    },
+    "po_number": {
+      "value": "PO-771",
+      "status": "needs_confirmation",
+      "confidence": 0.62
+    },
+    "vendor_vat_number": {
+      "value": "",
+      "status": "missing"
+    }
+  },
+  "suggestedActions": [
+    "Record supplier invoice and match to PO"
+  ],
+  "processedAt": "2026-05-14T10:40:00Z"
+}

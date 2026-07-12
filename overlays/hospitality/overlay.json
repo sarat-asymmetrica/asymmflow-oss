@@ -1,0 +1,33 @@
+{
+  "_comment": "Hospitality vertical deployment overlay — SYNTHETIC demo identity (Wasela Café, KSA). jurisdiction=SA routes invoices to the Saudi compliance engine; currency SAR at 2 decimals; 15% standard VAT. Same overlay schema as the trading vertical: the vertical is configuration + domain package, the substrate is untouched.",
+  "schema_version": 1,
+  "default_division_key": "Wasela Café",
+  "company_display_name": "Wasela Café LLC",
+  "industry": "Hospitality — café/restaurant",
+  "country": "Saudi Arabia",
+  "currency": "SAR",
+  "jurisdiction": "SA",
+  "currency_decimals": 2,
+  "default_vat_rate": 15.0,
+  "exchange_rates_to_base": {
+    "USD": 3.75,
+    "BHD": 9.94,
+    "AED": 1.02
+  },
+  "divisions": [
+    {
+      "key": "Wasela Café",
+      "legal_name": "Wasela Café LLC",
+      "vat_number": "310122393500003",
+      "city": "Riyadh",
+      "address_lines": ["7524 King Fahd Road", "Al Olaya District", "Riyadh 12244"],
+      "bank_details": [],
+      "letterhead_asset_name": "letterhead",
+      "letterhead_file": "",
+      "aliases": ["wasela", "wasela cafe"]
+    }
+  ],
+  "business_rules": {},
+  "product_markup_rules": [],
+  "default_product_margin": 0.0
+}

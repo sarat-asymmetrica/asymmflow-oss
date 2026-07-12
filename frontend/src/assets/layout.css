@@ -1,0 +1,71 @@
+/* Template: Dashboard */
+/* Application dashboard with sidebar, stats, charts, and data tables */
+
+.main-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: auto 1fr auto;
+  gap: 55px;
+  grid-template-areas:
+    "header header"
+    "sidebar main"
+    "footer footer"
+  ;
+  grid-auto-flow: row dense;
+  justify-items: stretch;
+  align-items: start;
+}
+
+@media (min-width: 512px) {
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 55px;
+  grid-template-areas:
+    "header"
+    "sidebar"
+    "main"
+    "footer"
+  ;
+}
+}
+
+.navigation {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 33px;
+}
+
+@media (max-width: 831px) {
+.navigation {
+  flex-direction: column;
+  align-items: stretch;
+}
+}
+
+.section-stats {
+  display: grid;
+  grid-template-columns: 1.000fr 0.618fr 1.618fr 1.000fr;
+  grid-template-rows: auto;
+  gap: 33px;
+}
+
+.section-charts {
+  display: grid;
+  grid-template-columns: 1.000fr 0.618fr;
+  grid-template-rows: auto;
+  gap: 33px;
+}
+
+.section-table {
+  display: grid;
+  grid-template-columns: 1.000fr;
+  grid-template-rows: auto;
+  gap: 33px;
+}

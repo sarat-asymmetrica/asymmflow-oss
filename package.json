@@ -1,0 +1,15 @@
+{
+  "name": "asymmflow-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "description": "AsymmFlow design system workspace — @asymmflow/* packages. The Wails frontend in frontend/ installs independently (see wails.json).",
+  "scripts": {
+    "dev": "pnpm --filter @asymmflow/showcase dev",
+    "build": "pnpm -r --filter \"./packages/**\" build",
+    "check": "pnpm -r --filter \"./packages/**\" check"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

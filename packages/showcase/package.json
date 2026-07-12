@@ -1,0 +1,29 @@
+{
+  "name": "@asymmflow/showcase",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The living gallery — every @asymmflow component renders here with all states. Doubles as docs and pitch artifact.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@asymmflow/charts": "workspace:*",
+    "@asymmflow/motion": "workspace:*",
+    "@asymmflow/patterns": "workspace:*",
+    "@asymmflow/scenes": "workspace:*",
+    "@asymmflow/tokens": "workspace:*",
+    "@asymmflow/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^4.0.4",
+    "@tsconfig/svelte": "^5.0.0",
+    "svelte": "^5.55.5",
+    "svelte-check": "^4.4.8",
+    "typescript": "^5.5.0",
+    "vite": "^5.4.4"
+  }
+}

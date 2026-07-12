@@ -1,0 +1,178 @@
+/**
+ * Onyx & Ether v3.1 — the AsymmFlow default theme.
+ *
+ * Lineage: Onyx & Ether v2 (Acme Instrumentation field deployment, sage evolution).
+ * v3.1: Windows/sRGB calibration. v3 was tuned on high-DPI P3 rendering;
+ * DirectWrite + standard-DPI sRGB panels lose roughly one perceptual step of
+ * contrast, so every neutral gained one: deeper text, crisper borders, wider
+ * bg ↔ surface separation, firmer shadows, more opaque glass. Sage identity
+ * unchanged.
+ * Philosophy: executive monochrome with a sage undertone. Contrast over color.
+ * Patterns over alerts. One confident green accent, spent rarely.
+ *
+ * Every value here fulfills the token contract in @asymmflow/tokens (src/index.ts).
+ * A theme is a complete assignment of these custom properties — nothing more.
+ * Constitution: packages/DESIGN_CONSTITUTION.md
+ */
+
+:root,
+[data-af-theme="onyx-ether"] {
+  /* ===== COLOR — neutrals derived from the accent (sage-tinted, never pure) ===== */
+  --af-bg: #E9EFE9;                  /* ether — app background, pale sage-grey */
+  --af-surface: #FFFFFF;             /* cards, inputs */
+  --af-surface-raised: #F7FAF7;      /* elevated panels, zebra rows */
+  --af-surface-sunken: #DEE7DE;      /* wells, insets, track backgrounds */
+
+  --af-text: #18211B;                /* onyx — near-black with green undertone */
+  --af-text-secondary: #4C5B51;      /* steel — labels, secondary copy (6.3:1 on white) */
+  --af-text-muted: #6E7E73;          /* meta, placeholders (4.5:1 on white — AA) */
+  --af-text-inverse: #F4F8F4;        /* text on accent / on inverse surfaces */
+
+  --af-accent: #2A7532;              /* the ONE accent — confident sage green (AA on white) */
+  --af-accent-hover: #236128;
+  --af-accent-pressed: #1A4C1F;
+  --af-accent-contrast: #FFFFFF;     /* text/icons on accent */
+  --af-accent-tint: rgba(42, 117, 50, 0.10);
+  --af-accent-tint-strong: rgba(42, 117, 50, 0.18);
+
+  --af-inverse-surface: #18211B;     /* north-star cards, inverted chrome */
+
+  --af-border: #CCD9CD;
+  --af-border-strong: #A3B7A8;
+
+  --af-tint: rgba(24, 33, 27, 0.05);          /* hover wash */
+  --af-tint-medium: rgba(24, 33, 27, 0.10);
+  --af-tint-strong: rgba(24, 33, 27, 0.15);
+
+  /* Status — exists, but the default status language is monochrome (§4c) */
+  --af-success: #2A7532;
+  --af-success-tint: rgba(42, 117, 50, 0.12);
+  --af-warning: #8F6210;
+  --af-warning-tint: rgba(143, 98, 16, 0.12);
+  --af-danger: #AC2F25;
+  --af-danger-tint: rgba(172, 47, 37, 0.12);
+  --af-info: #2861A6;
+  --af-info-tint: rgba(40, 97, 166, 0.12);
+
+  --af-glass-bg: rgba(247, 250, 247, 0.88);
+  --af-glass-border: rgba(24, 33, 27, 0.10);
+  --af-glass-blur: blur(16px);
+
+  --af-focus-ring: #2A7532;
+  --af-scrim: rgba(24, 33, 27, 0.48);          /* modal backdrop */
+
+  /* ===== CHART PALETTE — golden-angle (137.5°) hue walk from the accent.
+     Series colors for @asymmflow/charts. Each holds ≥3:1 against surface
+     (WCAG 1.4.11 non-text contrast). Theme Forge generates these for
+     seeded themes; the static sheet ships the curated walk. ===== */
+  --af-chart-1: #2A7532;   /* the accent itself — series 1 is always the brand */
+  --af-chart-2: #5D55A6;   /* +137.5° violet */
+  --af-chart-3: #A8741A;   /* +275° ochre */
+  --af-chart-4: #2D7670;   /* +412.5° teal */
+  --af-chart-5: #94427C;   /* +550° plum */
+  --af-chart-6: #5E7A34;   /* +687.5° olive */
+  --af-chart-7: #4359B1;   /* +825° indigo */
+  --af-chart-8: #B5503F;   /* +962.5° clay */
+
+  /* ===== TYPE — Space Grotesk (display/numeric) × Rubik (body/UI) ===== */
+  --af-font-display: 'Space Grotesk', 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --af-font-body: 'Rubik', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --af-font-numeric: 'Space Grotesk', 'Rubik', sans-serif;
+  --af-numeric-features: 'tnum' 1, 'lnum' 1;
+
+  /* Modular scale ≈1.2 · user-scalable via --af-scale */
+  --af-scale: 1;
+  --af-text-xs: calc(11px * var(--af-scale));    /* labels, meta */
+  --af-text-sm: calc(13px * var(--af-scale));    /* tables, controls */
+  --af-text-md: calc(14px * var(--af-scale));    /* body */
+  --af-text-lg: calc(16px * var(--af-scale));    /* section titles */
+  --af-text-xl: calc(19px * var(--af-scale));    /* card titles, modal titles */
+  --af-text-2xl: calc(24px * var(--af-scale));   /* page titles */
+  --af-text-3xl: calc(29px * var(--af-scale));   /* hero numerals */
+  --af-text-display: calc(48px * var(--af-scale)); /* north-star KPI */
+
+  --af-weight-regular: 400;
+  --af-weight-medium: 500;
+  --af-weight-semibold: 600;
+  --af-weight-bold: 700;
+
+  --af-leading-tight: 1.2;
+  --af-leading-base: 1.55;
+  --af-leading-relaxed: 1.7;
+
+  --af-label-tracking: 0.08em;
+  --af-title-tracking: -0.02em;
+
+  /* ===== SPACE — the φ ladder (each step = sum of previous two) ===== */
+  --af-space-1: 4px;
+  --af-space-2: 8px;
+  --af-space-3: 12px;
+  --af-space-4: 20px;
+  --af-space-5: 32px;
+  --af-space-6: 52px;
+  --af-space-7: 84px;
+  --af-space-8: 136px;
+
+  /* ===== RADII ===== */
+  --af-radius-sm: 8px;    /* buttons, inputs, controls */
+  --af-radius-md: 12px;   /* cards, surfaces */
+  --af-radius-lg: 16px;   /* modals, large panels */
+  --af-radius-pill: 999px;
+
+  /* ===== ELEVATION — borders at rest, the Lift on hover, shadow only when layered ===== */
+  --af-shadow-none: none;
+  --af-shadow-sm: 0 1px 2px rgba(24, 33, 27, 0.08);
+  --af-shadow-lift: 0 1px 2px rgba(24, 33, 27, 0.05), 0 4px 20px rgba(24, 33, 27, 0.10);
+  --af-shadow-overlay: 0 12px 48px rgba(24, 33, 27, 0.22);
+
+  /* ===== MOTION — three-regime policy (§4e) ===== */
+  /* R1 · Explore — entrances, reveals, arrivals */
+  --af-motion-explore-duration: 400ms;
+  --af-motion-explore-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  /* R2 · Optimize — micro-interactions: hover, press, toggle, focus */
+  --af-motion-optimize-duration: 140ms;
+  --af-motion-optimize-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* R3 · Stabilize — exits, settles, confirmations, collapses */
+  --af-motion-stabilize-duration: 240ms;
+  --af-motion-stabilize-ease: cubic-bezier(0.4, 0, 1, 1);
+  /* Spring — earned moments only */
+  --af-motion-spring-duration: 500ms;
+  --af-motion-spring-ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Sibling stagger rhythm */
+  --af-motion-stagger: 48ms;
+  /* Continuous loops — the ONE place linear easing is allowed (§4e).
+     Used by skeleton shimmer and spinner; transform-driven, GPU-composited. */
+  --af-motion-shimmer: 1600ms;
+  --af-motion-spin: 1000ms;
+  /* Reduced-motion fallback pulse — quiet opacity breathing in place of spin. */
+  --af-motion-pulse: 1500ms;
+
+  /* ===== Z-INDEX SCALE ===== */
+  --af-z-base: 1;
+  --af-z-dropdown: 100;
+  --af-z-sticky: 200;
+  --af-z-overlay: 900;
+  --af-z-modal: 1000;
+  --af-z-toast: 1500;
+  --af-z-tooltip: 2000;
+
+  /* ===== DENSITY (comfortable default; see [data-af-density="compact"]) ===== */
+  --af-control-height: 36px;
+  --af-row-height: 44px;
+  /* Minimum touch-target size (WCAG 2.5.5 / §2.6). A constant a11y floor —
+     deliberately NOT shrunk in compact density. Apply under @media (pointer: coarse)
+     so the refined desktop sizing is preserved while touch devices get full targets. */
+  --af-tap-min: 44px;
+  --af-header-height: 56px;
+  --af-page-padding: var(--af-space-4);
+  --af-card-padding: var(--af-space-4);
+  --af-grid-gap: var(--af-space-3);
+}
+
+[data-af-density="compact"] {
+  --af-control-height: 30px;
+  --af-row-height: 36px;
+  --af-page-padding: var(--af-space-3);
+  --af-card-padding: var(--af-space-3);
+  --af-grid-gap: var(--af-space-2);
+}
