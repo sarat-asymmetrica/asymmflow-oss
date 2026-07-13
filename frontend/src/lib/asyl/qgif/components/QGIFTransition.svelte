@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade } from 'svelte/transition';
+  import { motionMs } from '../../../motion';
   import QuaternionScenePlayer from '../../components/QuaternionScenePlayer.svelte';
   import transitionData from '../presets/transition_morph.json';
 
@@ -11,7 +12,7 @@
 </script>
 
 {#if visible}
-  <div class="qgif-transition-overlay" transition:fade>
+  <div class="qgif-transition-overlay" transition:fade={{ duration: motionMs(400) }}>
     <QuaternionScenePlayer qgifData={transitionData} width={window.innerWidth} height={window.innerHeight} />
   </div>
 {/if}

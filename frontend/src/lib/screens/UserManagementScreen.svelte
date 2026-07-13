@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createBubbler, stopPropagation } from 'svelte/legacy';
+    import { motionMs } from "$lib/motion";
 
     const bubble = createBubbler();
     import { onMount } from "svelte";
@@ -309,7 +310,7 @@ import { ListRoles, GetAuditLogs, GetRolePermissionsList, CreateUser, UpdateUser
                     class="search-input"
                 />
             </div>
-            <div class="table-card" in:fade>
+            <div class="table-card" in:fade={{ duration: motionMs(400) }}>
                 <table>
                     <thead
                         ><tr
@@ -353,7 +354,7 @@ import { ListRoles, GetAuditLogs, GetRolePermissionsList, CreateUser, UpdateUser
                 </table>
             </div>
         {:else if activeTab === "roles"}
-            <div class="grid-roles" in:fade>
+            <div class="grid-roles" in:fade={{ duration: motionMs(400) }}>
                 {#each roles as r}
                     <div class="card role-card">
                         <h3>{roleLabel(r)}</h3>
@@ -363,7 +364,7 @@ import { ListRoles, GetAuditLogs, GetRolePermissionsList, CreateUser, UpdateUser
                 {/each}
             </div>
         {:else if activeTab === "audit"}
-            <div class="table-card" in:fade>
+            <div class="table-card" in:fade={{ duration: motionMs(400) }}>
                 <table>
                     <thead
                         ><tr

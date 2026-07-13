@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount, onDestroy } from "svelte";
+    import { motionMs } from "$lib/motion";
     import { fade } from "svelte/transition";
     import { toast } from "../stores/toasts";
     import {
@@ -138,7 +139,7 @@ import { SimulateMargin } from "../../../wailsjs/go/main/InfraService";
                     <p>Select a customer to analyze pricing strategy.</p>
                 </div>
             {:else}
-                <div class="analysis-panel" in:fade>
+                <div class="analysis-panel" in:fade={{ duration: motionMs(400) }}>
                     <div class="panel-header">
                         <h2>{selectedCustomer.name}</h2>
                         <span class="tag"
@@ -176,7 +177,7 @@ import { SimulateMargin } from "../../../wailsjs/go/main/InfraService";
                     </div>
 
                     {#if simResult}
-                        <div class="result-box" in:fade>
+                        <div class="result-box" in:fade={{ duration: motionMs(400) }}>
                             <h3>Projected Outcome</h3>
                             <div class="res-grid">
                                 <div class="res-item">

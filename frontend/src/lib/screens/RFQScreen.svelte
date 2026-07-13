@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   /**
    * RFQ (Request for Quotation) Screen
@@ -652,7 +653,7 @@ import { CreateRFQ, UpdateRFQStatus, UpdateRFQStage, DeleteRFQ, ListCustomers } 
       {/if}
 
       {#each formData.products as item, index}
-        <div class="line-item" transition:fade>
+        <div class="line-item" transition:fade={{ duration: motionMs(400) }}>
           <div class="line-item-fields">
             <Input
               label="Product Description"

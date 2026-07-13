@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { motionMs } from "$lib/motion";
   import { fade, fly } from "svelte/transition";
   import { toast } from "$lib/stores/toasts";
   import WabiSpinner from "../components/ui/WabiSpinner.svelte";
@@ -140,7 +141,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
     <!-- Main -->
     <main class="wizard-content">
       {#if currentStep === 0}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>Welcome to Asymmetrica.</h2>
           <p class="intro">
             Let's configure your environment for maximum efficiency. We will set
@@ -154,7 +155,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
           </div>
         </div>
       {:else if currentStep === 1}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>Configure Folders</h2>
           <p class="desc">Where should we store your business data?</p>
           <div class="form-grid">
@@ -177,7 +178,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
           </div>
         </div>
       {:else if currentStep === 2}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>AI Connections</h2>
           <p class="desc">
             Enter API keys for enhanced cloud capabilities (Optional).
@@ -216,7 +217,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
           </div>
         </div>
       {:else if currentStep === 3}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>Hardware Detection</h2>
           <div class="result-box">
             {#if loading}
@@ -235,7 +236,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
           </div>
         </div>
       {:else if currentStep === 4}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>Office Integration</h2>
           <div class="result-box">
             {#if loading}
@@ -265,7 +266,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
           </div>
         </div>
       {:else if currentStep === 5}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>Initial Scan</h2>
           <div class="result-box">
             {#if loading}
@@ -280,7 +281,7 @@ import { UpdateFolderPaths, DetectGPU, DetectOffice, RunInitialScan, CompleteSet
           </div>
         </div>
       {:else if currentStep === 6}
-        <div class="slide" in:fade>
+        <div class="slide" in:fade={{ duration: motionMs(400) }}>
           <h2>Ready to Launch</h2>
           <p class="intro">Configuration complete. Your system is optimized.</p>
           <button class="btn-giant" onclick={finish}>Launch Asymmetrica</button

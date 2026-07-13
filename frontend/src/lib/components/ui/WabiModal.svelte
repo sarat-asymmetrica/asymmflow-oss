@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
   import { fade } from 'svelte/transition';
+  import { motionMs } from '../../motion';
 
   interface Props {
     open?: boolean;
@@ -58,8 +59,8 @@
   <div
     class="modal-overlay"
     onclick={handleOverlayClick}
-    in:fade={{ duration: 200 }}
-    out:fade={{ duration: 150 }}
+    in:fade={{ duration: motionMs(200) }}
+    out:fade={{ duration: motionMs(150) }}
     role="dialog"
     aria-modal="true"
     aria-labelledby="modal-title"
@@ -67,8 +68,8 @@
     <div 
       class="modal-container"
       style="max-width: {sizes[size]}"
-      in:fade={{ duration: 150 }}
-      out:fade={{ duration: 100 }}
+      in:fade={{ duration: motionMs(150) }}
+      out:fade={{ duration: motionMs(100) }}
     >
       {#if title || showClose}
         <header class="modal-header">

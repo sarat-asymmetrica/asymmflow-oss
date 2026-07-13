@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   /**
    * SuppliersScreen - Production-Ready Supplier Management
@@ -498,7 +499,7 @@ import { GetSupplierInvoicesBySupplier } from '../../../wailsjs/go/main/FinanceS
         {:else}
           <div class="summary-list">
             {#each supplierPOs.slice(0, 5) as po}
-              <div class="summary-item" transition:fade>
+              <div class="summary-item" transition:fade={{ duration: motionMs(400) }}>
                 <div class="summary-item-main">
                   <span class="summary-code">{po.po_number || po.id}</span>
                   <span class="summary-date">
@@ -537,7 +538,7 @@ import { GetSupplierInvoicesBySupplier } from '../../../wailsjs/go/main/FinanceS
         {:else}
           <div class="summary-list">
             {#each supplierInvoices.slice(0, 5) as invoice}
-              <div class="summary-item" transition:fade>
+              <div class="summary-item" transition:fade={{ duration: motionMs(400) }}>
                 <div class="summary-item-main">
                   <span class="summary-code">{invoice.invoice_number || invoice.id}</span>
                   <span class="summary-date">

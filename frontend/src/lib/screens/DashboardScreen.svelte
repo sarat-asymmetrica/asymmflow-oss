@@ -1,5 +1,6 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
+    import { motionMs } from "$lib/motion";
 
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
@@ -646,7 +647,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
             <CardGridSkeleton statCards={4} panels={4} panelCols={2} panelRows={4} />
         </div>
     {:else}
-        <main class="dashboard-shell" in:fade>
+        <main class="dashboard-shell" in:fade={{ duration: motionMs(400) }}>
             <section class="kpi-strip" aria-label={t("dashboard.kpis")}>
                 {#each kpis as kpi}
                     <div

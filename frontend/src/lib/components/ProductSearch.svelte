@@ -2,6 +2,7 @@
     import { createEventDispatcher } from "svelte";
     import { SearchProducts } from "../../../wailsjs/go/main/App";
     import { fade } from "svelte/transition";
+    import { motionMs } from "../motion";
     import { formatNumber } from "$lib/utils/formatters";
 
     interface Props {
@@ -79,7 +80,7 @@
     </div>
 
     {#if showResults}
-        <div class="results-dropdown" transition:fade={{ duration: 100 }}>
+        <div class="results-dropdown" transition:fade={{ duration: motionMs(100) }}>
             {#each results as product}
                 <button class="result-item" onclick={() => selectProduct(product)}>
                     <div class="code">{product.product_code || product.ProductCode}</div>

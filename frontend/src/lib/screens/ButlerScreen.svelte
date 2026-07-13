@@ -1,5 +1,6 @@
 <script lang="ts">
     import { stopPropagation } from 'svelte/legacy';
+    import { motionMs } from "$lib/motion";
 
     import { onMount, onDestroy, createEventDispatcher } from "svelte";
     import { fly } from "svelte/transition";
@@ -2372,7 +2373,7 @@ import { ListCustomers, GetCustomer } from "../../../wailsjs/go/main/CRMService"
             </div>
         {/if}
         {#each messages as m (m.id)}
-            <div class="msg-row {m.role}" in:fly={{ y: 8, duration: 200 }}>
+            <div class="msg-row {m.role}" in:fly={{ y: 8, duration: motionMs(200) }}>
                 {#if m.role === "butler"}
                     <div class="avatar">B</div>
                 {/if}

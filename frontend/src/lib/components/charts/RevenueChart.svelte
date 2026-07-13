@@ -1,5 +1,6 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
+    import { motionMs } from "../../motion";
     import type { RevenueChartData } from "$lib/types";
 
     interface Props {
@@ -70,7 +71,7 @@
             class="revenue-chart"
             viewBox="0 0 {width} {height}"
             preserveAspectRatio="xMidYMid meet"
-            in:fade
+            in:fade={{ duration: motionMs(400) }}
         >
             <!-- Grid lines -->
             <g class="grid">

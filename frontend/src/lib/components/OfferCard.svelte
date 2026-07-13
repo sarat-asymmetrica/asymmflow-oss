@@ -13,6 +13,7 @@
     */
     import { createEventDispatcher } from "svelte";
     import { slide } from "svelte/transition";
+    import { motionMs } from "../motion";
     import { formatNumber } from "$lib/utils/formatters";
 
     let { offer } = $props();
@@ -181,7 +182,7 @@
         </button>
 
         {#if showTimeline}
-            <div class="timeline" transition:slide={{ duration: 200 }}>
+            <div class="timeline" transition:slide={{ duration: motionMs(200) }}>
                 {#each offer.followUps as followUp}
                     <div class="timeline-item">
                         <span class="timeline-dot"></span>

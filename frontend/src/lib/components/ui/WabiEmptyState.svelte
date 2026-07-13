@@ -6,6 +6,7 @@
    */
   import { onMount, onDestroy } from 'svelte';
   import { fade } from 'svelte/transition';
+  import { motionMs } from '../../motion';
   
   
   import { createEventDispatcher } from 'svelte';
@@ -205,7 +206,7 @@
   });
 </script>
 
-<div class="empty-state" in:fade={{ duration: 400 }}>
+<div class="empty-state" in:fade={{ duration: motionMs(400) }}>
   <canvas bind:this={canvas} class="empty-canvas"></canvas>
   
   <h3 class="empty-title">{title}</h3>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   /**
    * PaymentsScreen - AR Money-In Workspace (Receipts + Payment History)
@@ -1386,7 +1387,7 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
 
       <!-- Invoice Details Display -->
       {#if selectedInvoice}
-        <div class="invoice-details" transition:fade={{ duration: 200 }}>
+        <div class="invoice-details" transition:fade={{ duration: motionMs(200) }}>
           <div class="detail-row">
             <span class="detail-label">Customer:</span>
             <span class="detail-value">{selectedInvoice.customer_name}</span>
@@ -1548,7 +1549,7 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
       </FormGroup>
 
       {#if applySelectedInvoice}
-        <div class="invoice-details" transition:fade={{ duration: 200 }}>
+        <div class="invoice-details" transition:fade={{ duration: motionMs(200) }}>
           <div class="detail-row">
             <span class="detail-label">Outstanding:</span>
             <span class="detail-value detail-mono detail-highlight">{formatBHD(applySelectedInvoice.outstanding_bhd)} BHD</span>

@@ -13,6 +13,7 @@
    */
 
   import { onMount } from 'svelte';
+  import { motionMs } from "$lib/motion";
   import { fade } from 'svelte/transition';
 
   // Wails API imports
@@ -133,7 +134,7 @@ import { GetDepositsInTransit } from '../../../wailsjs/go/main/InfraService';
   });
 </script>
 
-<div class="cash-widget" class:compact transition:fade={{ duration: 200 }}>
+<div class="cash-widget" class:compact transition:fade={{ duration: motionMs(200) }}>
   {#if loading}
     <div class="loading">
       <WabiSpinner size="sm" />

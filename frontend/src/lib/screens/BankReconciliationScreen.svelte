@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   /**
    * BankReconciliationScreen - Bank Statement Import & Reconciliation
@@ -1059,7 +1060,7 @@ import { ImportBankStatementWithDialog, PreviewBankStatementImportWithDialog, Co
       </div>
 
       {#if showHandoffBanner}
-        <div class="handoff-banner" in:fade={{ duration: 150 }}>
+        <div class="handoff-banner" in:fade={{ duration: motionMs(150) }}>
           <span>Statement reconciled. Ready for the next step.</span>
           <Button variant="primary" size="sm" on:click={goToProveBalance}>
             Next → Step 2: Prove the balance
