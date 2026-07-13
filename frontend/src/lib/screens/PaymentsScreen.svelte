@@ -908,10 +908,25 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
       return;
     }
 
+    // Wave 10 — decide up front, from client-known state only, whether this
+    // application will fully settle the target invoice (mirrors the settlement
+    // policy's tolerance). Computed before the async post and acted on only
+    // after it succeeds — never on a partial application, never on error.
+    const willFullySettle =
+      !!applySelectedInvoice &&
+      (applySelectedInvoice.outstanding_bhd - amount) <= PAID_TOLERANCE_BHD;
+
     applySaving = true;
     try {
       await ApplyCustomerReceiptToInvoice(applyReceipt.id, applyInvoiceId, amount);
       toast.success(`Applied ${formatBHD(amount)} BHD from receipt ${applyReceipt.receipt_number}`);
+
+      // Wave 10 — the one sound. Fires only when this application just fully
+      // settled the invoice (unreachable unless the await above resolved).
+      if (willFullySettle) {
+        playPaidSettle();
+      }
+
       showApplyModal = false;
       applyReceipt = null;
       selectedReceiptId = '';
