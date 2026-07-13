@@ -8,7 +8,8 @@ import { GetCRMCustomerDashboardByYear } from '../../../wailsjs/go/main/InfraSer
 import { CreateCustomer } from '../../../wailsjs/go/main/CRMService';
   import Card from '$lib/components/ui/Card.svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import WabiSpinner from '$lib/components/ui/WabiSpinner.svelte';
+  import CardGridSkeleton from '$lib/components/ui/CardGridSkeleton.svelte';
+  import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
   import { toast } from '$lib/stores/toasts';
   import { formatNumber } from '$lib/utils/formatters';
 
@@ -110,8 +111,11 @@ import { CreateCustomer } from '../../../wailsjs/go/main/CRMService';
 
 <div class="dashboard">
   {#if loading}
-    <div class="loading-state">
-      <WabiSpinner size="lg" />
+    <div class="loading-skeleton">
+      <CardGridSkeleton statCards={4} panels={0} />
+      <div class="loading-skeleton-table">
+        <TableSkeleton rows={8} cols={5} showFilterBar={true} />
+      </div>
     </div>
   {:else if dashboard}
     <!-- Year Selector -->
@@ -364,6 +368,19 @@ import { CreateCustomer } from '../../../wailsjs/go/main/CRMService';
     justify-content: center;
     align-items: center;
     height: 400px;
+  }
+
+  .loading-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .loading-skeleton-table {
+    border: 1px solid var(--border);
+    border-radius: var(--border-radius);
+    padding: 16px;
+    background: var(--surface);
   }
 
   /* Year Selector */

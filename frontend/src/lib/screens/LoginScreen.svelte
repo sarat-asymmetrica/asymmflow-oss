@@ -3,6 +3,7 @@
 
     import { createEventDispatcher } from "svelte";
     import { LoginDevice } from "../../../wailsjs/go/main/App";
+    import { brand } from "$lib/brand";
 
     const dispatch = createEventDispatcher();
 
@@ -93,8 +94,8 @@
     <div class="login-card">
         <div class="login-header">
             <div class="logo">
-                <div class="logo-mark">PH</div>
-                <span class="brand">Holdings</span>
+                <div class="logo-mark" style="background: {brand.accentVar}">{brand.mark}</div>
+                <span class="brand">{brand.wordmark}</span>
             </div>
             <h1>Sign In</h1>
             <p class="subtitle">Enter your credentials to continue</p>

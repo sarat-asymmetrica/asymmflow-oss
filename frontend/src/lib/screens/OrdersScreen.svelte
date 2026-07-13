@@ -1083,7 +1083,7 @@ import { CreateInvoiceFromOrder, CreateProformaInvoice } from '../../../wailsjs/
         <WabiSpinner size="md" />
       </div>
     {:else if filteredOrders.length === 0}
-      <p class="empty-message">No orders found</p>
+      <p class="empty-message">No orders yet — won offers become orders here.</p>
     {:else}
       <!-- Group orders by year -->
       {#each availableYears as year}
@@ -1275,7 +1275,7 @@ import { CreateInvoiceFromOrder, CreateProformaInvoice } from '../../../wailsjs/
           {columns}
           data={filteredOrders}
           {loading}
-          emptyMessage="No orders found"
+          emptyMessage="No orders yet — won offers become orders here."
           onRowClick={handleRowClick}
           keyField="id"
           stickyHeader={true}

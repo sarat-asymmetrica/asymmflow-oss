@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { CollaborativeProject, CollaborativeTask } from "$lib/api/collaboration";
   import { projectNameFor, dueLabel, isTaskOverdue } from "./workHubHelpers";
+  import TableSkeleton from "$lib/components/ui/TableSkeleton.svelte";
 
   interface Props {
     myTasks: CollaborativeTask[];
@@ -81,7 +82,7 @@
     <span class="count">{filteredMyTasks.length} of {myTasks.length}</span>
   </div>
   {#if loading}
-    <div class="empty">Loading your work queue...</div>
+    <TableSkeleton rows={5} cols={3} />
   {:else if filteredMyTasks.length === 0}
     <div class="empty">No tasks match these filters.</div>
   {:else}

@@ -609,7 +609,7 @@ import { CreateRFQ, UpdateRFQStatus, UpdateRFQStage, DeleteRFQ, ListCustomers } 
           {columns}
           data={filteredRFQs}
           loading={false}
-          emptyMessage="No RFQs found"
+          emptyMessage="No RFQs yet — enquiries you log land here."
           onRowClick={handleRowClick}
           stickyHeader={true}
           maxHeight="600px"

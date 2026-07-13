@@ -18,6 +18,8 @@ export { default as WabiTooltip } from './WabiTooltip.svelte';
 // Loading Components
 export { default as WabiSpinner } from './WabiSpinner.svelte';
 export { default as WabiSkeleton } from './WabiSkeleton.svelte';
+export { default as TableSkeleton } from './TableSkeleton.svelte';
+export { default as CardGridSkeleton } from './CardGridSkeleton.svelte';
 
 // Navigation Components
 export { default as WabiProgress } from './WabiProgress.svelte';

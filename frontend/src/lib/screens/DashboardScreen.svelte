@@ -14,6 +14,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
     import ContextTaskModal from "../components/ContextTaskModal.svelte";
     import { listMyTasks, listTeamTasks, refreshCollaborativeWorkspace, type CollaborativeTask } from "$lib/api/collaboration";
     import WabiSpinner from "../components/ui/WabiSpinner.svelte";
+    import CardGridSkeleton from "../components/ui/CardGridSkeleton.svelte";
 
     let loading = $state(true);
     let now = $state(new Date());
@@ -641,7 +642,9 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
     </header>
 
     {#if loading}
-        <div class="loading-state"><WabiSpinner size="lg" tempo="calm" /></div>
+        <div class="loading-state">
+            <CardGridSkeleton statCards={4} panels={4} panelCols={2} panelRows={4} />
+        </div>
     {:else}
         <main class="dashboard-shell" in:fade>
             <section class="kpi-strip" aria-label={t("dashboard.kpis")}>
@@ -880,10 +883,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
     }
 
     .loading-state {
-        min-height: 60vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        width: 100%;
     }
 
     .dashboard-shell {

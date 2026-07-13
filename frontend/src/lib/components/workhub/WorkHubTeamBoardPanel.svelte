@@ -2,6 +2,7 @@
   import { toast } from "$lib/stores/toasts";
   import { reassignTask, type CollaborativeProject, type CollaborativeTask, type EmployeeProfile } from "$lib/api/collaboration";
   import { projectNameFor, normalizedBoardStatus, dueLabel } from "./workHubHelpers";
+  import CardGridSkeleton from "$lib/components/ui/CardGridSkeleton.svelte";
 
   interface Props {
     teamTasks: CollaborativeTask[];
@@ -226,7 +227,9 @@
       <span class="count">{filteredTeamTasks.length} visible</span>
     </div>
     {#if loading}
-      <div class="empty">Loading team board...</div>
+      <div class="board-sections-loading">
+        <CardGridSkeleton statCards={0} panels={4} panelCols={4} panelRows={2} />
+      </div>
     {:else if lastLoadFailed}
       <div class="empty">
         Team board is retrying connection to the collaborative workspace.
@@ -472,6 +475,10 @@
   .board-sections {
     display: grid;
     gap: 18px;
+    margin-top: 12px;
+  }
+
+  .board-sections-loading {
     margin-top: 12px;
   }
 

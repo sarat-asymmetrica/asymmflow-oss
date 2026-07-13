@@ -1178,7 +1178,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
         {columns}
         data={filteredOffers}
         {loading}
-        emptyMessage="No offers found"
+        emptyMessage="No offers yet — quotes you send appear here."
         onRowClick={(row) => {}}
         on:rowClick={handleRowClick}
         stickyHeader={true}

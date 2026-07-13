@@ -122,6 +122,24 @@ type DealTimelineNode struct {
 type DealTimeline struct {
 	OrderID string             `json:"order_id"`
 	Nodes   []DealTimelineNode `json:"nodes"`
+	// Documents is the six-document closing-set checklist (Wave 10 B5a,
+	// Article I.6). Deliberately a SEPARATE field from Nodes: the B3 stepper
+	// (DealTimeline.svelte) only ever reads timeline.nodes, so adding rows
+	// here can never change the spine's existing rendering or semantics.
+	Documents []DealDocumentStatus `json:"documents"`
+}
+
+// DealDocumentStatus is one row of the six-document closing-set checklist:
+// offer / order confirmation / delivery note / invoice / statement entry /
+// receipt (Article I.6). Present-or-missing, honest - never invented; Serial
+// is always the human document serial, never a raw id.
+type DealDocumentStatus struct {
+	Document   string    `json:"document"`
+	Present    bool      `json:"present"`
+	Serial     string    `json:"serial,omitempty"`
+	Date       time.Time `json:"date,omitempty"`
+	RecordID   string    `json:"record_id,omitempty"`
+	RecordType string    `json:"record_type,omitempty"`
 }
 
 // GetDealTimeline assembles the deal spine for one order in a small, fixed
@@ -357,7 +375,144 @@ func (a *App) buildDealTimeline(ctx context.Context, order Order) (DealTimeline,
 	}
 	timeline.Nodes = append(timeline.Nodes, paidNode)
 
+	// Six-document closing-set checklist (Wave 10 B5a) - additive, does not
+	// touch Nodes above.
+	timeline.Documents = a.buildDealDocumentChecklist(ctx, order, offer, deliveryNotes, invoices)
+
 	return timeline, nil
+}
+
+// buildDealDocumentChecklist derives the six-document closing-set checklist
+// (Article I.6: offer / order confirmation / delivery note / invoice /
+// statement entry / receipt) from records already loaded by
+// buildDealTimeline, plus one small additional read-only lookup for payment/
+// receipt evidence. Every row is present-or-absent from an actual record -
+// never invented. Read-only: no INSERT/UPDATE/DELETE.
+func (a *App) buildDealDocumentChecklist(ctx context.Context, order Order, offer *Offer, deliveryNotes []DeliveryNote, invoices []Invoice) []DealDocumentStatus {
+	docs := make([]DealDocumentStatus, 0, 6)
+
+	// 1. Offer.
+	offerDoc := DealDocumentStatus{Document: "Offer"}
+	if offer != nil {
+		offerDoc.Present = true
+		offerDoc.Serial = offer.OfferNumber
+		offerDoc.Date = offer.QuotationDate
+		offerDoc.RecordID = offer.ID
+		offerDoc.RecordType = "offer"
+	}
+	docs = append(docs, offerDoc)
+
+	// 2. Order confirmation - the order itself IS the confirmation document;
+	// always present, since Order is the seed record GetDealTimeline is
+	// keyed on.
+	docs = append(docs, DealDocumentStatus{
+		Document:   "Order Confirmation",
+		Present:    true,
+		Serial:     order.OrderNumber,
+		Date:       order.OrderDate,
+		RecordID:   order.ID,
+		RecordType: "order",
+	})
+
+	// 3. Delivery note - latest, same source as the Delivery timeline node.
+	dnDoc := DealDocumentStatus{Document: "Delivery Note"}
+	if len(deliveryNotes) > 0 {
+		latest := deliveryNotes[len(deliveryNotes)-1]
+		dnDoc.Present = true
+		dnDoc.Serial = latest.DNNumber
+		dnDoc.Date = latest.DeliveryDate
+		dnDoc.RecordID = latest.ID
+		dnDoc.RecordType = "delivery_note"
+	}
+	docs = append(docs, dnDoc)
+
+	// 4. Invoice - latest, same source as the Invoice timeline node.
+	invDoc := DealDocumentStatus{Document: "Invoice"}
+	var latestInvoice *Invoice
+	if len(invoices) > 0 {
+		li := invoices[len(invoices)-1]
+		latestInvoice = &li
+		invDoc.Present = true
+		invDoc.Serial = li.InvoiceNumber
+		invDoc.Date = li.InvoiceDate
+		invDoc.RecordID = li.ID
+		invDoc.RecordType = "invoice"
+	}
+	docs = append(docs, invDoc)
+
+	// 5. Statement entry - there is no separate statement-entry entity in
+	// this codebase (confirmed: no CustomerStatement/StatementEntry type
+	// exists). The honest signal is that an invoice posts as a line in the
+	// customer operational ledger (GetOperationalLedger,
+	// operational_accounting_service.go) once it leaves Draft - exactly the
+	// status set that reporting endpoint already filters on
+	// (operationalInvoiceStatuses: Sent/Paid/PartiallyPaid/Overdue). We
+	// reuse that exact status set as a membership check in-memory rather
+	// than calling the date-ranged reporting endpoint, so "present" here
+	// means precisely "this invoice would appear as a ledger/statement line
+	// today" - never invented.
+	stmtDoc := DealDocumentStatus{Document: "Statement Entry"}
+	if latestInvoice != nil && operationalStatusIncluded(latestInvoice.Status) {
+		stmtDoc.Present = true
+		stmtDoc.Serial = latestInvoice.InvoiceNumber
+		stmtDoc.Date = latestInvoice.InvoiceDate
+		stmtDoc.RecordID = latestInvoice.ID
+		stmtDoc.RecordType = "invoice"
+	}
+	docs = append(docs, stmtDoc)
+
+	// 6. Receipt - real payment evidence against these invoices. A Payment
+	// row is receipt evidence on its own (RecordPartialPayment always
+	// creates one, customer_invoice_service.go); when that payment was
+	// routed through the formal CustomerReceipt header (Payment.ReceiptID,
+	// receipt_service.go) we prefer that header's human receipt number as
+	// the serial - never a raw id.
+	receiptDoc := DealDocumentStatus{Document: "Receipt"}
+	if len(invoices) > 0 {
+		invoiceIDs := make([]string, 0, len(invoices))
+		for _, inv := range invoices {
+			invoiceIDs = append(invoiceIDs, inv.ID)
+		}
+		var payments []Payment
+		if err := a.db.WithContext(ctx).
+			Where("invoice_id IN ?", invoiceIDs).
+			Order("payment_date ASC").
+			Find(&payments).Error; err == nil && len(payments) > 0 {
+			latestPayment := payments[len(payments)-1]
+			receiptDoc.Present = true
+			receiptDoc.Serial = latestPayment.Reference
+			receiptDoc.Date = latestPayment.PaymentDate
+			receiptDoc.RecordID = latestPayment.ID
+			receiptDoc.RecordType = "payment"
+
+			if latestPayment.ReceiptID != nil && *latestPayment.ReceiptID != "" {
+				var receipt CustomerReceipt
+				if err := a.db.WithContext(ctx).First(&receipt, "id = ?", *latestPayment.ReceiptID).Error; err == nil {
+					receiptDoc.Serial = receipt.ReceiptNumber
+					receiptDoc.RecordID = receipt.ID
+					receiptDoc.RecordType = "customer_receipt"
+				}
+			}
+		}
+	}
+	docs = append(docs, receiptDoc)
+
+	return docs
+}
+
+// operationalStatusIncluded mirrors operationalInvoiceStatuses()
+// (operational_accounting_service.go) - the exact status set the app
+// already treats as "posted to the customer ledger" everywhere else.
+// Duplicated as a membership check here (instead of calling
+// GetOperationalLedger) because that endpoint is a date-ranged reporting
+// call; this only needs a present/absent fact about one invoice.
+func operationalStatusIncluded(status string) bool {
+	for _, s := range operationalInvoiceStatuses() {
+		if s == status {
+			return true
+		}
+	}
+	return false
 }
 
 // CalculateInvoiceMargin calculates and updates gross margin for an invoice

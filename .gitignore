@@ -10,6 +10,9 @@ backups/
 *_BACKUP*.db
 SYNTHETIC_IDENTITY.local.md
 
+# === Deployment brand override (never commit real client identity) ===
+frontend/src/lib/brand.local.ts
+
 # === Build Artifacts ===
 build/
 *.exe

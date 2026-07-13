@@ -296,7 +296,7 @@ import { CreateCustomer, DeleteCustomer } from "../../../wailsjs/go/main/CRMServ
                     <WabiSpinner size="lg" tempo="calm" />
                 </div>
             {:else if filteredCustomers.length === 0}
-                <div class="empty-state">No customers found.</div>
+                <div class="empty-state">No customers yet — add one to begin quoting.</div>
             {:else}
                 <div class="customer-grid">
                     {#each filteredCustomers as c}

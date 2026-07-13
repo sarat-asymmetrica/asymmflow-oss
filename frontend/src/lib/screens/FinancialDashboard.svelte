@@ -4,7 +4,7 @@
      * Dynamically loads data from Tally imports or falls back to FY2024 baseline
      */
     import { onMount } from 'svelte';
-    import WabiSpinner from '$lib/components/ui/WabiSpinner.svelte';
+    import CardGridSkeleton from '$lib/components/ui/CardGridSkeleton.svelte';
     import { toast } from '$lib/stores/toasts';
     import { permissions } from '$lib/stores/authContext';
     import { GetFinancialDashboardForYear } from '../../../wailsjs/go/main/App';
@@ -201,9 +201,8 @@ import { GetFinancialReportYears, GetCashPosition } from '../../../wailsjs/go/ma
             <p style="color: var(--text-secondary); font-size: 14px;">You don't have permission to view financial data.</p>
         </div>
     {:else if loading}
-        <div class="loading-state">
-            <WabiSpinner size="lg" tempo="calm" />
-            <p>Loading financial data...</p>
+        <div class="loading-skeleton">
+            <CardGridSkeleton statCards={4} panels={2} panelCols={2} panelRows={5} />
         </div>
     {:else if loadError}
         <div class="loading-state">
@@ -631,6 +630,10 @@ import { GetFinancialReportYears, GetCashPosition } from '../../../wailsjs/go/ma
         min-height: 400px;
         gap: 16px;
         color: var(--text-secondary);
+    }
+
+    .loading-skeleton {
+        padding-top: 8px;
     }
 
     /* B9b: visible degraded state when the load fails - no fabricated numbers. */

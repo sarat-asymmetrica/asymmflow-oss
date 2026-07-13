@@ -1155,7 +1155,7 @@ import { GeneratePurchaseOrderPDF } from '../../../wailsjs/go/main/DocumentsServ
         {columns}
         data={filteredPOs}
         {loading}
-        emptyMessage="No purchase orders found"
+        emptyMessage="No purchase orders yet — raise one to order from a supplier."
         onRowClick={(row) => {}}
         on:rowClick={handleRowClick}
         stickyHeader={true}

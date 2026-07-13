@@ -61,7 +61,7 @@
     columns = [],
     data = [],
     loading = false,
-    emptyMessage = 'No data available',
+    emptyMessage = 'Nothing here yet.',
     onRowClick = undefined,
     selectedId = undefined,
     stickyHeader = true,

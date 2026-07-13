@@ -32,12 +32,30 @@ Full evidence in `docs/wave10-recon/A1..A7`. Headlines:
 
 _(filled in as each batch gates)_
 
-### B1 — Responsiveness ⏳
-### B2 — One motion vocabulary ⏳
-### B3 — Deal-spine timeline ⏳
-### B4 — The one sound ⏳
-### B5 — Rituals, operator language, brand slot ⏳
-### B6 — Toast discipline ⏳
+### B1 — Responsiveness ⏳ (Batch 2)
+
+### B2 — One motion vocabulary ✅ (committed 64b101c)
+One motion vocabulary now lives in `frontend/src/assets/design-tokens.css` — the canonical LIVE token file (imported first from `main.ts`):
+```
+--motion-fast: 120ms;   --motion-base: 200ms;   --motion-settle: 260ms;
+--ease-standard: cubic-bezier(0.25,0.1,0.25,1);   --ease-decelerate: cubic-bezier(0,0,0.2,1);
+--focus-ring-color: var(--brand-indigo);
+```
+The legacy `--transition-fast/base/slow` and `--easing-*` were **re-pointed to alias these** (one source of truth); `--transition-slow` came 400ms→250ms; **the spring `cubic-bezier(0.34,1.56,0.64,1)` is retired** from the vocabulary and removed from the real-surface call sites (`.animate-flourish`, `IntelligenceHub`, `CursorFollower`). A **live global `@media (prefers-reduced-motion: reduce)` reset** was added (previously effectively absent app-wide). Modal + toast enter/exit were unified onto the tokens: the global ConfirmHost modal (previously zero animation) now has a subtle 200ms decelerate entrance; the three modal impls and the toast were standardized to fade + small translate/scale, no overshoot. A latent invalid-CSS bug (two timing-functions stacked in one `animation` shorthand) was fixed in passing.
+**Audit — motion tokens = one source:** ✅ a single grep at the token layer finds every duration/easing.
+**Reduced-motion:** CSS reset kills all CSS motion. Svelte JS transitions (fly/fade/scale) are NOT CSS — the orchestrator added `frontend/src/lib/motion.ts` (`motionMs()`) and gated the shared primitives (toast + QuickCaptureModal). A final mechanical sweep of the remaining ~98 app-wide JS-transition sites is scheduled as the last step (see Gate results) so the "fully static" claim is honest, not assumed.
+
+### B3 — Deal-spine timeline ✅ (committed 64b101c) — THE signature
+Backend `GetDealTimeline(orderID)` + `GetDealTimelineByOrderNumber` in `invoice_traceability.go`: a **read-only 6-query assembler** (Order→Offer→RFQ→Costing→DeliveryNotes→Invoices) returning ordered `DealTimelineNode{Stage,Serial,Date,State,RecordID,RecordType}`. PAID is **derived in-memory** via the app's own `hydrateCustomerInvoicesPaymentState` (customer_invoice_payment_policy.go) — **zero writes**, `finance:view`-gated. Missing links render honestly (`pending` for a real future stage, `na` for an optional one) — never invented. `DealTimeline.svelte` is the owner-ratified compact single-row stepper (state-colored dots on a thin rule; serial + date beneath; horizontal scroll on narrow widths, never shrink-to-fit) on Onyx & Ether monochrome tokens. Mounted on `OrderDetail.svelte` (primary, preserving the existing stage-change log) and `CustomerOrdersTab.svelte` (per-row on-demand toggle). Customer360 left unmounted (it's a prediction/graph screen with no deal rows — Article I.5). Bindings regenerated.
+**AC:** one glance answers "where does this deal stand"; every present node deep-links via the app's existing handoff stores; assembly is one round-trip; partial chains render.
+
+### B4 — The one sound ✅ (committed 64b101c)
+`scripts/gen_paid_sound.py` (pure stdlib) synthesizes `frontend/src/assets/sounds/paid-settle.wav` — a two-tone low "settle" (root 208Hz + fifth 312Hz, warm attack, fast decay): **18 KB, 0.42s** (budget ≤50KB/<1s). `frontend/src/lib/sound.ts` is the **only `new Audio()` in the repo** (grep-verified) — asset bundled via Vite → `go:embed` → Wails asset server, no network. It plays only when a receipt **fully settles** a customer invoice to PAID (client-side gate on the same `0.001` tolerance the settlement policy uses), only after the posting call resolves without error, only on the acting user's click. Opt-out setting `sound_on_paid_enabled` (default ON) added to the settings map + `SettingsScreen` toggle + `soundSettings` store. `.gitattributes` now pins `*.wav/ogg/mp3` binary.
+**Audit — audio = one call site:** ✅. **No sound on any other event** (not errors, not saves, not arrivals).
+
+### B5 — Rituals, operator language, brand slot ⏳ (Batch 2: B5a checklist, B5bc language+brand)
+
+### B6 — Toast discipline ⏳ (Batch 3)
 
 ---
 
@@ -45,4 +63,16 @@ _(filled in as each batch gates)_
 _(final)_
 
 ## Taste Ledger
-_(final — every aesthetic decision, alternatives considered, what to review first)_
+_(every aesthetic decision, alternatives considered, what to review first — grows per batch)_
+
+**What to review FIRST:** `DealTimeline.svelte` on an Order detail view (the signature) — open an order that is part-way through its life and one that's fully PAID. Then the paid-settle sound (record a receipt that fully settles an invoice) — this is the whole audio budget; re-roll it in `scripts/gen_paid_sound.py` if the character's wrong.
+
+**B2 — motion easing [TASTE].** `--ease-standard` kept bit-identical to the pre-existing `--easing-smooth` (0.25,0.1,0.25,1) so nothing already using it shifts feel — only the vocabulary consolidates. `--ease-decelerate` = Material decelerate (0,0,0.2,1); considered ease-out-expo (0.33,1,0.68,1) but rejected as too flat-tailed ("sluggish stop") in a 120–260ms window. Spring/bounce deliberately excluded (trading desk, not a game). Toasts enter via `fly` (−8px, "arriving from above the stack"), modals via `fade`+`scale` ("growing into place") — matching what each already implied, just standardized. **Owner look:** confirm the modal/toast feel; note `IntelligenceHub`'s screen-mount is still 0.5s (curve-only was in scope) — shorten it too if you want.
+
+**B3 — timeline shape [TASTE].** Built the owner-ratified compact dot-and-rule stepper. Alternatives considered & rejected: vertical timeline card (heavier, not "compact"); progress-bar-with-percent (hides which stage is missing); icon-per-stage (adds visual weight the brief avoids). Colors use monochrome contrast tokens, not hues — so the future green-accent can't collide with a "done = green" (there is no green in the timeline). **Owner look:** is the dot/label density right at typical order widths?
+
+**B4 — the sound [TASTE].** A two-tone wooden "settle" (208Hz root + 312Hz fifth, warm attack, fast decay, 0.42s), not a chime/fanfare. Re-roll params are named constants at the top of `scripts/gen_paid_sound.py` (pitch via `ROOT_FREQ_HZ`/`FIFTH_RATIO`, per-tone timing/gain, warmth partial, master gain). **Owner look:** play it; if it should be lower/warmer/shorter, tweak and regenerate.
+
+### Owner decisions requested (open questions)
+1. **B4 autoplay:** `.play()` fires after the `await`-ed posting call resolves (so it never sounds on a failed post) rather than the strict zero-await pattern. For a sub-second local Wails IPC this stays inside Chromium's user-activation window, so it should play — but only real-hardware confirmation is definitive (can't verify audio headlessly). Accept, or want the zero-await variant (which risks sounding on a subsequently-failed post)?
+2. **B4 second PAID path:** a separate "Apply receipt to invoice" flow can also bring an invoice to PAID; it's currently SILENT (only the "Record Payment/Receipt" submit sounds). Wiring it too = same one `Audio` construction, just a second call site — more consistent, arguably more correct. Want it wired?

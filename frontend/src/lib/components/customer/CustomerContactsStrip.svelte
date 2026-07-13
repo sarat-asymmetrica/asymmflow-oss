@@ -36,7 +36,7 @@
 <div class="contacts-strip">
   <div class="contacts-strip-header">
     <h3 class="strip-title">CONTACTS</h3>
-    <button class="add-contact-btn-inline" onclick={() => showContactModal = true}>+ Add</button>
+    <Button variant="secondary" size="sm" on:click={() => showContactModal = true}>+ Add</Button>
   </div>
   <div class="contacts-scroll-container">
     {#if profile.contacts?.length > 0}
@@ -123,22 +123,6 @@
     letter-spacing: 0.05em;
     color: var(--text-secondary);
     margin: 0;
-  }
-
-  .add-contact-btn-inline {
-    background: none;
-    border: 1px solid var(--border);
-    padding: 4px 12px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    border-radius: 6px;
-    transition: all 0.2s;
-  }
-
-  .add-contact-btn-inline:hover {
-    border-color: var(--brand-indigo, #1D1D1F);
-    color: var(--text-primary);
   }
 
   .contacts-scroll-container {

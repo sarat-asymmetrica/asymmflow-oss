@@ -26,7 +26,7 @@
 </script>
 
 <header class="header">
-  <button class="back-btn" onclick={goBack}>Back to Customers</button>
+  <Button variant="ghost" size="sm" on:click={goBack}>Back to Customers</Button>
   {#if profile}
     <div class="header-info">
       <h1>{profile.business_name}</h1>
@@ -38,7 +38,7 @@
           <Button variant="secondary" size="sm" on:click={() => showTaskModal = true}>Create Task</Button>
           <Button variant="secondary" size="sm" on:click={startEdit}>Edit</Button>
           {#if !customerDeleted}
-            <Button variant="secondary" size="sm" on:click={() => showDeleteConfirm = true} style="color: #e74c3c; border-color: #e74c3c;">Delete</Button>
+            <Button variant="danger" size="sm" on:click={() => showDeleteConfirm = true}>Delete</Button>
           {/if}
         {/if}
       </div>
@@ -48,8 +48,6 @@
 
 <style>
   .header { margin-bottom: 24px; }
-  .back-btn { background: none; border: none; color: var(--brand-indigo); cursor: pointer; font-size: 14px; padding: 0; margin-bottom: 12px; }
-  .back-btn:hover { text-decoration: underline; }
 
   .header-info { display: flex; justify-content: space-between; align-items: center; }
   .header-info h1 { margin: 0; font-size: 24px; font-weight: 500; }

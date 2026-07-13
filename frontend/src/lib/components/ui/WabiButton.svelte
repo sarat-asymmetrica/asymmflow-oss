@@ -62,8 +62,13 @@
     font-family: var(--font-prose, Georgia, serif);
     border-radius: var(--fib-1);
     cursor: pointer;
-    transition: all 0.2s var(--ease-wabi, cubic-bezier(0, 0, 0.2, 1));
+    transition: transform var(--transition-fast, 120ms cubic-bezier(0.25, 0.1, 0.25, 1)), background var(--transition-fast, 120ms), border-color var(--transition-fast, 120ms);
     white-space: nowrap;
+  }
+
+  /* Press state — scale 0.97 per Constitution IV.2, shared by every variant. */
+  .wabi-button:active:not(:disabled):not(.loading) {
+    transform: scale(0.97);
   }
 
   /* Sizes */
@@ -94,6 +99,11 @@
     border-color: #2d2d2d;
   }
 
+  .wabi-button.primary:active:not(:disabled) {
+    background: #000000;
+    border-color: #000000;
+  }
+
   .wabi-button.secondary {
     background: transparent;
     color: var(--color-ink, #1c1c1c);
@@ -102,6 +112,10 @@
 
   .wabi-button.secondary:hover:not(:disabled) {
     background: rgba(0, 0, 0, 0.05);
+  }
+
+  .wabi-button.secondary:active:not(:disabled) {
+    background: rgba(0, 0, 0, 0.1);
   }
 
   .wabi-button.ghost {
@@ -114,6 +128,10 @@
     background: rgba(0, 0, 0, 0.05);
   }
 
+  .wabi-button.ghost:active:not(:disabled) {
+    background: rgba(0, 0, 0, 0.1);
+  }
+
   .wabi-button.danger {
     background: var(--color-danger, #ef4444);
     color: white;
@@ -123,6 +141,11 @@
   .wabi-button.danger:hover:not(:disabled) {
     background: #dc2626;
     border-color: #dc2626;
+  }
+
+  .wabi-button.danger:active:not(:disabled) {
+    background: #b91c1c;
+    border-color: #b91c1c;
   }
 
   /* States */
@@ -139,9 +162,9 @@
     width: 100%;
   }
 
-  /* Focus ring */
+  /* Focus ring — points at the single app-wide focus token (Batch 1). */
   .wabi-button:focus-visible {
-    outline: 2px solid var(--color-ink, #1c1c1c);
+    outline: 2px solid var(--focus-ring-color, var(--color-ink, #1c1c1c));
     outline-offset: 2px;
   }
 

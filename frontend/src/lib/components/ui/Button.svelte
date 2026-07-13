@@ -33,7 +33,7 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), color var(--transition-fast);
     border: none;
     font-family: var(--font-family);
     display: inline-flex;
@@ -41,6 +41,11 @@
     justify-content: center;
     gap: 8px;
     position: relative;
+  }
+
+  /* Press state — defined ONCE, inherited by every variant (Article IV.2: press ≈ scale 0.97). */
+  .btn:active:not(:disabled):not(.loading) {
+    transform: scale(0.97);
   }
 
   .btn:disabled {
@@ -80,6 +85,12 @@
     box-shadow: var(--shadow-sm);
   }
 
+  .btn-secondary:active:not(:disabled) {
+    background: var(--brand-indigo-tint);
+    border-color: var(--text-muted);
+    box-shadow: none;
+  }
+
   .btn-ghost {
     background: transparent;
     color: var(--text-secondary);
@@ -87,6 +98,11 @@
 
   .btn-ghost:hover:not(:disabled) {
     background: var(--brand-indigo-tint);
+    color: var(--text-primary);
+  }
+
+  .btn-ghost:active:not(:disabled) {
+    background: var(--brand-indigo-tint-medium);
     color: var(--text-primary);
   }
 
@@ -173,7 +189,7 @@
 
   /* Focus visible for accessibility */
   .btn:focus-visible {
-    outline: 2px solid var(--brand-indigo);
+    outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
   }
 </style>

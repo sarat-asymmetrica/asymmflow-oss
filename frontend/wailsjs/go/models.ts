@@ -10377,6 +10377,46 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class DealDocumentStatus {
+	    document: string;
+	    present: boolean;
+	    serial?: string;
+	    date?: time.Time;
+	    record_id?: string;
+	    record_type?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new DealDocumentStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.document = source["document"];
+	        this.present = source["present"];
+	        this.serial = source["serial"];
+	        this.date = this.convertValues(source["date"], time.Time);
+	        this.record_id = source["record_id"];
+	        this.record_type = source["record_type"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class DealTimelineNode {
 	    stage: string;
 	    serial: string;
@@ -10422,6 +10462,7 @@ export namespace main {
 	export class DealTimeline {
 	    order_id: string;
 	    nodes: DealTimelineNode[];
+	    documents: DealDocumentStatus[];
 	
 	    static createFrom(source: any = {}) {
 	        return new DealTimeline(source);
@@ -10431,6 +10472,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.order_id = source["order_id"];
 	        this.nodes = this.convertValues(source["nodes"], DealTimelineNode);
+	        this.documents = this.convertValues(source["documents"], DealDocumentStatus);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

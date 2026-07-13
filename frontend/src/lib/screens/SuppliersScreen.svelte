@@ -425,7 +425,7 @@ import { GetSupplierInvoicesBySupplier } from '../../../wailsjs/go/main/FinanceS
         {columns}
         data={filteredSuppliers}
         {loading}
-        emptyMessage="No suppliers found"
+        emptyMessage="No suppliers yet — add one to begin sourcing."
         onRowClick={(row) => {}}
         on:rowClick={handleRowClick}
         stickyHeader={true}
