@@ -4,6 +4,7 @@
 import { FirstRunSyncWithProgress, GetFirstRunSyncStatus } from "../../../wailsjs/go/main/SyncServiceBinding";
     import { toast } from "$lib/stores/toasts";
     import SyncProgress from "../components/ui/SyncProgress.svelte";
+    import { brand } from "$lib/brand";
 
     const dispatch = createEventDispatcher();
 
@@ -102,8 +103,8 @@ import { FirstRunSyncWithProgress, GetFirstRunSyncStatus } from "../../../wailsj
 
 <div class="license-screen">
     <div class="license-card">
-        <div class="logo-mark">AC</div>
-        <h1>Acme Instrumentation ERP</h1>
+        <div class="logo-mark">{brand.mark}</div>
+        <h1>{brand.wordmark}</h1>
         <p class="subtitle">Enter your license key to activate this device</p>
 
         <div class="form-group">
