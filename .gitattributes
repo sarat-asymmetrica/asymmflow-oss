@@ -48,6 +48,9 @@
 *.woff2 binary
 *.eot   binary
 *.pdf   binary
+*.wav   binary
+*.ogg   binary
+*.mp3   binary
 *.xlsx  binary
 *.xls   binary
 *.db    binary

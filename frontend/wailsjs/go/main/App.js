@@ -1526,6 +1526,14 @@ export function GetDataQualityReviewHistory(arg1) {
   return window['go']['main']['App']['GetDataQualityReviewHistory'](arg1);
 }
 
+export function GetDealTimeline(arg1) {
+  return window['go']['main']['App']['GetDealTimeline'](arg1);
+}
+
+export function GetDealTimelineByOrderNumber(arg1) {
+  return window['go']['main']['App']['GetDealTimelineByOrderNumber'](arg1);
+}
+
 export function GetDeliveriesByArea(arg1) {
   return window['go']['main']['App']['GetDeliveriesByArea'](arg1);
 }

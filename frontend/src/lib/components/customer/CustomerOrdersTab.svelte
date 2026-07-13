@@ -1,6 +1,8 @@
 <script lang="ts">
   import Card from '$lib/components/ui/Card.svelte';
+  import DealTimeline from '../DealTimeline.svelte';
   import { formatDate, formatCurrency } from './customerFormatters';
+  import { GetDealTimelineByOrderNumber } from '../../../../wailsjs/go/main/App';
   import type { main } from '../../../../wailsjs/go/models';
 
   interface Props {
@@ -9,6 +11,34 @@
   }
 
   let { profile, openOrder }: Props = $props();
+
+  // OrderSummary rows here carry order_number/date/status/total only - no id
+  // (recon: A3, Wave 10) - so the deal-spine timeline is resolved by serial
+  // via GetDealTimelineByOrderNumber rather than a prop-plumbed id. Toggle
+  // reveal keeps this to ONE backend call per row, only on demand.
+  let expandedOrderNumber: string | null = $state(null);
+  let expandedOrderId: string | null = $state(null);
+  let resolvingOrderNumber: string | null = $state(null);
+
+  async function toggleTimeline(orderNumber: string) {
+    if (expandedOrderNumber === orderNumber) {
+      expandedOrderNumber = null;
+      expandedOrderId = null;
+      return;
+    }
+    resolvingOrderNumber = orderNumber;
+    try {
+      const timeline = await GetDealTimelineByOrderNumber(orderNumber);
+      expandedOrderId = timeline.order_id;
+      expandedOrderNumber = orderNumber;
+    } catch (e) {
+      // Honest failure - no timeline to show, no fabricated data.
+      expandedOrderNumber = null;
+      expandedOrderId = null;
+    } finally {
+      resolvingOrderNumber = null;
+    }
+  }
 </script>
 
 <Card padding="md">
@@ -16,21 +46,36 @@
   {#if profile.recent_orders?.length > 0}
     <div class="list">
       {#each profile.recent_orders as order}
-        <div
-          class="list-item"
-          role="button"
-          tabindex="0"
-          onclick={() => openOrder()}
-          onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openOrder())}
-        >
-          <div class="item-main">
-            <span class="item-code">{order.order_number}</span>
-            <span class="item-date">{formatDate(order.order_date)}</span>
+        <div class="list-wrap">
+          <div
+            class="list-item"
+            role="button"
+            tabindex="0"
+            onclick={() => openOrder()}
+            onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), openOrder())}
+          >
+            <div class="item-main">
+              <span class="item-code">{order.order_number}</span>
+              <span class="item-date">{formatDate(order.order_date)}</span>
+            </div>
+            <div class="item-meta">
+              <span class="item-status">{order.status}</span>
+              <span class="item-amount">{formatCurrency(order.total_value_bhd)} BHD</span>
+              <button
+                type="button"
+                class="timeline-toggle"
+                onclick={(e) => { e.stopPropagation(); toggleTimeline(order.order_number); }}
+                disabled={resolvingOrderNumber === order.order_number}
+              >
+                {expandedOrderNumber === order.order_number ? 'Hide timeline' : 'Timeline'}
+              </button>
+            </div>
           </div>
-          <div class="item-meta">
-            <span class="item-status">{order.status}</span>
-            <span class="item-amount">{formatCurrency(order.total_value_bhd)} BHD</span>
-          </div>
+          {#if expandedOrderNumber === order.order_number && expandedOrderId}
+            <div class="inline-timeline">
+              <DealTimeline orderId={expandedOrderId} />
+            </div>
+          {/if}
         </div>
       {/each}
     </div>
@@ -53,4 +98,23 @@
   .item-meta { display: flex; align-items: center; gap: 16px; }
   .item-status { font-size: 12px; padding: 2px 8px; background: var(--surface); border-radius: 4px; }
   .item-amount { font-weight: 600; font-family: 'JetBrains Mono', monospace; }
+
+  .list-wrap { display: flex; flex-direction: column; }
+  .timeline-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  .timeline-toggle:hover:not(:disabled) { color: var(--text-primary); border-color: var(--onyx); }
+  .timeline-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+  .inline-timeline {
+    padding: 10px 12px 4px;
+    background: var(--surface-elevated);
+    border-radius: 0 0 6px 6px;
+    margin-top: -8px;
+  }
 </style>

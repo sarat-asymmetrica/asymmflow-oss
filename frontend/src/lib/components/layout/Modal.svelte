@@ -171,6 +171,7 @@
     justify-content: center;
     z-index: var(--z-modal);
     padding: clamp(16px, 2.5vw, 28px);
+    animation: wave10-modal-scrim-in var(--motion-base, 200ms) var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1));
   }
 
   .modal {
@@ -181,6 +182,17 @@
     flex-direction: column;
     max-height: calc(100vh - 56px);
     overflow: hidden;
+    animation: wave10-modal-panel-in var(--motion-base, 200ms) var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1));
+  }
+
+  @keyframes wave10-modal-scrim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes wave10-modal-panel-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
 
   .modal-sm {

@@ -3,6 +3,14 @@
 
     import { createEventDispatcher } from "svelte";
     import { fade, scale } from "svelte/transition";
+    import { cubicOut } from "svelte/easing";
+    import { motionMs } from "$lib/motion";
+
+    // Motion vocabulary (Wave 10 B2): timing mirrors design-tokens.css --motion-base (200ms).
+    // Svelte transitions run in JS and cannot read CSS custom properties directly, so the
+    // numeric value is hardcoded — keep it equal to --motion-base. cubicOut approximates
+    // --ease-decelerate (fast start, slow settle, no overshoot).
+    const MODAL_MOTION_MS = 200;
     import { toast } from "$lib/stores/toasts";
     import { confirm } from "$lib/stores/confirm";
     import WabiSpinner from "$lib/components/ui/WabiSpinner.svelte";
@@ -1266,7 +1274,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 {#if show}
     <div
         class="modal-backdrop"
-        transition:fade={{ duration: 200 }}
+        transition:fade={{ duration: motionMs(MODAL_MOTION_MS), easing: cubicOut }}
         onclick={self(handleBackdropClick)}
         onkeydown={(event) => handleBackdropKeydown(event, handleBackdropClick)}
         role="button"
@@ -1275,7 +1283,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
         <div
             class="modal"
             class:bank-statement-modal={selectedType === 'bank_statement'}
-            transition:scale={{ duration: 200, start: 0.95 }}
+            transition:scale={{ duration: motionMs(MODAL_MOTION_MS), start: 0.98, easing: cubicOut }}
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"
@@ -1349,7 +1357,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 
                     <!-- Details Tab: Editable Fields -->
                     {#if activeTab === 'details'}
-                        <div class="form-panel" transition:fade={{ duration: 150 }}>
+                        <div class="form-panel" transition:fade={{ duration: motionMs(150) }}>
                             <div class="form-grid">
                                 {#if selectedType === 'bank_statement'}
                                     <div class="form-group full-width">
@@ -1488,7 +1496,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 
                     <!-- Line Items / Transactions Tab -->
                     {#if activeTab === 'items'}
-                        <div class="items-panel" transition:fade={{ duration: 150 }}>
+                        <div class="items-panel" transition:fade={{ duration: motionMs(150) }}>
                             {#if lineItems.length === 0}
                                 <div class="empty-items">
                                     <p>No {selectedType === 'bank_statement' ? 'transactions' : 'line items'} yet.</p>
@@ -1626,7 +1634,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 
                     <!-- Raw Text Tab -->
                     {#if activeTab === 'raw'}
-                        <div class="raw-text-panel" transition:fade={{ duration: 150 }}>
+                        <div class="raw-text-panel" transition:fade={{ duration: motionMs(150) }}>
                             <pre>{ocrResult.text || 'No text extracted'}</pre>
                         </div>
                     {/if}
@@ -1671,13 +1679,13 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 {#if showCloseConfirmation}
     <div
         class="modal-backdrop confirmation-backdrop"
-        transition:fade={{ duration: 150 }}
+        transition:fade={{ duration: motionMs(MODAL_MOTION_MS), easing: cubicOut }}
         onclick={self(cancelClose)}
         onkeydown={(event) => handleBackdropKeydown(event, cancelClose)}
         role="button"
         tabindex="0"
     >
-        <div class="confirmation-modal" transition:scale={{ duration: 150, start: 0.95 }}>
+        <div class="confirmation-modal" transition:scale={{ duration: motionMs(MODAL_MOTION_MS), start: 0.98, easing: cubicOut }}>
             <h3>Unsaved Changes</h3>
             <p>You have unsaved changes. Are you sure you want to close?</p>
             <div class="confirmation-actions">
@@ -1692,13 +1700,13 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 {#if showDuplicateWarning}
     <div
         class="modal-backdrop"
-        transition:fade={{ duration: 150 }}
+        transition:fade={{ duration: motionMs(MODAL_MOTION_MS), easing: cubicOut }}
         onclick={self(() => showDuplicateWarning = false)}
         onkeydown={(event) => handleBackdropKeydown(event, () => (showDuplicateWarning = false))}
         role="button"
         tabindex="0"
     >
-        <div class="warning-modal" transition:scale={{ duration: 150, start: 0.95 }} role="alertdialog">
+        <div class="warning-modal" transition:scale={{ duration: motionMs(MODAL_MOTION_MS), start: 0.98, easing: cubicOut }} role="alertdialog">
             <div class="warning-header">
                 <span class="warning-icon">!</span>
                 <h3>Similar Document Exists</h3>

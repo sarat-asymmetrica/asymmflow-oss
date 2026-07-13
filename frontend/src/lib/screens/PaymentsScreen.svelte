@@ -55,6 +55,12 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
   import { confirm } from '$lib/stores/confirm';
   import { permissions } from '$lib/stores/authContext';
   import { buildWailsInput, toWailsDate } from '$lib/utils/wailsInterop';
+  import { playPaidSettle } from '$lib/sound';
+
+  // Wave 10 / B4: same tolerance the backend uses for BHD float comparisons
+  // (FloatingPointTolerance, supplier_payment_service.go) — a receipt that
+  // brings outstanding to (approximately) zero is a full settlement.
+  const PAID_TOLERANCE_BHD = 0.001;
 
   const dispatch = createEventDispatcher();
 
@@ -772,6 +778,19 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
       return;
     }
 
+    // Wave 10 / B4: decide up front — using only the client-known
+    // outstanding balance and the amount the user is about to post — whether
+    // this receipt will fully settle the invoice. This mirrors the same
+    // condition the backend's settlement policy uses (outstanding <=
+    // FloatingPointTolerance after the payment is applied). Computed BEFORE
+    // the async post so it can never be affected by loadData() resetting
+    // selectedInvoice afterwards, and only acted on after the post succeeds
+    // (never on a partial payment, never on an error).
+    const willFullySettle =
+      receiptApplyNow &&
+      !!selectedInvoice &&
+      (selectedInvoice.outstanding_bhd - amount) <= PAID_TOLERANCE_BHD;
+
     recordLoading = true;
     try {
       await CreateCustomerReceipt(buildWailsInput(main.CustomerReceiptInput, {
@@ -790,6 +809,14 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
           ? `Receipt of ${formatBHD(amount)} BHD recorded and applied`
           : `Receipt of ${formatBHD(amount)} BHD recorded on-account`
       );
+
+      // Wave 10 / B4 — the one sound. Fires only when this posting click
+      // just fully applied the invoice (never on partial payments, never
+      // on-account, never on error — this line is unreachable unless the
+      // await above resolved without throwing).
+      if (willFullySettle) {
+        playPaidSettle();
+      }
 
       showRecordModal = false;
       await loadData();

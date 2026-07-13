@@ -7,6 +7,7 @@
   import { permissions } from "$lib/stores/authContext";
   import { initI18n, localeOptions, setLocale, t, type Locale } from "$lib/i18n";
   import { setTextScale, setTextScalePreset, textScale, textScalePreset, type TextScalePreset } from "$lib/stores/textScale";
+  import { soundOnPaidEnabled } from "$lib/stores/soundSettings";
   import { formatNumber } from "$lib/utils/formatters";
   import WabiSpinner from "$lib/components/ui/WabiSpinner.svelte";
   import { confirm } from "$lib/stores/confirm";
@@ -73,6 +74,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
     office: { outlook_enabled: false, excel_enabled: false },
     business: { default_margin: 20, vat_rate: 10 },
     security: { session_timeout_minutes: 30 },
+    sounds: { sound_on_paid_enabled: true },
   });
 
   let userRole = $state('staff');
@@ -615,6 +617,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
     try {
       await UpdateSettings(settings as Record<string, any>);
       await setLocale(settings.language as Locale);
+      soundOnPaidEnabled.set(settings.sounds.sound_on_paid_enabled);
       toast.success("Settings saved");
     } catch (e) {
       toast.danger("Save failed");
@@ -888,6 +891,17 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
             />
             <label for="excel">Enable Excel Automations</label>
           </div>
+
+          <h3>Sound</h3>
+          <div class="toggle-row">
+            <input
+              type="checkbox"
+              id="sound-on-paid"
+              bind:checked={settings.sounds.sound_on_paid_enabled}
+            />
+            <label for="sound-on-paid">Play a sound when an invoice is paid in full</label>
+          </div>
+          <p class="hint">The application's one sound — a quiet settle when your own posting click fully pays a customer invoice. On by default.</p>
         </div>
       {:else if activeSection === "folders"}
         <div class="section" in:fade>

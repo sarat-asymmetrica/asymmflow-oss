@@ -786,6 +786,10 @@ export function GetDashboardStatsV2():Promise<main.DashboardStatsV2>;
 
 export function GetDataQualityReviewHistory(arg1:number):Promise<Array<main.DataQualityReview>>;
 
+export function GetDealTimeline(arg1:string):Promise<main.DealTimeline>;
+
+export function GetDealTimelineByOrderNumber(arg1:string):Promise<main.DealTimeline>;
+
 export function GetDeliveriesByArea(arg1:string):Promise<Array<main.DeliveryPlanningItem>>;
 
 export function GetDeliveryAreaSummary():Promise<Record<string, number>>;

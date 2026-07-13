@@ -133,6 +133,13 @@ func (a *App) GetSettings() (map[string]any, error) {
 			"session_timeout_minutes": getSettingOrDefault(userSettings, "security.session_timeout_minutes",
 				int(InteractiveSessionTimeout.Minutes())),
 		},
+		// Wave 10 / B4 (Article IV.3 — sound is saffron, one sound only):
+		// opt-out for the single "paid settle" sound. Default ON. No
+		// in-memory side effect needed — this round-trips through
+		// saveUserSettings(settings) like any other plain JSON field.
+		"sounds": map[string]any{
+			"sound_on_paid_enabled": getSettingOrDefault(userSettings, "sounds.sound_on_paid_enabled", true),
+		},
 	}
 
 	log.Printf("⚙️ Retrieved settings")

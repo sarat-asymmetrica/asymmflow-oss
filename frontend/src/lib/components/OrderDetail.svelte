@@ -13,6 +13,7 @@
     import { createEventDispatcher, onMount } from "svelte";
     import ShipmentCard from "./ShipmentCard.svelte";
     import MathematicalRigorBadge from "./consciousness/MathematicalRigorBadge.svelte";
+    import DealTimeline from "./DealTimeline.svelte";
     import { GetOrderFulfillmentStatus } from "../../../wailsjs/go/main/App";
 
     type LineItem = {
@@ -483,6 +484,10 @@
         </section>
 
         <section class="timeline">
+            <p class="mono">Deal Timeline</p>
+            {#if detail.order?.id}
+                <DealTimeline orderId={String(detail.order.id)} />
+            {/if}
             <p class="mono">Stage Timeline</p>
             <div class="history">
                 {#if detail.history?.length === 0}

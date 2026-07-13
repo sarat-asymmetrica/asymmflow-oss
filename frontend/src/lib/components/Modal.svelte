@@ -112,7 +112,7 @@
         align-items: center;
         justify-content: center;
         z-index: var(--z-modal, 1000);
-        animation: fadeIn 150ms ease-out;
+        animation: fadeIn var(--motion-base, 200ms) var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1));
     }
 
     @keyframes fadeIn {
@@ -123,11 +123,11 @@
     @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateY(16px);
+            transform: translateY(8px) scale(0.98);
         }
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
         }
     }
 
@@ -137,7 +137,7 @@
         max-height: 90vh;
         overflow: auto;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        animation: slideUp 200ms ease-out;
+        animation: slideUp var(--motion-base, 200ms) var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1));
     }
 
     .modal-sm { width: 400px; max-width: 95vw; }

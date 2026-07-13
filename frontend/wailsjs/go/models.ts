@@ -10377,6 +10377,81 @@ export namespace main {
 		    return a;
 		}
 	}
+	export class DealTimelineNode {
+	    stage: string;
+	    serial: string;
+	    date: time.Time;
+	    state: string;
+	    record_id?: string;
+	    record_type?: string;
+	    count?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DealTimelineNode(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.stage = source["stage"];
+	        this.serial = source["serial"];
+	        this.date = this.convertValues(source["date"], time.Time);
+	        this.state = source["state"];
+	        this.record_id = source["record_id"];
+	        this.record_type = source["record_type"];
+	        this.count = source["count"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class DealTimeline {
+	    order_id: string;
+	    nodes: DealTimelineNode[];
+	
+	    static createFrom(source: any = {}) {
+	        return new DealTimeline(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.order_id = source["order_id"];
+	        this.nodes = this.convertValues(source["nodes"], DealTimelineNode);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class DeleteCascadeResult {
 	    rfq_id: number;
 	    linked_costing_sheets: number;
