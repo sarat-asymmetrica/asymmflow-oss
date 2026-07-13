@@ -21,10 +21,14 @@ import { get } from 'svelte/store';
  * Plays the one application sound — the "paid settle" — for the acting
  * user's own posting click that fully applies a customer invoice to PAID.
  *
- * MUST be called synchronously as the first statement in the click-handler
- * path that follows a successful PAID transition (no `await` before this
- * call), or WebView2/Chromium's autoplay-with-sound gesture attribution is
- * lost and playback silently fails.
+ * Called from the click-handler path that follows a successful PAID
+ * transition — after the posting call resolves, so it never sounds on a
+ * failed post. WebView2/Chromium extends user-activation across the
+ * sub-second local Wails IPC await; the settle decision itself is computed
+ * BEFORE the await (see PaymentsScreen) so a post-success data reload can
+ * never change it. If real-hardware testing ever shows the activation
+ * window expiring, move to the zero-await variant and accept the
+ * sound-on-failed-post risk consciously.
  *
  * Never throws — swallows playback errors so a missing/blocked sound can
  * never interrupt the real posting flow.
