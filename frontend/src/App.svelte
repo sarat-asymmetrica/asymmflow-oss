@@ -25,7 +25,7 @@
     // Single shared nav source of truth (Wave 9.5 B8) — drives sidebar order,
     // Alt+N shortcut order, and the shell-level permission gate together.
     import { NAV_ITEMS, SCREEN_PERMISSIONS } from "./lib/config/navItems";
-    import { t } from "$lib/i18n";
+    import { t, initI18n } from "$lib/i18n";
 
     // Error Boundary - Catch uncaught errors gracefully
     import ErrorBoundary from "./lib/components/ErrorBoundary.svelte";
@@ -487,6 +487,11 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
     onMount(() => {
         let cleanup: (() => void) | undefined;
         initTextScale();
+        // Load UI translations at startup so labels (sidebar nav, etc.) resolve
+        // from the first paint instead of showing raw i18n keys until Settings is
+        // opened. Fire-and-forget: `messages` is reactive $state, so labels update
+        // as soon as it loads; Settings re-inits on an explicit language change.
+        void initI18n();
 
         void (async () => {
 
