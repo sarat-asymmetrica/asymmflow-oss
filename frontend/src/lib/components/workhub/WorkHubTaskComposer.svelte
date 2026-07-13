@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CollaborativeProject } from "$lib/api/collaboration";
+  import Button from "$lib/components/ui/Button.svelte";
 
   interface AssigneeOption {
     id: string;
@@ -65,7 +66,7 @@
   </div>
   <textarea bind:value={taskDescription} rows="3" placeholder="Context, blockers, or expected outcome"></textarea>
   <div class="actions">
-    <button class="primary" onclick={onCreate} disabled={savingTask}>Create Task</button>
+    <Button variant="primary" on:click={onCreate} disabled={savingTask}>Create Task</Button>
   </div>
 </section>
 
@@ -103,8 +104,7 @@
 
   input,
   select,
-  textarea,
-  button {
+  textarea {
     font: inherit;
   }
 
@@ -122,14 +122,6 @@
     display: flex;
     justify-content: flex-end;
     margin-top: 12px;
-  }
-
-  .primary {
-    border: none;
-    border-radius: 10px;
-    padding: 10px 14px;
-    background: var(--onyx);
-    color: white;
   }
 
   @media (max-width: 1100px) {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 // =============================================================================
@@ -94,6 +95,424 @@ func (a *App) GetInvoiceAuditTrail(invoiceID string) (InvoiceAuditTrail, error) 
 	}
 
 	return trail, nil
+}
+
+// =============================================================================
+// DEAL TIMELINE (Wave 10 B3) - single-row assembly of the deal spine
+// RFQ -> Costing -> Offer -> Order -> Delivery -> Invoice -> Paid
+// =============================================================================
+
+// DealTimelineNode is one stage of the deal spine (Article I: the human
+// document serial leads, never a raw id). RecordID/RecordType exist purely
+// for the frontend to deep-link into the source record's own screen; nothing
+// here is mutated.
+type DealTimelineNode struct {
+	Stage      string    `json:"stage"`  // RFQ | Costing | Offer | Order | Delivery | Invoice | Paid
+	Serial     string    `json:"serial"` // human document serial; empty if the node was never reached
+	Date       time.Time `json:"date"`   // document date; zero value if none
+	State      string    `json:"state"`  // done | current | pending | na
+	RecordID   string    `json:"record_id,omitempty"`
+	RecordType string    `json:"record_type,omitempty"` // opportunity | offer | order | delivery_note | invoice
+	Count      int       `json:"count,omitempty"`       // >1 when a stage aggregates multiple records (DNs, invoices)
+}
+
+// DealTimeline is the ordered, one-call assembly of a single order's full
+// document chain, for the deal-spine stepper (Article I - the signature
+// timeline). Read-only: no field here is ever written back to the DB.
+type DealTimeline struct {
+	OrderID string             `json:"order_id"`
+	Nodes   []DealTimelineNode `json:"nodes"`
+	// Documents is the six-document closing-set checklist (Wave 10 B5a,
+	// Article I.6). Deliberately a SEPARATE field from Nodes: the B3 stepper
+	// (DealTimeline.svelte) only ever reads timeline.nodes, so adding rows
+	// here can never change the spine's existing rendering or semantics.
+	Documents []DealDocumentStatus `json:"documents"`
+}
+
+// DealDocumentStatus is one row of the six-document closing-set checklist:
+// offer / order confirmation / delivery note / invoice / statement entry /
+// receipt (Article I.6). Present-or-missing, honest - never invented; Serial
+// is always the human document serial, never a raw id.
+type DealDocumentStatus struct {
+	Document   string    `json:"document"`
+	Present    bool      `json:"present"`
+	Serial     string    `json:"serial,omitempty"`
+	Date       time.Time `json:"date,omitempty"`
+	RecordID   string    `json:"record_id,omitempty"`
+	RecordType string    `json:"record_type,omitempty"`
+}
+
+// GetDealTimeline assembles the deal spine for one order in a small, fixed
+// number of queries (Order, Offer, Opportunity/RFQ, best-effort Costing
+// attachment, DeliveryNotes, Invoices - six queries worst case, fewer when
+// upstream links are empty). PAID state is derived with the exact same
+// policy function the app already uses on every invoice read
+// (hydrateCustomerInvoicesPaymentState, customer_invoice_payment_policy.go),
+// applied here in-memory only - this function never writes to the database.
+func (a *App) GetDealTimeline(orderID string) (DealTimeline, error) {
+	if err := a.requirePermission("finance:view"); err != nil {
+		return DealTimeline{}, err
+	}
+	if a.db == nil {
+		return DealTimeline{}, fmt.Errorf("database not initialized")
+	}
+	ctx := context.Background()
+
+	// 1. Order - the seed record.
+	var order Order
+	if err := a.db.WithContext(ctx).First(&order, "id = ?", orderID).Error; err != nil {
+		return DealTimeline{OrderID: orderID, Nodes: []DealTimelineNode{}}, fmt.Errorf("order not found: %w", err)
+	}
+
+	return a.buildDealTimeline(ctx, order)
+}
+
+// GetDealTimelineByOrderNumber is the same read-only assembly as
+// GetDealTimeline, keyed by the human order serial instead of the raw id.
+// Exists because some list surfaces (e.g. the customer-orders tab, which
+// renders OrderSummary rows carrying only order_number/date/status/total,
+// no id) have no order id to deep-link with - this lets them resolve the
+// serial they already display into the same one-call timeline without a
+// wider surface change.
+func (a *App) GetDealTimelineByOrderNumber(orderNumber string) (DealTimeline, error) {
+	if err := a.requirePermission("finance:view"); err != nil {
+		return DealTimeline{}, err
+	}
+	if a.db == nil {
+		return DealTimeline{}, fmt.Errorf("database not initialized")
+	}
+	ctx := context.Background()
+
+	var order Order
+	if err := a.db.WithContext(ctx).First(&order, "order_number = ?", orderNumber).Error; err != nil {
+		return DealTimeline{Nodes: []DealTimelineNode{}}, fmt.Errorf("order not found: %w", err)
+	}
+
+	return a.buildDealTimeline(ctx, order)
+}
+
+// buildDealTimeline assembles the deal spine for an already-loaded order.
+func (a *App) buildDealTimeline(ctx context.Context, order Order) (DealTimeline, error) {
+	timeline := DealTimeline{OrderID: order.ID, Nodes: []DealTimelineNode{}}
+
+	// 2. Offer, via Order.OfferID.
+	var offer *Offer
+	if order.OfferID != "" {
+		var o Offer
+		if err := a.db.WithContext(ctx).First(&o, "id = ?", order.OfferID).Error; err == nil {
+			offer = &o
+		}
+	}
+
+	// 3. Opportunity/RFQ, via Order.RFQID (falls back to Offer.RFQID when the
+	// order itself doesn't carry the link).
+	var opportunity *Opportunity
+	rfqID := order.RFQID
+	if rfqID == "" && offer != nil {
+		rfqID = offer.RFQID
+	}
+	if rfqID != "" {
+		var opp Opportunity
+		if err := a.db.WithContext(ctx).First(&opp, "id = ?", rfqID).Error; err == nil {
+			opportunity = &opp
+		}
+	}
+
+	// 4. Costing - best-effort. There is no first-class per-deal costing
+	// entity; CostingSheetAttachment is scoped by a free-form ScopeID that
+	// callers set to the opportunity or offer id. We look for either, purely
+	// to say "was a costing artifact ever attached to this deal" - never
+	// invented, never guessed beyond an exact scope-id match.
+	var costingAttachment *CostingSheetAttachment
+	{
+		scopeIDs := []string{}
+		if opportunity != nil {
+			scopeIDs = append(scopeIDs, opportunity.ID)
+		}
+		if offer != nil {
+			scopeIDs = append(scopeIDs, offer.ID)
+		}
+		if len(scopeIDs) > 0 {
+			var att CostingSheetAttachment
+			if err := a.db.WithContext(ctx).
+				Where("scope_id IN ?", scopeIDs).
+				Order("created_at DESC").
+				First(&att).Error; err == nil {
+				costingAttachment = &att
+			}
+		}
+	}
+
+	// 5. Delivery Notes for this order.
+	var deliveryNotes []DeliveryNote
+	if err := a.db.WithContext(ctx).
+		Where("order_id = ?", order.ID).
+		Order("delivery_date ASC").
+		Find(&deliveryNotes).Error; err != nil {
+		deliveryNotes = []DeliveryNote{}
+	}
+
+	// 6. Invoices for this order (same WHERE shape as GetInvoicesByOrder,
+	// inlined here so this assembly stays under the single "finance:view"
+	// permission gate rather than layering invoices:view on top).
+	var invoices []Invoice
+	if err := a.db.WithContext(ctx).
+		Where("order_id = ?", order.ID).
+		Order("invoice_date ASC").
+		Find(&invoices).Error; err != nil {
+		invoices = []Invoice{}
+	}
+
+	// Derive settlement status honestly with the exact function every invoice
+	// list/detail view already uses on read. This mutates only the in-memory
+	// slice - no DB write happens here.
+	hydrateCustomerInvoicesPaymentState(invoices)
+
+	// --- Assemble nodes in spine order ---
+
+	// RFQ
+	rfqNode := DealTimelineNode{Stage: "RFQ", State: "na"}
+	if opportunity != nil {
+		serial := opportunity.EHRef
+		if serial == "" {
+			serial = opportunity.FolderNumber
+		}
+		rfqNode.Serial = serial
+		rfqNode.Date = opportunity.OfferDate
+		rfqNode.State = "done"
+		rfqNode.RecordID = opportunity.ID
+		rfqNode.RecordType = "opportunity"
+	}
+	timeline.Nodes = append(timeline.Nodes, rfqNode)
+
+	// Costing
+	costingNode := DealTimelineNode{Stage: "Costing", State: "na"}
+	if costingAttachment != nil {
+		serial := costingAttachment.CostingNumber
+		if serial == "" {
+			serial = costingAttachment.FileName
+		}
+		costingNode.Serial = serial
+		costingNode.Date = costingAttachment.CreatedAt
+		costingNode.State = "done"
+		costingNode.RecordID = costingAttachment.ID
+		costingNode.RecordType = "costing_attachment"
+	}
+	timeline.Nodes = append(timeline.Nodes, costingNode)
+
+	// Offer
+	offerNode := DealTimelineNode{Stage: "Offer", State: "na"}
+	if offer != nil {
+		offerNode.Serial = offer.OfferNumber
+		offerNode.Date = offer.QuotationDate
+		offerNode.State = "done"
+		offerNode.RecordID = offer.ID
+		offerNode.RecordType = "offer"
+	}
+	timeline.Nodes = append(timeline.Nodes, offerNode)
+
+	// Order - always the seed record, always done.
+	timeline.Nodes = append(timeline.Nodes, DealTimelineNode{
+		Stage:      "Order",
+		Serial:     order.OrderNumber,
+		Date:       order.OrderDate,
+		State:      "done",
+		RecordID:   order.ID,
+		RecordType: "order",
+	})
+
+	// Delivery - a real future stage: "pending" (not "na") when absent,
+	// because an order without a DN yet genuinely has delivery ahead of it.
+	deliveryNode := DealTimelineNode{Stage: "Delivery", State: "pending"}
+	if len(deliveryNotes) > 0 {
+		latest := deliveryNotes[len(deliveryNotes)-1]
+		deliveryNode.Serial = latest.DNNumber
+		deliveryNode.Date = latest.DeliveryDate
+		deliveryNode.State = "done"
+		deliveryNode.RecordID = latest.ID
+		deliveryNode.RecordType = "delivery_note"
+		deliveryNode.Count = len(deliveryNotes)
+	}
+	timeline.Nodes = append(timeline.Nodes, deliveryNode)
+
+	// Invoice - same "pending, not na" reasoning as Delivery.
+	invoiceNode := DealTimelineNode{Stage: "Invoice", State: "pending"}
+	allPaid := false
+	if len(invoices) > 0 {
+		latest := invoices[len(invoices)-1]
+		invoiceNode.Serial = latest.InvoiceNumber
+		invoiceNode.Date = latest.InvoiceDate
+		invoiceNode.State = "done"
+		invoiceNode.RecordID = latest.ID
+		invoiceNode.RecordType = "invoice"
+		invoiceNode.Count = len(invoices)
+
+		allPaid = true
+		for _, inv := range invoices {
+			if inv.Status != "Paid" {
+				allPaid = false
+				break
+			}
+		}
+	}
+	timeline.Nodes = append(timeline.Nodes, invoiceNode)
+
+	// Paid - the closing state of the spine. "current" marks the deal as
+	// actively in flight (invoiced but not yet fully settled); "pending"
+	// means invoicing hasn't happened yet, so payment can't be in flight.
+	paidNode := DealTimelineNode{Stage: "Paid", State: "pending"}
+	if len(invoices) > 0 {
+		if allPaid {
+			latest := invoices[len(invoices)-1]
+			paidNode.State = "done"
+			paidNode.Serial = latest.InvoiceNumber
+			paidNode.Date = latest.InvoiceDate
+			paidNode.RecordID = latest.ID
+			paidNode.RecordType = "invoice"
+		} else {
+			paidNode.State = "current"
+		}
+	}
+	timeline.Nodes = append(timeline.Nodes, paidNode)
+
+	// Six-document closing-set checklist (Wave 10 B5a) - additive, does not
+	// touch Nodes above.
+	timeline.Documents = a.buildDealDocumentChecklist(ctx, order, offer, deliveryNotes, invoices)
+
+	return timeline, nil
+}
+
+// buildDealDocumentChecklist derives the six-document closing-set checklist
+// (Article I.6: offer / order confirmation / delivery note / invoice /
+// statement entry / receipt) from records already loaded by
+// buildDealTimeline, plus one small additional read-only lookup for payment/
+// receipt evidence. Every row is present-or-absent from an actual record -
+// never invented. Read-only: no INSERT/UPDATE/DELETE.
+func (a *App) buildDealDocumentChecklist(ctx context.Context, order Order, offer *Offer, deliveryNotes []DeliveryNote, invoices []Invoice) []DealDocumentStatus {
+	docs := make([]DealDocumentStatus, 0, 6)
+
+	// 1. Offer.
+	offerDoc := DealDocumentStatus{Document: "Offer"}
+	if offer != nil {
+		offerDoc.Present = true
+		offerDoc.Serial = offer.OfferNumber
+		offerDoc.Date = offer.QuotationDate
+		offerDoc.RecordID = offer.ID
+		offerDoc.RecordType = "offer"
+	}
+	docs = append(docs, offerDoc)
+
+	// 2. Order confirmation - the order itself IS the confirmation document;
+	// always present, since Order is the seed record GetDealTimeline is
+	// keyed on.
+	docs = append(docs, DealDocumentStatus{
+		Document:   "Order Confirmation",
+		Present:    true,
+		Serial:     order.OrderNumber,
+		Date:       order.OrderDate,
+		RecordID:   order.ID,
+		RecordType: "order",
+	})
+
+	// 3. Delivery note - latest, same source as the Delivery timeline node.
+	dnDoc := DealDocumentStatus{Document: "Delivery Note"}
+	if len(deliveryNotes) > 0 {
+		latest := deliveryNotes[len(deliveryNotes)-1]
+		dnDoc.Present = true
+		dnDoc.Serial = latest.DNNumber
+		dnDoc.Date = latest.DeliveryDate
+		dnDoc.RecordID = latest.ID
+		dnDoc.RecordType = "delivery_note"
+	}
+	docs = append(docs, dnDoc)
+
+	// 4. Invoice - latest, same source as the Invoice timeline node.
+	invDoc := DealDocumentStatus{Document: "Invoice"}
+	var latestInvoice *Invoice
+	if len(invoices) > 0 {
+		li := invoices[len(invoices)-1]
+		latestInvoice = &li
+		invDoc.Present = true
+		invDoc.Serial = li.InvoiceNumber
+		invDoc.Date = li.InvoiceDate
+		invDoc.RecordID = li.ID
+		invDoc.RecordType = "invoice"
+	}
+	docs = append(docs, invDoc)
+
+	// 5. Statement entry - there is no separate statement-entry entity in
+	// this codebase (confirmed: no CustomerStatement/StatementEntry type
+	// exists). The honest signal is that an invoice posts as a line in the
+	// customer operational ledger (GetOperationalLedger,
+	// operational_accounting_service.go) once it leaves Draft - exactly the
+	// status set that reporting endpoint already filters on
+	// (operationalInvoiceStatuses: Sent/Paid/PartiallyPaid/Overdue). We
+	// reuse that exact status set as a membership check in-memory rather
+	// than calling the date-ranged reporting endpoint, so "present" here
+	// means precisely "this invoice would appear as a ledger/statement line
+	// today" - never invented.
+	stmtDoc := DealDocumentStatus{Document: "Statement Entry"}
+	if latestInvoice != nil && operationalStatusIncluded(latestInvoice.Status) {
+		stmtDoc.Present = true
+		stmtDoc.Serial = latestInvoice.InvoiceNumber
+		stmtDoc.Date = latestInvoice.InvoiceDate
+		stmtDoc.RecordID = latestInvoice.ID
+		stmtDoc.RecordType = "invoice"
+	}
+	docs = append(docs, stmtDoc)
+
+	// 6. Receipt - real payment evidence against these invoices. A Payment
+	// row is receipt evidence on its own (RecordPartialPayment always
+	// creates one, customer_invoice_service.go); when that payment was
+	// routed through the formal CustomerReceipt header (Payment.ReceiptID,
+	// receipt_service.go) we prefer that header's human receipt number as
+	// the serial - never a raw id.
+	receiptDoc := DealDocumentStatus{Document: "Receipt"}
+	if len(invoices) > 0 {
+		invoiceIDs := make([]string, 0, len(invoices))
+		for _, inv := range invoices {
+			invoiceIDs = append(invoiceIDs, inv.ID)
+		}
+		var payments []Payment
+		if err := a.db.WithContext(ctx).
+			Where("invoice_id IN ?", invoiceIDs).
+			Order("payment_date ASC").
+			Find(&payments).Error; err == nil && len(payments) > 0 {
+			latestPayment := payments[len(payments)-1]
+			receiptDoc.Present = true
+			receiptDoc.Serial = latestPayment.Reference
+			receiptDoc.Date = latestPayment.PaymentDate
+			receiptDoc.RecordID = latestPayment.ID
+			receiptDoc.RecordType = "payment"
+
+			if latestPayment.ReceiptID != nil && *latestPayment.ReceiptID != "" {
+				var receipt CustomerReceipt
+				if err := a.db.WithContext(ctx).First(&receipt, "id = ?", *latestPayment.ReceiptID).Error; err == nil {
+					receiptDoc.Serial = receipt.ReceiptNumber
+					receiptDoc.RecordID = receipt.ID
+					receiptDoc.RecordType = "customer_receipt"
+				}
+			}
+		}
+	}
+	docs = append(docs, receiptDoc)
+
+	return docs
+}
+
+// operationalStatusIncluded mirrors operationalInvoiceStatuses()
+// (operational_accounting_service.go) - the exact status set the app
+// already treats as "posted to the customer ledger" everywhere else.
+// Duplicated as a membership check here (instead of calling
+// GetOperationalLedger) because that endpoint is a date-ranged reporting
+// call; this only needs a present/absent fact about one invoice.
+func operationalStatusIncluded(status string) bool {
+	for _, s := range operationalInvoiceStatuses() {
+		if s == status {
+			return true
+		}
+	}
+	return false
 }
 
 // CalculateInvoiceMargin calculates and updates gross margin for an invoice

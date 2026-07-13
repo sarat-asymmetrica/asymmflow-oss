@@ -6,6 +6,7 @@
    */
   import { fade, fly } from 'svelte/transition';
   import { cubicOut, quintOut } from 'svelte/easing';
+  import { motionMs } from '../../motion';
   
   interface Props {
     key: string | number;
@@ -35,8 +36,8 @@
 {#key key}
   <div
     class="page-transition"
-    in:fly={{ y: trans.y, x: trans.x, duration, easing: quintOut, delay: 50 }}
-    out:fade={{ duration: duration / 2 }}
+    in:fly={{ y: trans.y, x: trans.x, duration: motionMs(duration), easing: quintOut, delay: 50 }}
+    out:fade={{ duration: motionMs(duration) / 2 }}
   >
     {@render children?.()}
   </div>

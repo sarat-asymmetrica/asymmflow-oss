@@ -1,5 +1,6 @@
 <script lang="ts">
   import WabiSpinner from "$lib/components/ui/WabiSpinner.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
   import type { EmployeeProfile, ProjectMember } from "$lib/api/collaboration";
 
   interface MemberDraft {
@@ -53,9 +54,9 @@
   <div class="member-composer">
     <input bind:value={newMemberRole} placeholder="Default role for new members" />
     <input bind:value={newMemberAllocation} type="number" min="0" max="100" placeholder="Allocation %" />
-    <button class="primary" onclick={onAddMembers} disabled={savingMember || memberSelections.length === 0}>
+    <Button variant="primary" on:click={onAddMembers} disabled={savingMember || memberSelections.length === 0}>
       {memberSelections.length > 0 ? `Add ${memberSelections.length} Member${memberSelections.length === 1 ? "" : "s"}` : "Add Members"}
-    </button>
+    </Button>
   </div>
   {#if projectContextLoading}
     <div class="section-loading">
@@ -97,12 +98,14 @@
             oninput={(event) => onSetMemberDraftField(member.employee_id, "allocation", Number((event.currentTarget as HTMLInputElement).value))}
             placeholder="Allocation %"
           />
-          <button
-            onclick={() => onSaveMember(member)}
+          <Button
+            variant="secondary"
+            size="sm"
+            on:click={() => onSaveMember(member)}
             disabled={savingMemberId === member.employee_id}
           >
             {savingMemberId === member.employee_id ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
       {/each}
     </div>
@@ -137,14 +140,6 @@
     border-radius: 10px;
     padding: 10px 12px;
     background: var(--bg-base);
-  }
-
-  .primary {
-    border: none;
-    border-radius: 10px;
-    padding: 10px 14px;
-    background: var(--onyx);
-    color: white;
   }
 
   .subpanel {

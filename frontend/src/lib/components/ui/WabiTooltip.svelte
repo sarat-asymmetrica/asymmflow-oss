@@ -4,6 +4,7 @@
    * Elegant, paper-like tooltips that appear like whispered wisdom
    */
   import { fade } from 'svelte/transition';
+  import { motionMs } from '../../motion';
   
   interface Props {
     text: string;
@@ -47,8 +48,8 @@
   {#if visible && text}
     <div 
       class="tooltip {position}"
-      in:fade={{ duration: 120 }}
-      out:fade={{ duration: 80 }}
+      in:fade={{ duration: motionMs(120) }}
+      out:fade={{ duration: motionMs(80) }}
     >
       <span class="tooltip-text">{text}</span>
       <div class="tooltip-arrow"></div>

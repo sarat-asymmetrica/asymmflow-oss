@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { motionMs } from "$lib/motion";
   import { fade } from "svelte/transition";
   import { toast } from "$lib/stores/toasts";
   import { GetReportData, ExportReport } from "../../../wailsjs/go/main/InfraService";
@@ -100,7 +101,7 @@
     {#if loading}
       <div class="loading"><WabiSpinner size="lg" tempo="calm" /></div>
     {:else if reportData}
-      <div class="report-container" in:fade>
+      <div class="report-container" in:fade={{ duration: motionMs(400) }}>
         {#if activeCategory === "sales"}
           <div class="stats-row">
             <div class="stat-card">
@@ -311,7 +312,7 @@
 </div>
 
 {#if showExportModal}
-  <div class="modal-backdrop" transition:fade>
+  <div class="modal-backdrop" transition:fade={{ duration: motionMs(400) }}>
     <div class="modal">
       <h3>Export Report</h3>
       <div class="form-group">

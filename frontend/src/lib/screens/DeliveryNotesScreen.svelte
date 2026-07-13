@@ -1075,7 +1075,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
         <WabiSpinner size="md" />
       </div>
     {:else if filteredDeliveryNotes.length === 0}
-      <p class="empty-message">No delivery notes found</p>
+      <p class="empty-message">No delivery notes yet — dispatches you record show here.</p>
     {:else}
       {#each availableYears as year}
         {@const yearNotes = filteredDeliveryNotes.filter(note => {
@@ -1210,7 +1210,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
           {columns}
           data={filteredDeliveryNotes}
           {loading}
-          emptyMessage="No delivery notes found"
+          emptyMessage="No delivery notes yet — dispatches you record show here."
           onRowClick={handleRowClick}
           keyField="id"
           stickyHeader={true}

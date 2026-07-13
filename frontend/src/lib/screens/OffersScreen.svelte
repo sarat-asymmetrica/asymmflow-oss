@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run, preventDefault } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   /**
    * OffersScreen - Production-Ready Offers Management
@@ -1178,7 +1179,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
         {columns}
         data={filteredOffers}
         {loading}
-        emptyMessage="No offers found"
+        emptyMessage="No offers yet — quotes you send appear here."
         onRowClick={(row) => {}}
         on:rowClick={handleRowClick}
         stickyHeader={true}
@@ -1286,7 +1287,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
       {:else}
         <div class="items-list">
           {#each formData.items as item, index}
-            <div class="item-row" transition:fade>
+            <div class="item-row" transition:fade={{ duration: motionMs(400) }}>
               <Input
                 label="Description"
                 bind:value={item.description}
@@ -1412,7 +1413,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
       {:else}
         <div class="items-list-detailed">
           {#each formData.items as item, index}
-            <div class="item-card" transition:fade>
+            <div class="item-card" transition:fade={{ duration: motionMs(400) }}>
               <div class="item-card-header">
                 <span class="item-number">Item #{index + 1}</span>
                 <button type="button" class="btn-remove-card" onclick={() => removeLineItem(index)} aria-label="Remove">×</button>

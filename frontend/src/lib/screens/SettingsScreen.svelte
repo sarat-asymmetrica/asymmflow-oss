@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   import { createEventDispatcher, onMount } from "svelte";
   import { fade } from "svelte/transition";
@@ -7,6 +8,7 @@
   import { permissions } from "$lib/stores/authContext";
   import { initI18n, localeOptions, setLocale, t, type Locale } from "$lib/i18n";
   import { setTextScale, setTextScalePreset, textScale, textScalePreset, type TextScalePreset } from "$lib/stores/textScale";
+  import { soundOnPaidEnabled } from "$lib/stores/soundSettings";
   import { formatNumber } from "$lib/utils/formatters";
   import WabiSpinner from "$lib/components/ui/WabiSpinner.svelte";
   import { confirm } from "$lib/stores/confirm";
@@ -73,6 +75,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
     office: { outlook_enabled: false, excel_enabled: false },
     business: { default_margin: 20, vat_rate: 10 },
     security: { session_timeout_minutes: 30 },
+    sounds: { sound_on_paid_enabled: true },
   });
 
   let userRole = $state('staff');
@@ -615,6 +618,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
     try {
       await UpdateSettings(settings as Record<string, any>);
       await setLocale(settings.language as Locale);
+      soundOnPaidEnabled.set(settings.sounds.sound_on_paid_enabled);
       toast.success("Settings saved");
     } catch (e) {
       toast.danger("Save failed");
@@ -767,7 +771,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
       {#if loading}
         <div class="loading"><WabiSpinner /></div>
       {:else if activeSection === "general"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>{t("settings.general")}</h3>
           {#if canOpenDeployment}
             <div class="deployment-card">
@@ -888,9 +892,20 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
             />
             <label for="excel">Enable Excel Automations</label>
           </div>
+
+          <h3>Sound</h3>
+          <div class="toggle-row">
+            <input
+              type="checkbox"
+              id="sound-on-paid"
+              bind:checked={settings.sounds.sound_on_paid_enabled}
+            />
+            <label for="sound-on-paid">Play a sound when an invoice is paid in full</label>
+          </div>
+          <p class="hint">The application's one sound — a quiet settle when your own posting click fully pays a customer invoice. On by default.</p>
         </div>
       {:else if activeSection === "folders"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Directory Mapping</h3>
           <p class="hint">Define where the system looks for documents.</p>
 
@@ -915,7 +930,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           {/each}
         </div>
       {:else if activeSection === "ai"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Artificial Intelligence</h3>
 
           <div class="form-group">
@@ -1016,7 +1031,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           </div>
         </div>
       {:else if activeSection === "business"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Financial Rules</h3>
           <div class="row">
             <div class="form-group half">
@@ -1040,7 +1055,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           </div>
         </div>
       {:else if activeSection === "currency"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Currency Exchange Rates</h3>
           <p class="hint">Exchange rates to BHD (base currency). Historical rates are preserved for audit accuracy.</p>
 
@@ -1144,7 +1159,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           </div>
         </div>
       {:else if activeSection === "accounts" && canManageBankAccounts}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Bank Accounts</h3>
           <p class="hint">Manage the company bank accounts used across statement import, matching, and reconciliation. Deactivating an account hides it from the active pickers without deleting history.</p>
 
@@ -1253,7 +1268,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           </div>
         </div>
       {:else if activeSection === "data"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Tally Data Import</h3>
           <p class="hint">Import historical data from Tally Excel exports. Files are loaded from Data_for_database/Tally_data directory.</p>
 
@@ -1306,7 +1321,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           {/if}
         </div>
       {:else if activeSection === "reports"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Financial Report Generation</h3>
           <p class="hint">Generate Profit & Loss and Balance Sheet reports from imported Tally data.</p>
 
@@ -1454,7 +1469,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           {/if}
         </div>
       {:else if activeSection === "sync"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Supabase Connection</h3>
           <p class="hint">Configure remote database sync via Supabase for multi-device access.</p>
 
@@ -1706,7 +1721,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
           {/if}
         </div>
       {:else if activeSection === "deployment"}
-        <div class="section" in:fade>
+        <div class="section" in:fade={{ duration: motionMs(400) }}>
           <h3>Deployment Workspace</h3>
           <p class="hint">Keep rollout checks and production support controls under Settings, where admin tools belong.</p>
 

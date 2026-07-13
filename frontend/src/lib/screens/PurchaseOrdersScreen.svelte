@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run, preventDefault } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   /**
    * PurchaseOrdersScreen - Production-Ready Purchase Orders Management
@@ -1155,7 +1156,7 @@ import { GeneratePurchaseOrderPDF } from '../../../wailsjs/go/main/DocumentsServ
         {columns}
         data={filteredPOs}
         {loading}
-        emptyMessage="No purchase orders found"
+        emptyMessage="No purchase orders yet — raise one to order from a supplier."
         onRowClick={(row) => {}}
         on:rowClick={handleRowClick}
         stickyHeader={true}
@@ -1312,7 +1313,7 @@ import { GeneratePurchaseOrderPDF } from '../../../wailsjs/go/main/DocumentsServ
       {:else}
         <div class="items-list">
           {#each formData.items as item, index}
-            <div class="item-row" transition:fade>
+            <div class="item-row" transition:fade={{ duration: motionMs(400) }}>
               <Input
                 label="Description"
                 bind:value={item.description}
@@ -1497,7 +1498,7 @@ import { GeneratePurchaseOrderPDF } from '../../../wailsjs/go/main/DocumentsServ
       {:else}
         <div class="items-list">
           {#each formData.items as item, index}
-            <div class="item-row" transition:fade>
+            <div class="item-row" transition:fade={{ duration: motionMs(400) }}>
               <Input
                 label="Description"
                 bind:value={item.description}

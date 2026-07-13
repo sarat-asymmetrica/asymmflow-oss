@@ -8,6 +8,7 @@
     // used to live here has moved to DeploymentHub (the ops surface) — this
     // component is now single-purpose (Conflicts only).
     import { fade } from "svelte/transition";
+    import { motionMs } from "../motion";
     import WabiSpinner from "./ui/WabiSpinner.svelte";
     import { ListOpportunityEditConflicts, ResolveOpportunityEditConflict } from "../../../wailsjs/go/main/CRMService";
     import { toast } from "../stores/toasts";
@@ -71,7 +72,7 @@
 
 <div class="admin-tools">
     {#if canResolveOpportunityConflicts}
-        <div class="activity-panel" in:fade>
+        <div class="activity-panel" in:fade={{ duration: motionMs(400) }}>
             <div class="activity-toolbar">
                 <div>
                     <h2>Opportunity Conflicts</h2>

@@ -1251,7 +1251,7 @@ import { GenerateInvoicePDF } from '../../../wailsjs/go/main/DocumentsService';
           {columns}
           data={filteredInvoices}
           {loading}
-          emptyMessage="No invoices found. Click 'Create Invoice' to add one from an order."
+          emptyMessage="No invoices yet — bill a completed order to start."
           onRowClick={(row) => openDetailModal(row)}
           stickyHeader={!embedded}
           maxHeight={embedded ? '400px' : 'calc(100vh - 520px)'}

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { stopPropagation, createBubbler } from 'svelte/legacy';
+    import { motionMs } from "$lib/motion";
 
     const bubble = createBubbler();
     import { onMount, createEventDispatcher } from "svelte";
@@ -296,7 +297,7 @@ import { CreateCustomer, DeleteCustomer } from "../../../wailsjs/go/main/CRMServ
                     <WabiSpinner size="lg" tempo="calm" />
                 </div>
             {:else if filteredCustomers.length === 0}
-                <div class="empty-state">No customers found.</div>
+                <div class="empty-state">No customers yet — add one to begin quoting.</div>
             {:else}
                 <div class="customer-grid">
                     {#each filteredCustomers as c}
@@ -345,7 +346,7 @@ import { CreateCustomer, DeleteCustomer } from "../../../wailsjs/go/main/CRMServ
 {#if showCreate}
     <div
         class="modal-backdrop"
-        transition:fade
+        transition:fade={{ duration: motionMs(400) }}
         role="button"
         tabindex="0"
         onclick={() => (showCreate = false)}

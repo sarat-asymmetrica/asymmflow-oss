@@ -1,6 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
+  import { fly, fade } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import { motionMs } from '../../motion';
+
+  // Motion vocabulary (Wave 10 B2): timing mirrors design-tokens.css --motion-base (200ms).
+  // Svelte transitions run in JS and cannot read CSS custom properties or CSS cubic-bezier
+  // strings directly, so the numeric value is hardcoded here — keep it equal to --motion-base.
+  // cubicOut is the closest svelte/easing analog to --ease-decelerate (fast start, slow settle, no overshoot).
+  const TOAST_MOTION_MS = 200;
 
   interface Props {
     message?: string;
@@ -45,8 +53,8 @@
 <button
   class="wabi-toast {type}"
   class:with-brush={showBrush}
-  in:fade={{ duration: 180 }}
-  out:fade={{ duration: 180 }}
+  in:fly={{ duration: motionMs(TOAST_MOTION_MS), y: -8, easing: cubicOut }}
+  out:fade={{ duration: motionMs(TOAST_MOTION_MS), easing: cubicOut }}
   onclick={dismiss}
   aria-label="Dismiss notification: {message}"
   data-testid="{type}-toast"

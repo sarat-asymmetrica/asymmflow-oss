@@ -4,7 +4,8 @@
   const bubble = createBubbler();
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import WabiSpinner from '$lib/components/ui/WabiSpinner.svelte';
+  import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
+  import CardGridSkeleton from '$lib/components/ui/CardGridSkeleton.svelte';
   import ContextTaskModal from '$lib/components/ContextTaskModal.svelte';
   import CustomerSidebar from '$lib/components/customer/CustomerSidebar.svelte';
   import CustomerOrdersTab from '$lib/components/customer/CustomerOrdersTab.svelte';
@@ -170,7 +171,19 @@ import { UpdateCustomer, DeleteCustomer } from '../../../wailsjs/go/main/CRMServ
   />
 
   {#if loading}
-    <div class="loading-state"><WabiSpinner size="lg" /></div>
+    <div class="skeleton-strip">
+      {#each Array(5) as _, i (i)}
+        <div class="skeleton-tab-pill"></div>
+      {/each}
+    </div>
+    <div class="content-layout">
+      <aside class="sidebar-skeleton">
+        <CardGridSkeleton statCards={0} panels={2} panelCols={1} panelRows={5} />
+      </aside>
+      <main class="main">
+        <TableSkeleton rows={6} cols={4} />
+      </main>
+    </div>
   {:else if error}
     <div class="error-state">
       <p class="error-message">{error}</p>
@@ -255,7 +268,14 @@ import { UpdateCustomer, DeleteCustomer } from '../../../wailsjs/go/main/CRMServ
 <style>
   .detail-view { padding: 16px; }
 
-  .loading-state { display: flex; justify-content: center; padding: 100px; }
+  .skeleton-strip { display: flex; gap: 12px; border-bottom: 1px solid var(--border); margin-bottom: 16px; padding-bottom: 12px; }
+  .skeleton-tab-pill {
+    width: 84px;
+    height: 14px;
+    border-radius: var(--border-radius-sm);
+    background: var(--surface-elevated);
+  }
+  .sidebar-skeleton { display: flex; flex-direction: column; }
 
   .error-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px; gap: 16px; }
   .error-message { color: var(--text-danger); font-size: 14px; margin: 0; }

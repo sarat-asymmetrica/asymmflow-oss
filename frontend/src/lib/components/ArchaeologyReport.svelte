@@ -1,5 +1,6 @@
 <script lang="ts">
   import { fade, slide } from 'svelte/transition';
+  import { motionMs } from '../motion';
   import WabiCard from './ui/WabiCard.svelte';
   import type { ArchaeologyReportData } from '../types/archaeology';
 
@@ -74,7 +75,7 @@
 
 <!-- Report Layout -->
 {#if report}
-<div class="archaeology-report" in:fade={{ duration: 500 }}>
+<div class="archaeology-report" in:fade={{ duration: motionMs(500) }}>
   <!-- Header -->
   <header class="report-header">
     <h1>Archaeology Report</h1>
@@ -89,7 +90,7 @@
       <span class="toggle">{sectionsOpen.overview ? '−' : '+'}</span>
     </button>
     {#if sectionsOpen.overview}
-      <div class="section-content" transition:slide={{ duration: 200 }}>
+      <div class="section-content" transition:slide={{ duration: motionMs(200) }}>
         <div class="stats-grid">
           <div class="stat">
             <span class="stat-value">{report.workspace_overview.total_files}</span>
@@ -134,7 +135,7 @@
       <span class="toggle">{sectionsOpen.clusters ? '−' : '+'}</span>
     </button>
     {#if sectionsOpen.clusters}
-      <div class="section-content" transition:slide={{ duration: 200 }}>
+      <div class="section-content" transition:slide={{ duration: motionMs(200) }}>
         {#if report.detected_clusters.length === 0}
           <p class="empty-state">No clusters detected. Files appear independent.</p>
         {:else}
@@ -173,7 +174,7 @@
       <span class="toggle">{sectionsOpen.quality ? '−' : '+'}</span>
     </button>
     {#if sectionsOpen.quality}
-      <div class="section-content" transition:slide={{ duration: 200 }}>
+      <div class="section-content" transition:slide={{ duration: motionMs(200) }}>
         <div class="quality-grid">
           <div class="quality-card" style="background: {qualityColor('high')}">
             <div class="quality-value" style="color: {qualityTextColor('high')}">
@@ -219,7 +220,7 @@
       <span class="toggle">{sectionsOpen.languages ? '−' : '+'}</span>
     </button>
     {#if sectionsOpen.languages}
-      <div class="section-content" transition:slide={{ duration: 200 }}>
+      <div class="section-content" transition:slide={{ duration: motionMs(200) }}>
         <!-- Languages -->
         <div class="subsection">
           <h4>Languages</h4>
@@ -277,7 +278,7 @@
       <span class="toggle">{sectionsOpen.uncertainties ? '−' : '+'}</span>
     </button>
     {#if sectionsOpen.uncertainties}
-      <div class="section-content" transition:slide={{ duration: 200 }}>
+      <div class="section-content" transition:slide={{ duration: motionMs(200) }}>
         {#if report.uncertainties.length === 0}
           <p class="empty-state">No significant uncertainties detected. All documents appear consistent.</p>
         {:else}

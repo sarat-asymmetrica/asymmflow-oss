@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
+    import { motionMs } from "$lib/motion";
     import { fade } from "svelte/transition";
     import { toast } from "../stores/toasts";
     import { confirm } from "../stores/confirm";
@@ -208,7 +209,7 @@
             </div>
 
             {#if quotationData}
-                <div class="panel summary-panel" in:fade>
+                <div class="panel summary-panel" in:fade={{ duration: motionMs(400) }}>
                     <h3>Summary</h3>
                     <div class="row">
                         <span>Customer</span>
@@ -238,7 +239,7 @@
             {#if pricingRecommendation}
                 <div
                     class="panel pricing-panel"
-                    in:fade
+                    in:fade={{ duration: motionMs(400) }}
                     style="border-color: {getRegimeColor(
                         pricingRecommendation.customerRegime,
                     )}"
@@ -276,7 +277,7 @@
             {/if}
 
             {#if pdfResult}
-                <div class="panel success-panel" in:fade>
+                <div class="panel success-panel" in:fade={{ duration: motionMs(400) }}>
                     <h3>PDF Ready</h3>
                     <p class="detail">
                         {(pdfResult.pdfSize / 1024).toFixed(1)} KB • {pdfResult.processingTimeMs}ms

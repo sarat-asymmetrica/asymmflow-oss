@@ -1,5 +1,7 @@
 <script lang="ts">
   import WabiSpinner from "$lib/components/ui/WabiSpinner.svelte";
+  import TableSkeleton from "$lib/components/ui/TableSkeleton.svelte";
+  import Button from "$lib/components/ui/Button.svelte";
   import type { CollaborativeProject, CollaborativeTask, EmployeeProfile, ProjectMember, TaskActivityItem } from "$lib/api/collaboration";
   import { formatDate } from "./workHubHelpers";
   import WorkHubMemberManagementPanel from "./WorkHubMemberManagementPanel.svelte";
@@ -129,9 +131,9 @@
     </div>
 
     <div class="actions archived-toggle-row">
-      <button onclick={onToggleArchivedProjectsView} disabled={loadingArchivedProjects}>
+      <Button variant="secondary" size="sm" on:click={onToggleArchivedProjectsView} disabled={loadingArchivedProjects}>
         {projectsShowArchived ? "Show Active Projects" : "Show Archived"}
-      </button>
+      </Button>
     </div>
 
     {#if !projectsShowArchived}
@@ -152,14 +154,14 @@
           </div>
         {/if}
         <div class="actions">
-          <button class="primary" onclick={onCreateProject} disabled={savingProject}>Create Project</button>
+          <Button variant="primary" on:click={onCreateProject} disabled={savingProject}>Create Project</Button>
         </div>
       </div>
     {/if}
 
     <div class="project-list">
       {#if loadingArchivedProjects}
-        <div class="empty compact">Loading archived projects...</div>
+        <TableSkeleton rows={4} cols={2} />
       {:else if visibleProjects.length === 0}
         <div class="empty compact">{projectsShowArchived ? "No archived projects." : "No projects yet."}</div>
       {:else}
@@ -199,8 +201,8 @@
             </select>
             <textarea bind:value={projectEditDescription} rows="2" placeholder="What is this project for?"></textarea>
             <div class="actions">
-              <button class="primary" onclick={onSaveProjectEdit} disabled={savingProjectAdmin}>Save Changes</button>
-              <button onclick={onCancelProjectEdit} disabled={savingProjectAdmin}>Cancel</button>
+              <Button variant="primary" on:click={onSaveProjectEdit} disabled={savingProjectAdmin}>Save Changes</Button>
+              <Button variant="secondary" on:click={onCancelProjectEdit} disabled={savingProjectAdmin}>Cancel</Button>
             </div>
           </div>
         {:else}
@@ -216,7 +218,7 @@
               </div>
             {/if}
           </div>
-          <button class="edit-project" onclick={onStartProjectEdit}>Edit</button>
+          <Button variant="secondary" size="sm" on:click={onStartProjectEdit}>Edit</Button>
         {/if}
       </div>
       <div class="metrics-grid compact">
@@ -317,10 +319,10 @@
               </p>
               <div class="actions">
                 {#if canManageProjects}
-                  <button class="primary" onclick={onRestoreProject} disabled={savingProjectAdmin}>Restore to Active</button>
+                  <Button variant="primary" on:click={onRestoreProject} disabled={savingProjectAdmin}>Restore to Active</Button>
                 {/if}
                 {#if canDeleteProject}
-                  <button class="danger" onclick={onDeleteProject} disabled={savingProjectAdmin}>Delete</button>
+                  <Button variant="danger" on:click={onDeleteProject} disabled={savingProjectAdmin}>Delete</Button>
                 {/if}
               </div>
             {:else}
@@ -330,11 +332,11 @@
               </p>
               <div class="actions">
                 {#if canManageProjects}
-                  <button onclick={() => onApplyProjectAdminAction("archive")} disabled={savingProjectAdmin}>Archive</button>
-                  <button onclick={() => onApplyProjectAdminAction("shelve")} disabled={savingProjectAdmin}>Shelve</button>
+                  <Button variant="secondary" on:click={() => onApplyProjectAdminAction("archive")} disabled={savingProjectAdmin}>Archive</Button>
+                  <Button variant="secondary" on:click={() => onApplyProjectAdminAction("shelve")} disabled={savingProjectAdmin}>Shelve</Button>
                 {/if}
                 {#if canDeleteProject}
-                  <button class="danger" onclick={onDeleteProject} disabled={savingProjectAdmin}>Delete</button>
+                  <Button variant="danger" on:click={onDeleteProject} disabled={savingProjectAdmin}>Delete</Button>
                 {/if}
               </div>
             {/if}
@@ -431,19 +433,6 @@
     margin-top: 12px;
   }
 
-  .primary {
-    border: none;
-    border-radius: 10px;
-    padding: 10px 14px;
-    background: var(--onyx);
-    color: white;
-  }
-
-  .danger {
-    background: #fff1f2;
-    color: #9f1239;
-  }
-
   .detail-stack,
   .timeline,
   .project-list {
@@ -508,15 +497,6 @@
     flex: 1;
     display: grid;
     gap: 10px;
-  }
-
-  .edit-project {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 12px;
-    background: transparent;
-    color: var(--text-secondary);
-    flex-shrink: 0;
   }
 
   .admin-hint {

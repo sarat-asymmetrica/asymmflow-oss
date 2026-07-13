@@ -10,6 +10,7 @@
    */
 
   import { fade, fly } from 'svelte/transition';
+  import { motionMs } from "$lib/motion";
   import { toast } from '$lib/stores/toasts';
   import {
     ValidateOneDrivePath } from '../../../wailsjs/go/main/App';
@@ -333,7 +334,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
 
   <!-- ── STEP 1: Configure Paths ─────────────────────────────────────────────── -->
   {#if currentStep === 1}
-    <div class="step-body" in:fade={{ duration: 200 }}>
+    <div class="step-body" in:fade={{ duration: motionMs(200) }}>
       <div class="card step-card">
         <div class="card-header">
           <h2>Folder Paths</h2>
@@ -345,7 +346,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
 
         <div class="paths-list">
           {#each paths as entry (entry.id)}
-            <div class="path-row" in:fly={{ y: 8, duration: 180 }}>
+            <div class="path-row" in:fly={{ y: 8, duration: motionMs(180) }}>
               <div class="path-input-wrap">
                 <input
                   type="text"
@@ -433,7 +434,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
         </div>
 
         {#if scanning}
-          <div class="scan-progress" in:fade>
+          <div class="scan-progress" in:fade={{ duration: motionMs(400) }}>
             <div class="scan-bar">
               <div class="scan-bar-fill"></div>
             </div>
@@ -458,7 +459,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
 
   <!-- ── STEP 2: Review Deals ──────────────────────────────────────────────────── -->
   {#if currentStep === 2 && scanResult}
-    <div class="step-body" in:fade={{ duration: 200 }}>
+    <div class="step-body" in:fade={{ duration: motionMs(200) }}>
 
       <!-- Summary bar -->
       <div class="summary-bar">
@@ -663,7 +664,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
 
   <!-- ── STEP 3: Import Progress ────────────────────────────────────────────────── -->
   {#if currentStep === 3}
-    <div class="step-body" in:fade={{ duration: 200 }}>
+    <div class="step-body" in:fade={{ duration: motionMs(200) }}>
       <div class="card step-card">
         <div class="card-header">
           <h2>Import {selectedCount} Deal{selectedCount !== 1 ? 's' : ''}</h2>
@@ -749,7 +750,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
                 class:log-success={entry.done && entry.success}
                 class:log-error={entry.done && !entry.success}
                 class:log-pending={!entry.done}
-                in:fly={{ y: 4, duration: 150 }}
+                in:fly={{ y: 4, duration: motionMs(150) }}
               >
                 <span class="log-icon">
                   {#if !entry.done}

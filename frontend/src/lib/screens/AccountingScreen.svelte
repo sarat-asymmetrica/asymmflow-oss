@@ -1,5 +1,6 @@
 <script lang="ts">
     import { createBubbler, stopPropagation } from 'svelte/legacy';
+    import { motionMs } from "$lib/motion";
 
     const bubble = createBubbler();
     import { onMount } from "svelte";
@@ -740,7 +741,7 @@
             {#if loading}
                 <div class="loading"><WabiSpinner size="lg" /></div>
             {:else if currentView === "dashboard"}
-                <div class="dashboard-grid" in:fade>
+                <div class="dashboard-grid" in:fade={{ duration: motionMs(400) }}>
                     <div class="card">
                         <h3>Total Assets</h3>
                         <div class="big-num">
@@ -836,7 +837,7 @@
                     </div>
                 </div>
             {:else if currentView === "coa"}
-                <div class="coa-view" in:fade>
+                <div class="coa-view" in:fade={{ duration: motionMs(400) }}>
                     <!-- VAT Summary Card -->
                     <div class="vat-summary-card">
                         <h4>Bahrain VAT Summary (10%)</h4>
@@ -899,7 +900,7 @@
                     {/each}
                 </div>
             {:else if currentView === "journal"}
-                <div class="table-container" in:fade>
+                <div class="table-container" in:fade={{ duration: motionMs(400) }}>
                     <table>
                         <thead
                             ><tr
@@ -923,7 +924,7 @@
                     </table>
                 </div>
             {:else if currentView === "reports"}
-                <div class="reports-grid" in:fade>
+                <div class="reports-grid" in:fade={{ duration: motionMs(400) }}>
                     <!-- Wave 9.3 B4: name the source so the two P&Ls don't confuse. -->
                     <div class="source-authority-note" role="note">
                         <strong>Imported accounting figures.</strong> These statements are built from
@@ -989,7 +990,7 @@
                 </div>
 
                 {#if plReport}
-                    <div class="financial-report" in:fade>
+                    <div class="financial-report" in:fade={{ duration: motionMs(400) }}>
                         <h4>Profit & Loss Statement - {plReport.year}</h4>
                         <div class="report-section">
                             <div class="report-line">
@@ -1047,7 +1048,7 @@
                 {/if}
 
                 {#if bsReport}
-                    <div class="financial-report" in:fade>
+                    <div class="financial-report" in:fade={{ duration: motionMs(400) }}>
                         <h4>Balance Sheet - As of {new Date(bsReport.as_of_date).toLocaleDateString()}</h4>
 
                         <div class="report-section">

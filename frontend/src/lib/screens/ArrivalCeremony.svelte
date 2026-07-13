@@ -1,5 +1,6 @@
 <script>
     import { createEventDispatcher } from "svelte";
+    import { motionMs } from "$lib/motion";
     import { fade, fly } from "svelte/transition";
     import { toast } from "../stores/toasts";
 
@@ -83,11 +84,11 @@
     }
 </script>
 
-<div class="ceremony" in:fade={{ duration: 400 }}>
+<div class="ceremony" in:fade={{ duration: motionMs(400) }}>
     <div class="content">
         {#if step === 0}
             <!-- Welcome -->
-            <div class="step" in:fly={{ y: 30, duration: 400 }}>
+            <div class="step" in:fly={{ y: 30, duration: motionMs(400) }}>
                 <div class="logo">PH</div>
                 <h1>Welcome to<br />PH Sovereign.</h1>
                 <p class="intro">
@@ -99,7 +100,7 @@
             </div>
         {:else if step === 1}
             <!-- Name Input -->
-            <div class="step" in:fly={{ y: 30, duration: 400 }}>
+            <div class="step" in:fly={{ y: 30, duration: motionMs(400) }}>
                 <span class="label">Identity</span>
                 <h2>Who's here?</h2>
                 <div class="input-container">
@@ -115,7 +116,7 @@
             </div>
         {:else if step === 2}
             <!-- Role Selection -->
-            <div class="step wide" in:fly={{ y: 30, duration: 400 }}>
+            <div class="step wide" in:fly={{ y: 30, duration: motionMs(400) }}>
                 <span class="label">Role</span>
                 <h2>Welcome, {userName}.</h2>
                 <p>Select your primary domain.</p>
@@ -138,7 +139,7 @@
             </div>
         {:else if step === 3}
             <!-- Configuration -->
-            <div class="step" in:fly={{ y: 30, duration: 400 }}>
+            <div class="step" in:fly={{ y: 30, duration: motionMs(400) }}>
                 <span class="label">Setup</span>
                 <h2>Configuring<br />your workspace.</h2>
 

@@ -5,6 +5,7 @@
     // CanViewUserActivityMonitoring gate are unchanged from the original;
     // only the mount point moved.
     import { fade } from "svelte/transition";
+    import { motionMs } from "../motion";
     import WabiSpinner from "./ui/WabiSpinner.svelte";
     import { GetWeeklyUserActivityReport } from "../../../wailsjs/go/main/InfraService";
 
@@ -58,7 +59,7 @@
 </script>
 
 {#if canViewActivityMonitoring}
-    <div class="activity-panel" in:fade>
+    <div class="activity-panel" in:fade={{ duration: motionMs(400) }}>
         <div class="activity-toolbar">
             <div>
                 <h2>Weekly Efficiency</h2>

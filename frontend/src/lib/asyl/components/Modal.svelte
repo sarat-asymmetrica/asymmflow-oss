@@ -20,6 +20,7 @@
     import { createEventDispatcher, onMount, tick } from "svelte";
     import { fade } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
+    import { motionMs } from "../../motion";
 
     /** Event interface for type-safe dispatch */
     interface ModalEvents {
@@ -173,7 +174,7 @@
     <div
         class="modal-backdrop"
         onclick={handleBackdropClick}
-        transition:fade={{ duration: 300 }}
+        transition:fade={{ duration: motionMs(300) }}
         aria-hidden="true"
     >
         <!-- Modal Container -->

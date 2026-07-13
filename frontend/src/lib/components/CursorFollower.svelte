@@ -123,8 +123,8 @@
         background: #000;
         opacity: 0;
         transition:
-            width 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-            height 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+            width 0.25s var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1)),
+            height 0.25s var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1)),
             border-radius 0.2s ease,
             opacity 0.15s ease,
             background 0.2s ease;

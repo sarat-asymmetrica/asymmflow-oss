@@ -9,6 +9,7 @@
 import { SyncNowWithProgress, GetDBSyncSettings } from "../../../../wailsjs/go/main/SyncServiceBinding";
     import { getUnreadNotificationsCount } from "$lib/api/collaboration";
     import { NAV_ITEMS } from "$lib/config/navItems";
+    import { brand } from "$lib/brand";
     import SyncProgress from "./SyncProgress.svelte";
 
     const dispatch = createEventDispatcher();
@@ -161,8 +162,8 @@ import { SyncNowWithProgress, GetDBSyncSettings } from "../../../../wailsjs/go/m
 <aside class="sidebar">
     <!-- BRAND HEADER -->
     <div class="sidebar-header">
-        <div class="logo-mark">PH</div>
-        <span class="brand-name">Trading</span>
+        <div class="logo-mark" style="background: {brand.accentVar}">{brand.mark}</div>
+        <span class="brand-name">{brand.wordmark}</span>
     </div>
 
     <!-- NAVIGATION -->

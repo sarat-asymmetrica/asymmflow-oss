@@ -968,8 +968,10 @@
     }
     const opened = await loadTaskDetail(taskID, { suppressErrorToast: Boolean(cachedTask) });
     if (!opened && cachedTask) {
+      // Wave 10 B6 (Article IV.4): cached data still displays; the toast
+      // announced background sync state with no user action to echo, so
+      // it was removed.
       primeTaskDetail(cachedTask);
-      toast.warning("Showing cached task details while sync catches up.");
     }
   }
 

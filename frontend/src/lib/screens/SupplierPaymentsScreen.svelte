@@ -1,5 +1,6 @@
 <script lang="ts">
   import { run, self } from 'svelte/legacy';
+  import { motionMs } from "$lib/motion";
 
   import { createEventDispatcher, onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -481,7 +482,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
   });
 </script>
 
-<div class="screen" in:fade={{ duration: 200 }}>
+<div class="screen" in:fade={{ duration: motionMs(200) }}>
   {#if !embedded}
     <PageLayout title="Payments Made" subtitle="Track outgoing payments across supplier invoices and expense settlements">
       <svelte:fragment slot="header-actions">
@@ -558,7 +559,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
 <!-- Record Payment Modal -->
 {#if showPaymentModal}
   <div class="modal-overlay" role="button" tabindex="0" onclick={self(() => showPaymentModal = false)} onkeydown={(event) => (event.key === "Enter" || event.key === " ") && (showPaymentModal = false)}>
-    <div class="modal" in:fade={{ duration: 150 }}>
+    <div class="modal" in:fade={{ duration: motionMs(150) }}>
       <h2>{paymentModalMode === 'edit' ? 'Edit Supplier Payment' : 'Record Supplier Payment'}</h2>
       {#if paymentModalMode === 'edit'}
         <p class="modal-intro">Editing the existing supplier payment. Invoice linkage stays locked for audit safety.</p>
@@ -584,7 +585,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
       </div>
 
       {#if paymentModalMode === 'create' && selectedInvoiceForPayment}
-        <div class="invoice-outstanding-card" transition:fade={{ duration: 150 }}>
+        <div class="invoice-outstanding-card" transition:fade={{ duration: motionMs(150) }}>
           <div class="outstanding-row">
             <span class="outstanding-label">Invoice Total</span>
             <span class="outstanding-value">{formatBHD(selectedInvoiceForPayment.total_bhd)} BHD</span>

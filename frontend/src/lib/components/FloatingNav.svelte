@@ -1,6 +1,7 @@
 <script lang="ts">
     import { createEventDispatcher, onMount } from "svelte";
     import { fade, fly } from "svelte/transition";
+    import { motionMs } from "../motion";
 
     interface Props {
         currentScreen?: string;
@@ -47,7 +48,7 @@
 </script>
 
 {#if visible}
-    <nav class="floating-nav" transition:fly={{ y: 50, duration: 200 }}>
+    <nav class="floating-nav" transition:fly={{ y: 50, duration: motionMs(200) }}>
         <div class="nav-container">
             {#each quickLinks as link}
                 <button

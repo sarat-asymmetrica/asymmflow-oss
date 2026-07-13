@@ -1,5 +1,6 @@
 <script lang="ts">
     import { fade } from "svelte/transition";
+    import { motionMs } from "$lib/motion";
     import CRMCustomerDashboard from "./CRMCustomerDashboard.svelte";
     import CRMSupplierDashboard from "./CRMSupplierDashboard.svelte";
     import CustomerDetailView from "./CustomerDetailView.svelte";
@@ -66,7 +67,7 @@
 </script>
 
 <ErrorBoundary name="CRM Hub">
-    <div class="hub" in:fade={{ duration: 200 }}>
+    <div class="hub" in:fade={{ duration: motionMs(200) }}>
         <header class="header">
             <div class="header-row">
                 <h1>Customers &amp; Suppliers</h1>

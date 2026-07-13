@@ -339,7 +339,11 @@ import { GetCurrentUserRole } from "../../../wailsjs/go/main/InfraService";
             devLog.error("Failed to update stage:", err);
             const message = String(err?.message || err || "Failed to update stage");
             if (message.toLowerCase().includes("conflict")) {
-                toast.warning("This opportunity changed on another device. The update was flagged for admin review.");
+                // Wave 10 B6 (Article IV.4): this is the failure echo of the user's OWN
+                // stage-change click (not an unbidden background announce), so it stays as
+                // a toast — reworded to lead with the action that failed. The conflict was
+                // flagged for admin review server-side; that logic is unchanged.
+                toast.danger("Couldn't update stage — this opportunity changed on another device. It's been flagged for review.");
             } else {
                 toast.danger("Failed to update stage");
             }

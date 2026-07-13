@@ -30,8 +30,8 @@
         flex-direction: column;
         opacity: 0;
         transform: scale(0.97) translateY(6px);
-        transition: opacity 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-                    transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transition: opacity 0.5s var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1)),
+                    transform 0.5s var(--ease-decelerate, cubic-bezier(0, 0, 0.2, 1));
     }
 
     .hub.flourish {

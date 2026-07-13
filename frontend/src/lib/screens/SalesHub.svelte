@@ -1,5 +1,6 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
+    import { motionMs } from "$lib/motion";
 
     import { onMount } from "svelte";
     import { fade } from "svelte/transition";
@@ -73,7 +74,7 @@
 </script>
 
 <ErrorBoundary name="Sales Hub">
-    <div class="hub" in:fade={{ duration: 200 }}>
+    <div class="hub" in:fade={{ duration: motionMs(200) }}>
         <!-- Header with Tabs -->
         <header class="header">
             <h1 class="page-title">Opportunities</h1>
