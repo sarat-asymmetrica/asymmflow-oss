@@ -686,7 +686,7 @@ func (a *App) startup(ctx context.Context) {
 		}()
 	}
 
-	AppLogger.Info("Acme Instrumentation App started successfully", map[string]any{
+	AppLogger.Info("AsymmFlow app started successfully", map[string]any{
 		"db_path":       cfg.Database.Path,
 		"config_loaded": true,
 	})
@@ -1223,7 +1223,7 @@ func (a *App) shutdown(ctx context.Context) {
 }
 
 func (a *App) shutdownInternal(ctx context.Context) {
-	log.Println("Acme Instrumentation App shutting down...")
+	log.Println("AsymmFlow app shutting down...")
 
 	// Stop file watcher
 	if a.fileWatcher != nil && a.fileWatcher.IsRunning() {

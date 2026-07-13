@@ -4,6 +4,7 @@
     import { onDestroy, onMount } from "svelte";
     import { get } from "svelte/store";
     import { toast } from "$lib/stores/toasts";
+    import { brand } from "$lib/brand";
     import { confirm } from '$lib/stores/confirm';
     import { permissions, currentUser } from '$lib/stores/authContext';
     let permissionList = $derived(Array.isArray($permissions) ? $permissions : []);
@@ -223,7 +224,7 @@ import { GetSettings } from "../../../wailsjs/go/main/DocumentsService";
         return trimmed;
     };
 
-    function createDefaultHeader(division = 'Acme Instrumentation') {
+    function createDefaultHeader(division = brand.defaultDivision) {
         // Wave 9.3 B2: default Prepared By to the current operator (Article
         // III.4) instead of leaving it blank — the picker still lets them
         // choose someone else (e.g. preparing on a colleague's behalf).
@@ -357,7 +358,7 @@ All prices are in Bahraini Dinars (BHD) unless otherwise stated. Prices are excl
 As per the payment terms specified in this quotation. Late payments may incur interest charges.
 
 4. DELIVERY
-Delivery times are estimates and subject to manufacturer's confirmation. Acme Instrumentation shall not be liable for delays beyond our control.
+Delivery times are estimates and subject to manufacturer's confirmation. ${brand.defaultDivision} shall not be liable for delays beyond our control.
 
 5. WARRANTY
 All products carry the manufacturer's standard warranty. Extended warranty options are available upon request.
@@ -366,7 +367,7 @@ All products carry the manufacturer's standard warranty. Extended warranty optio
 Installation and commissioning services are available at additional cost unless included in the quotation.
 
 7. FORCE MAJEURE
-Acme Instrumentation shall not be liable for failure to perform due to causes beyond reasonable control.
+${brand.defaultDivision} shall not be liable for failure to perform due to causes beyond reasonable control.
 
 8. GOVERNING LAW
 This quotation is governed by the laws of the Kingdom of Bahrain.`);
@@ -665,7 +666,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
         suppressDraftPersistence = true;
         try {
             const draftHeader = payload?.header || {};
-            const draftDivision = draftHeader.division || header.division || 'Acme Instrumentation';
+            const draftDivision = draftHeader.division || header.division || brand.defaultDivision;
             header = {
                 ...createDefaultHeader(draftDivision),
                 ...draftHeader,
@@ -924,7 +925,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
             const matchedCustomer = findMatchingCustomerByName(customerName);
 
             if (!restoredRevision) {
-                const nextDivision = selectedOpportunity.division || header.division || 'Acme Instrumentation';
+                const nextDivision = selectedOpportunity.division || header.division || brand.defaultDivision;
                 header = {
                     ...header,
                     customerName: matchedCustomer?.business_name || customerName,
@@ -1661,7 +1662,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
     <header class="page-header">
         <div>
             <h1>Costing Sheet</h1>
-            <p class="subtitle">Acme Instrumentation W.L.L. - Pricing Calculator</p>
+            <p class="subtitle">{brand.defaultDivision} W.L.L. - Pricing Calculator</p>
         </div>
         <div class="header-actions">
             <Button variant="secondary" on:click={loadData}>Refresh</Button>

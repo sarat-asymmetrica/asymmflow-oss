@@ -7,6 +7,7 @@
 import { GetOrder, CreateOrderWithItems, UpdateOrder, DeleteOrder, UpdateOrderStage, ListCustomers, GetOrderDeliveryStatusBatch, GetOrderFulfillmentStatus, CreatePOFromOrder, QuickMarkOrderDelivered, GetOrdersWithNoItems } from '../../../wailsjs/go/main/CRMService';
 import { CreateInvoiceFromOrder, CreateProformaInvoice } from '../../../wailsjs/go/main/FinanceService';
   import { toast } from '$lib/stores/toasts';
+  import { brand } from '$lib/brand';
   import { pendingDNCreate, pendingProjectHandoff, pendingOrderView } from '$lib/stores/navigation';
   import { main, crm } from '../../../wailsjs/go/models';
   import { escapeHtml } from '$lib/utils/escapeHtml';
@@ -816,10 +817,10 @@ import { CreateInvoiceFromOrder, CreateProformaInvoice } from '../../../wailsjs/
       toast.success(`Invoice ${invoice.invoice_number} created`);
       showDetailModal = false;
       window.dispatchEvent(new CustomEvent('navigateToScreen', {
-        detail: { screen: 'finance', tab: 'invoices', company: order.division || 'Acme Instrumentation' }
+        detail: { screen: 'finance', tab: 'invoices', company: order.division || brand.defaultDivision }
       }));
       window.dispatchEvent(new CustomEvent('finance:navigate', {
-        detail: { tab: 'invoices', company: order.division || 'Acme Instrumentation' }
+        detail: { tab: 'invoices', company: order.division || brand.defaultDivision }
       }));
       await loadOrders();
     } catch (err) {
@@ -888,10 +889,10 @@ import { CreateInvoiceFromOrder, CreateProformaInvoice } from '../../../wailsjs/
       toast.success(`Proforma Invoice ${invoice.invoice_number} created`);
       showDetailModal = false;
       window.dispatchEvent(new CustomEvent('navigateToScreen', {
-        detail: { screen: 'finance', tab: 'invoices', company: order.division || 'Acme Instrumentation' }
+        detail: { screen: 'finance', tab: 'invoices', company: order.division || brand.defaultDivision }
       }));
       window.dispatchEvent(new CustomEvent('finance:navigate', {
-        detail: { tab: 'invoices', company: order.division || 'Acme Instrumentation' }
+        detail: { tab: 'invoices', company: order.division || brand.defaultDivision }
       }));
       await loadOrders();
     } catch (err) {

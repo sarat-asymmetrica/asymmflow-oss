@@ -399,12 +399,13 @@ func (am *AuthManager) startCallbackServer() error {
 		// Send code to channel
 		am.callbackChan <- code
 
-		// Success page
+		// Success page (Wave 11 B1: entity name from overlay, not a literal)
+		orgName := activeOverlay.CompanyDisplayName
 		fmt.Fprintf(w, `
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Acme Instrumentation - Login Successful</title>
+    <title>%s - Login Successful</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -432,16 +433,16 @@ func (am *AuthManager) startCallbackServer() error {
     <div class="container">
         <div class="icon">✅</div>
         <h1>Login Successful!</h1>
-        <p>You can close this window and return to Acme Instrumentation.</p>
+        <p>You can close this window and return to %s.</p>
     </div>
 </body>
 </html>
-		`)
+		`, orgName, orgName)
 	})
 
 	// Health check
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Acme Instrumentation OAuth2 callback server running")
+		fmt.Fprintf(w, "%s OAuth2 callback server running", activeOverlay.CompanyDisplayName)
 	})
 
 	am.httpServer = &http.Server{

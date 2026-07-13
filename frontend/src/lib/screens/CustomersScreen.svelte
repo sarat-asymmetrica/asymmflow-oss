@@ -1,6 +1,7 @@
 <script lang="ts">
     import { stopPropagation, createBubbler } from 'svelte/legacy';
     import { motionMs } from "$lib/motion";
+    import { brand } from "$lib/brand";
 
     const bubble = createBubbler();
     import { onMount, createEventDispatcher } from "svelte";
@@ -49,7 +50,7 @@ import { CreateCustomer, DeleteCustomer } from "../../../wailsjs/go/main/CRMServ
         { code: "PB", label: "Plant Builder" },
         { code: "SI", label: "System Integrator" },
         { code: "SP", label: "Service Provider" },
-        { code: "PH", label: "Acme Instrumentation" },
+        { code: "PH", label: brand.defaultDivision },
     ];
 
     // Payment terms options per Bahrain business rules

@@ -6,6 +6,11 @@ type MockWailsBridgeOptions = {
   collaborativeDataReadyAfterRefreshCount?: number;
   taskDetailsReadyAfterRefreshCount?: number;
   projectContextDelayMs?: number;
+  // Real i18n messages (en.json) so the startup initI18n() call resolves and the
+  // shell renders localized labels instead of raw keys. Without this the app hits
+  // its startup error boundary (InfraService.GetTranslations is undefined in a
+  // bare browser). Callers that don't set it get an empty map → raw keys render.
+  translations?: Record<string, string>;
 };
 
 export async function installMockWailsBridge(page: Page, options: MockWailsBridgeOptions = {}) {
@@ -676,6 +681,42 @@ export async function installMockWailsBridge(page: Page, options: MockWailsBridg
                 sync_enabled: false,
                 last_sync: null,
               });
+            // People hub (Wave 11 A3): one synthetic employee so the directory
+            // populates and the Employee Detail pane (Profile/Work/Access/
+            // Compliance sub-tabs) is reachable in the sweep. Empty arrays for
+            // the sibling lists keep the Promise.all load path from throwing.
+            case 'ListEmployeeProfiles':
+              return defaultValue([
+                {
+                  id: 'emp-1',
+                  employee_code: 'EMP-001',
+                  full_name: 'Jordan Avery',
+                  preferred_name: 'Jordan',
+                  email: 'jordan.avery@asymmflow.example',
+                  phone: '+973-1700-0100',
+                  department: 'Operations',
+                  job_title: 'Operations Lead',
+                  employment_status: 'Full-time',
+                  manager_employee_id: '',
+                  manager_name: '',
+                  start_date: '2024-01-15T00:00:00Z',
+                  end_date: null,
+                  emergency_contact: 'Sam Avery +973-1700-0101',
+                  notes: 'Synthetic profile for QA sweep.',
+                  is_active: true,
+                  archived_at: null,
+                  archived_by: '',
+                  archive_reason: '',
+                  archive_request_id: '',
+                },
+              ]);
+            case 'ListEmployeeAccessLinks':
+            case 'ListLicenseKeys':
+            case 'ListEmployeeContributionSummaries':
+            case 'ListLoginUsers':
+            case 'ListLoginRoles':
+            case 'ListEmployeeComplianceDocuments':
+              return defaultValue([]);
             case 'GetDashboardStats':
               return defaultValue({
                 total_revenue: 12000,
@@ -1316,7 +1357,40 @@ export async function installMockWailsBridge(page: Page, options: MockWailsBridg
       },
     });
 
-    window.go = { main: { App: app } } as any;
+    // InfraService: the app's second bound Go service. The generated bindings
+    // call window.go.main.InfraService.<Method>(...). Delegate every method to
+    // the same App proxy (safe no-op defaults for anything unmocked), but serve
+    // real translations for GetTranslations so startup i18n succeeds.
+    const translations = (opts && (opts as any).translations) || {};
+    const infra = new Proxy({}, {
+      get(_, prop) {
+        if (String(prop) === 'GetTranslations') {
+          return () => defaultValue(translations);
+        }
+        if (String(prop) === 'GetAvailableLocales') {
+          return () => defaultValue(['en', 'ar', 'hi', 'fr', 'es']);
+        }
+        // Everything else routes through the App proxy's generic dispatch.
+        return (app as any)[prop];
+      },
+    });
+
+    // The Go backend is split across several bound services (App, CRMService,
+    // FinanceService, DocumentsService, ButlerService, SyncServiceBinding). The
+    // generated bindings call window.go.main.<Service>.<Method>(...). Route every
+    // service through the same App proxy (method-name dispatch + safe no-op
+    // default) so a screen that calls any of them still renders its layout.
+    window.go = {
+      main: {
+        App: app,
+        InfraService: infra,
+        CRMService: app,
+        FinanceService: app,
+        DocumentsService: app,
+        ButlerService: app,
+        SyncServiceBinding: app,
+      },
+    } as any;
     window.runtime = runtime as any;
   }, options);
 }

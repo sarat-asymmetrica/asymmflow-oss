@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
   import { gsap } from 'gsap';
+  import { brand } from '$lib/brand';
 
   interface Props {
     activeRoute?: string;
@@ -160,7 +161,7 @@
   <div class="nav-header">
     <div class="brand-container">
       <div class="brand-icon">P</div>
-      <h1 class="brand-text" class:hidden={!isOpen}>Acme Instrumentation</h1>
+      <h1 class="brand-text" class:hidden={!isOpen}>{brand.defaultDivision}</h1>
     </div>
 
     <!-- Toggle Button -->

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
     import { motionMs } from "$lib/motion";
+    import { brand } from "$lib/brand";
 
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
@@ -313,7 +314,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
         navigateTo({
             screen: "finance",
             tab: "invoices",
-            company: "Acme Instrumentation",
+            company: brand.defaultDivision,
             ...(bucket.invoiceFilter ? { invoiceFilter: bucket.invoiceFilter } : {}),
             ...(bucket.agingBucket ? { agingBucket: bucket.agingBucket } : {}),
         });
@@ -325,7 +326,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
                 // Bank Recon tab id in FinanceHub is "bank_recon" (underscore) -
                 // the previous "bank-recon" value never matched, so this action
                 // silently landed on the Finance dashboard tab instead.
-                navigateTo({ screen: "finance", tab: "bank_recon", company: "Acme Instrumentation" });
+                navigateTo({ screen: "finance", tab: "bank_recon", company: brand.defaultDivision });
                 return;
             case "review_credit":
             case "chase_overdue":
@@ -333,12 +334,12 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
                 navigateTo({
                     screen: "finance",
                     tab: "invoices",
-                    company: "Acme Instrumentation",
+                    company: brand.defaultDivision,
                     ...(stats.arDaysOverdue > 0 ? { invoiceFilter: "Overdue" } : {}),
                 });
                 return;
             case "review_revenue":
-                navigateTo({ screen: "finance", tab: "dashboard", company: "Acme Instrumentation" });
+                navigateTo({ screen: "finance", tab: "dashboard", company: brand.defaultDivision });
                 return;
             case "open_followups":
                 navigateTo({ screen: "work" });

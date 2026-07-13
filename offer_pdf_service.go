@@ -217,6 +217,9 @@ func buildCostingExportDataFromOffer(offer Offer, customer CustomerMaster, custo
 }
 
 func defaultOfferTermsAndConditions(vatRate float64) string {
+	// Wave 11 B1: the trading entity named in the T&C comes from the overlay so a
+	// deployment's own name appears in generated quotations (no source edit).
+	company := activeOverlay.CompanyDisplayName
 	return fmt.Sprintf(`1. QUOTATION VALIDITY
 This quotation is valid for thirty (30) days from the date of issue.
 
@@ -227,7 +230,7 @@ All prices are in Bahraini Dinars (BHD) unless otherwise stated. Prices are excl
 As per the payment terms specified in this quotation. Late payments may incur interest charges.
 
 4. DELIVERY
-Delivery times are estimates and subject to manufacturer's confirmation. Acme Instrumentation shall not be liable for delays beyond our control.
+Delivery times are estimates and subject to manufacturer's confirmation. %s shall not be liable for delays beyond our control.
 
 5. WARRANTY
 All products carry the manufacturer's standard warranty. Extended warranty options are available upon request.
@@ -236,10 +239,10 @@ All products carry the manufacturer's standard warranty. Extended warranty optio
 Installation and commissioning services are available at additional cost unless included in the quotation.
 
 7. FORCE MAJEURE
-Acme Instrumentation shall not be liable for failure to perform due to causes beyond reasonable control.
+%s shall not be liable for failure to perform due to causes beyond reasonable control.
 
 8. GOVERNING LAW
-This quotation is governed by the laws of the Kingdom of Bahrain.`, vatRate)
+This quotation is governed by the laws of the Kingdom of Bahrain.`, vatRate, company, company)
 }
 
 func firstPositiveInt(value, fallback int) int {
