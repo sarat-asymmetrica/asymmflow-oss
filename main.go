@@ -13,6 +13,17 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// brandWindowTitle is the desktop window title shown in the OS title bar and
+// alt-tab. Branding is configuration, not code (repo law): the committed value
+// is the SYNTHETIC product identity, and a deployment overrides it at BUILD
+// time with no source edit —
+//
+//	wails build -ldflags "-X 'main.brandWindowTitle=Your Product'"
+//
+// The `wails.json` name field controls the binary/installer name; this controls
+// the runtime window title. See docs/DEPLOYMENT_BRANDING.md slot 4.
+var brandWindowTitle = "AsymmFlow"
+
 func main() {
 	resetStartupDiagnostics()
 	appendStartupDiagnostic("MAIN: starting Wails runtime")
@@ -30,7 +41,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:            "AsymmFlow",
+		Title:            brandWindowTitle,
 		Width:            1400,
 		Height:           900,
 		WindowStartState: options.Maximised,

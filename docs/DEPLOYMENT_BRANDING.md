@@ -20,7 +20,7 @@ brand slot, the one place each is overridden, and the two-step rebrand recipe.
 | 1 | **App wordmark + mark** | Sidebar header + login/lock surface | `frontend/src/lib/brand.local.ts` (gitignored) | Web runtime config |
 | 2 | **Accent color** | The accent used by the wordmark badge (and any token consumer) | `--brand-indigo` token, or `accentVar` in `brand.local.ts` | Web token |
 | 3 | **PDF / print header identity** | Legal name, letterhead, address, VAT/TRN on generated documents | `overlay.json` next to the binary | Backend config |
-| 4 | **Desktop app name** | Window title / installer name | `wails.json` → `name` | Build config |
+| 4 | **Desktop app name** | Window title / installer name | `wails.json` name (binary/installer) + `main.brandWindowTitle` ldflags (window title) | Build config |
 | 5 | **Desktop app icon** | Taskbar / window / installer icon | `build/appicon.png` + `build/windows/icon.ico` | Build asset (baked) |
 
 ---
@@ -91,6 +91,12 @@ assets, not runtime config**:
 
 A deployment keeps its real name/icon on its own branch or applies them as a pre-build
 asset swap in its pipeline; the committed repo keeps the synthetic defaults.
+
+The runtime **window title** (OS title bar, alt-tab) is a separate slot: the
+`main.brandWindowTitle` package var in `main.go` (synthetic default `AsymmFlow`),
+overridden at build time with no source edit —
+`wails build -ldflags "-X 'main.brandWindowTitle=Your Product'"`. `wails.json` `name`
+only sets the binary/installer name, not the runtime title.
 
 ---
 
