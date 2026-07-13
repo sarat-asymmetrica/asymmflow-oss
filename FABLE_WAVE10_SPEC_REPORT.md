@@ -30,8 +30,6 @@ Full evidence in `docs/wave10-recon/A1..A7`. Headlines:
 
 ## Phase B — Implementation
 
-_(filled in as each batch gates)_
-
 ### B1 — Responsiveness ✅ (committed 4ad3d3a)
 (a) **Press state defined ONCE** in `Button.svelte`: `.btn:active:not(:disabled):not(.loading){ transform: scale(0.97) }` + shade shift, transitioned via `var(--transition-fast)` (120ms). Added the missing `:active` to `.btn-ghost`/`.btn-secondary`. `WabiButton.svelte` got the same. (b) **Focus:** every touched button's `:focus-visible` now points at the one `--focus-ring-color` token (keyboard-visible). (c) **Skeletons:** two reusable primitives `TableSkeleton` + `CardGridSkeleton` (CSS shimmer — frozen by the reduced-motion reset, verified) wired to all five A5 hot spots (DashboardScreen, WorkHub's three loading panels, CustomerDetailView, FinancialDashboard, CRMCustomerDashboard) with dimensions matched to real content → zero layout shift. (d) **13 ad-hoc buttons converged** onto `<Button>` (WorkHub's 5 panels, customer strip/header); card-shaped selection/drag controls deliberately left raw (converging them would change behavior, not just style). Orchestrator removed 2 orphaned CSS selectors left by the conversions to restore the 0-err/14-warn baseline.
 **AC:** pressing any button visibly responds within one frame; the five worst screens stop popping on load; no behavior change.
@@ -54,7 +52,7 @@ One motion vocabulary now lives in `frontend/src/assets/design-tokens.css` — t
 ```
 The legacy `--transition-fast/base/slow` and `--easing-*` were **re-pointed to alias these** (one source of truth); `--transition-slow` came 400ms→250ms; **the spring `cubic-bezier(0.34,1.56,0.64,1)` is retired** from the vocabulary and removed from the real-surface call sites (`.animate-flourish`, `IntelligenceHub`, `CursorFollower`). A **live global `@media (prefers-reduced-motion: reduce)` reset** was added (previously effectively absent app-wide). Modal + toast enter/exit were unified onto the tokens: the global ConfirmHost modal (previously zero animation) now has a subtle 200ms decelerate entrance; the three modal impls and the toast were standardized to fade + small translate/scale, no overshoot. A latent invalid-CSS bug (two timing-functions stacked in one `animation` shorthand) was fixed in passing.
 **Audit — motion tokens = one source:** ✅ a single grep at the token layer finds every duration/easing.
-**Reduced-motion:** CSS reset kills all CSS motion. Svelte JS transitions (fly/fade/scale) are NOT CSS — the orchestrator added `frontend/src/lib/motion.ts` (`motionMs()`) and gated the shared primitives (toast + QuickCaptureModal). A final mechanical sweep of the remaining ~98 app-wide JS-transition sites is scheduled as the last step (see Gate results) so the "fully static" claim is honest, not assumed.
+**Reduced-motion:** CSS reset kills all CSS motion. Svelte JS transitions (fly/fade/scale) are NOT CSS — the orchestrator added `frontend/src/lib/motion.ts` (`motionMs()`), gated the shared primitives first, then swept **every** remaining Svelte JS-transition site app-wide (commit `466eae0`, ~40 components) so the "fully static" claim is verified (zero un-gated directives remain), not assumed.
 
 ### B3 — Deal-spine timeline ✅ (committed 64b101c) — THE signature
 Backend `GetDealTimeline(orderID)` + `GetDealTimelineByOrderNumber` in `invoice_traceability.go`: a **read-only 6-query assembler** (Order→Offer→RFQ→Costing→DeliveryNotes→Invoices) returning ordered `DealTimelineNode{Stage,Serial,Date,State,RecordID,RecordType}`. PAID is **derived in-memory** via the app's own `hydrateCustomerInvoicesPaymentState` (customer_invoice_payment_policy.go) — **zero writes**, `finance:view`-gated. Missing links render honestly (`pending` for a real future stage, `na` for an optional one) — never invented. `DealTimeline.svelte` is the owner-ratified compact single-row stepper (state-colored dots on a thin rule; serial + date beneath; horizontal scroll on narrow widths, never shrink-to-fit) on Onyx & Ether monochrome tokens. Mounted on `OrderDetail.svelte` (primary, preserving the existing stage-change log) and `CustomerOrdersTab.svelte` (per-row on-demand toggle). Customer360 left unmounted (it's a prediction/graph screen with no deal rows — Article I.5). Bindings regenerated.
@@ -64,14 +62,47 @@ Backend `GetDealTimeline(orderID)` + `GetDealTimelineByOrderNumber` in `invoice_
 `scripts/gen_paid_sound.py` (pure stdlib) synthesizes `frontend/src/assets/sounds/paid-settle.wav` — a two-tone low "settle" (root 208Hz + fifth 312Hz, warm attack, fast decay): **18 KB, 0.42s** (budget ≤50KB/<1s). `frontend/src/lib/sound.ts` is the **only `new Audio()` in the repo** (grep-verified) — asset bundled via Vite → `go:embed` → Wails asset server, no network. It plays only when a receipt **fully settles** a customer invoice to PAID (client-side gate on the same `0.001` tolerance the settlement policy uses), only after the posting call resolves without error, only on the acting user's click. Opt-out setting `sound_on_paid_enabled` (default ON) added to the settings map + `SettingsScreen` toggle + `soundSettings` store. `.gitattributes` now pins `*.wav/ogg/mp3` binary.
 **Audit — audio = one call site:** ✅. **No sound on any other event** (not errors, not saves, not arrivals).
 
-### B5 — Rituals, operator language, brand slot ⏳ (Batch 2: B5a checklist, B5bc language+brand)
-
-### B6 — Toast discipline ⏳ (Batch 3)
+### B6 — Toast discipline ✅ (committed 72df550)
+The A6 census was tiny (826 sites, ~814 legitimate). Fixed exactly the flagged violations:
+- `App.svelte` file-watcher `toast.info` → **removed** (background event; handler kept as a no-op hook point).
+- `App.svelte` **session-expired** (a 30-min inactivity timeout — genuinely background, not a user action) → toast removed and the reason **routed to the login surface** via a new `authNotice` store (a quiet `.session-notice` line on `LoginScreen`). This is the Article V move (state belongs on its destination surface) and it doesn't strand the user — they now see *why* they're back at login.
+- `OpportunityDetail` cross-device conflict → this fires in the **catch block of the user's own stage-change click**, so it's a legitimate action-echo, not background announce. **Kept** as `toast.danger`, reworded to lead with the failed action ("Couldn't update stage — this opportunity changed on another device. It's been flagged for review."). *(Orchestrator gate correction: B6 initially removed it, which left a failed stage change silent — a dead-end violating Article II #4/#7.)*
+- `WorkHub` cached-while-sync `toast.warning` → **removed** (cached data still renders).
+- `BankReconciliation` "Statement reconciled" → **removed** (duplicated the persistent inline `.handoff-banner`, which stays with its CTA).
+- Dev-only `ToastTestButton.svelte` → **deleted** (no live imports).
+**Audit — zero announce-class:** ✅ every remaining toast echoes a user action.
 
 ---
 
-## Gate results
-_(final)_
+## Gate results (final commit)
+
+| Gate | Result |
+|------|--------|
+| `go build ./...` | ✅ clean |
+| `go vet ./...` | ✅ clean |
+| `go test -count=1 -timeout 1800s ./...` | ✅ green — 84 ok packages, 0 fail |
+| `svelte-check` | ✅ **0 errors / 14 warnings** (baseline exactly; 677 files) |
+| **Audit 1 — motion tokens = one source** | ✅ `--motion-*` / `--ease-*` defined only in `frontend/src/assets/design-tokens.css` |
+| **Audit 2 — audio = one call site** | ✅ exactly one `new Audio(` in the repo (`frontend/src/lib/sound.ts`) |
+| **Audit 3 — toasts = zero announce-class** | ✅ every remaining toast echoes a user action |
+| **Reduced-motion = fully static** | ✅ global CSS reset + every Svelte JS transition gated via `motionMs()`; zero un-gated directives remain |
+
+**Commits on `feat/fable-wave10-sensory-brand`** (off `main` `b67071c`; NOT merged/pushed/tagged):
+- `64b101c` — Batch 1: B2 motion vocabulary, B3 deal timeline, B4 the one sound
+- `4ad3d3a` — Batch 2: B1 responsiveness, B5a checklist, B5bc language + brand slot
+- `72df550` — Batch 3: B6 toast discipline
+- `466eae0` — reduced-motion sweep (all Svelte JS transitions gated)
+- (this report is the final commit)
+
+Line-endings: `.gitattributes` LF policy respected; `*.wav` pinned binary. `frontend/dist` untouched (the brand-override proof-build was reverted). Bindings regenerated for the two new read-only endpoints.
+
+## Definition of done
+- ✅ Phase A verdicts delivered (A1–A7, in `docs/wave10-recon/`).
+- ✅ B1–B6 shipped; every [TASTE] item built as the recommended/ratified variant with alternatives recorded below.
+- ✅ Gates green on the final commit; the three audits pass.
+- ✅ Flows frozen — no behavior/routing/permission/data changes; the two new backend endpoints are read-only assembly (`GetDealTimeline` / `GetDealTimelineByOrderNumber`, `finance:view`-gated, zero writes). Zero financial-semantics authorizations this wave.
+- ✅ Synthetic invariant held — shipped identity is "AsymmFlow"; the only non-synthetic values lived in a gitignored, since-deleted `brand.local.ts`.
+- ⚠️ Owner decisions requested (below) — none block the branch; they're taste/consistency calls for gate review.
 
 ## Taste Ledger
 _(every aesthetic decision, alternatives considered, what to review first — grows per batch)_
@@ -88,6 +119,13 @@ _(every aesthetic decision, alternatives considered, what to review first — gr
 
 **B5 — checklist & brand [TASTE].** Checklist is a plain six-row present/missing list below the timeline (comprehension over ornament, per the whole-wave direction). Empty-state copy is colleague-voiced, no illustrations. Brand slot ships synthetic "AsymmFlow"; override is config, not code. **Owner look:** the "statement entry" row's meaning (invoice-left-Draft = on the customer's ledger) — confirm that's the right signal; the PO empty-state verb "raise".
 
-### Owner decisions requested (open questions)
-1. **B4 autoplay:** `.play()` fires after the `await`-ed posting call resolves (so it never sounds on a failed post) rather than the strict zero-await pattern. For a sub-second local Wails IPC this stays inside Chromium's user-activation window, so it should play — but only real-hardware confirmation is definitive (can't verify audio headlessly). Accept, or want the zero-await variant (which risks sounding on a subsequently-failed post)?
-2. **B4 second PAID path:** a separate "Apply receipt to invoice" flow can also bring an invoice to PAID; it's currently SILENT (only the "Record Payment/Receipt" submit sounds). Wiring it too = same one `Audio` construction, just a second call site — more consistent, arguably more correct. Want it wired?
+### Owner decisions requested (open questions — none block the branch)
+1. **B4 autoplay timing:** `.play()` fires after the `await`-ed posting call resolves (so it never sounds on a failed post) rather than the strict zero-await pattern. For a sub-second local Wails IPC this stays inside Chromium's user-activation window, so it should play — but only real-hardware confirmation is definitive (can't verify audio headlessly). Accept, or want the zero-await variant (which risks sounding on a subsequently-failed post)?
+2. **B4 second PAID path:** a separate "Apply receipt to invoice" flow can also bring an invoice to PAID; it's currently SILENT (only the "Record Payment/Receipt" submit sounds). Wiring it too = same one `Audio` construction, just a second call site — more consistent. Want it wired?
+3. **B4 sound character:** play `paid-settle.wav`; if it should be lower/warmer/shorter, tweak the named constants in `scripts/gen_paid_sound.py` and regenerate.
+4. **B3 timeline density** and **B1 press depth (0.97):** eyeball on a real order / on rapid double-clicks.
+5. **B1 button normalization:** the login "Back" link and a "+ Add" pill now render as real `<Button variant="ghost">` (padding/border/hover) instead of bare links — intentional, but a visible change. OK?
+6. **B5a "statement entry" signal:** with no first-class statement entity, "present" = the invoice has left Draft (i.e. it would appear on the customer's ledger). Confirm that's the right signal.
+7. **B5b copy:** the Purchase-Orders empty state says "raise a PO" — confirm "raise" is the house verb (vs "create").
+8. **B5c flagship accent:** when the exact green is sampled, eyeball it beside a semantic success badge; nudge the accent's lightness/saturation if needed rather than restyling the status token. (The timeline is monochrome, so no collision there.)
+9. **B2 residual:** `IntelligenceHub`'s 0.5s screen-mount fade was curve-only in scope and is still >250ms on that (low-traffic) screen — shorten it too if you like.
