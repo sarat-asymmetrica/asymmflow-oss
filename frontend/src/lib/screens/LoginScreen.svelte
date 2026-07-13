@@ -4,6 +4,7 @@
     import { createEventDispatcher } from "svelte";
     import { LoginDevice } from "../../../wailsjs/go/main/App";
     import { brand } from "$lib/brand";
+    import { authNotice } from "$lib/stores/authNotice";
 
     const dispatch = createEventDispatcher();
 
@@ -61,6 +62,7 @@
 
     async function handleLogin() {
         error = "";
+        authNotice.set("");   // a fresh sign-in attempt clears the "why you're here" notice
 
         // P0-8 FIX: Check rate limiting before attempting login
         if (isRateLimited()) {
@@ -100,6 +102,10 @@
             <h1>Sign In</h1>
             <p class="subtitle">Enter your credentials to continue</p>
         </div>
+
+        {#if $authNotice}
+            <div class="session-notice" role="status">{$authNotice}</div>
+        {/if}
 
         <form onsubmit={preventDefault(handleLogin)} class="login-form">
             {#if error}
@@ -293,6 +299,18 @@
         padding: 12px 16px;
         border-radius: 8px;
         font-size: 14px;
+    }
+
+    /* Wave 10 B6: quiet, informational — NOT an error. Explains why the user
+       is back at the login screen (e.g. inactivity timeout). */
+    .session-notice {
+        background: var(--surface-elevated, #f4f6f8);
+        color: var(--text-secondary, #4b5563);
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 16px;
+        border: 1px solid var(--border, #e5e7eb);
     }
 
     /* P1-4 FIX: Password visibility toggle */

@@ -409,7 +409,8 @@ import { ImportBankStatementWithDialog, PreviewBankStatementImportWithDialog, Co
     }
     try {
       await FinalizeReconciliation(selectedStatement.id, $currentUser.id);
-      toast.success('Statement reconciled successfully');
+      // Wave 10 B6: toast removed — duplicated the persistent inline
+      // .handoff-banner below, which already confirms this event with a CTA.
       showHandoffBanner = true;
       await loadStatements();
     } catch (err) {

@@ -60,6 +60,7 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
 
     // Global file drop store
     import { fileDrop } from "./lib/stores/fileDrop";
+    import { authNotice } from "./lib/stores/authNotice";
 
     // Global OCR Modal
     import QuickCaptureModal from "./lib/components/QuickCaptureModal.svelte";
@@ -77,19 +78,13 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
     let globalOCRFileName = $state("");
     let globalOCRSessionKey = $state(0);
 
-    // Butler event handler - shows real-time notifications for file events
+    // Butler event handler - background file-watcher/import events.
+    // Wave 10 B6 (Article IV.4): a toast may only echo a user action, so
+    // this no longer announces file events via toast. No notifications/
+    // digest surface exists yet to route this to; left as a no-op handler
+    // (still registered below so future routing has a single hook point).
     function handleButlerEvent(event) {
-        if (event && event.Type && event.FileName) {
-            const eventLabels = {
-                new_rfq: "New RFQ",
-                eh_xml: "Rhine Instruments Pricing",
-                invoice: "Invoice",
-                offer_change: "Offer Updated",
-                generic: "File Changed",
-            };
-            const label = eventLabels[event.Type] || "File Event";
-            toast.info(`${label}: ${event.FileName}`);
-        }
+        // Intentionally no toast — see comment above.
     }
 
     // Setup state
@@ -624,7 +619,10 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
                 currentUser.set(null);
                 permissions.set([]);
                 deviceStatus = "login";
-                toast.warning("Session expired — please sign in again.");
+                // Wave 10 B6 (Article IV.4/V): a 30-min inactivity timeout is a
+                // background state transition, not a user action — so it must not
+                // arrive as a toast. Carry the reason to the login surface instead.
+                authNotice.set("Your session timed out after 30 minutes of inactivity. Please sign in again.");
             });
 
             // NOTE: File drop handler is registered in registerFileDropHandler()
