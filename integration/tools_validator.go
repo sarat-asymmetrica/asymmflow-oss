@@ -229,6 +229,7 @@ func (v *ToolsValidator) validateTool(config ToolConfig) *ToolStatus {
 
 	// Try to get version
 	cmd := exec.Command(config.Command, config.VersionFlag)
+	suppressCommandWindow(cmd)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
