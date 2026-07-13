@@ -130,6 +130,7 @@ func (e *ProductionToolExecutor) CheckToolAvailability() (map[string]*Tool, erro
 
 		// Try to execute with --version
 		cmd := exec.Command(tc.command, "--version")
+		suppressCommandWindow(cmd)
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			tool.Available = true
@@ -159,6 +160,7 @@ func (e *ProductionToolExecutor) ConvertDocument(ctx context.Context, input, out
 	}
 
 	cmd := exec.CommandContext(ctx, "pandoc", input, "-o", output, "-t", format)
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("pandoc conversion failed: %w", err)
 	}
@@ -177,6 +179,7 @@ func (e *ProductionToolExecutor) ExtractTextFromImage(ctx context.Context, image
 	outputFile := outputBase + ".txt"
 
 	cmd := exec.CommandContext(ctx, "tesseract", imagePath, outputBase)
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("tesseract OCR failed: %w", err)
 	}
@@ -217,6 +220,7 @@ func (e *ProductionToolExecutor) CompressPDF(ctx context.Context, input, output 
 		input,
 	)
 
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("PDF compression failed: %w", err)
 	}
@@ -240,6 +244,7 @@ func (e *ProductionToolExecutor) MergePDFs(ctx context.Context, inputs []string,
 	args = append(args, inputs...)
 
 	cmd := exec.CommandContext(ctx, "gs", args...)
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("PDF merge failed: %w", err)
 	}
@@ -256,6 +261,7 @@ func (e *ProductionToolExecutor) ResizeImage(ctx context.Context, input, output 
 	size := fmt.Sprintf("%dx%d", width, height)
 	cmd := exec.CommandContext(ctx, "magick", input, "-resize", size, output)
 
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("image resize failed: %w", err)
 	}
@@ -270,6 +276,7 @@ func (e *ProductionToolExecutor) ConvertImageFormat(ctx context.Context, input, 
 	}
 
 	cmd := exec.CommandContext(ctx, "magick", input, output)
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("image conversion failed: %w", err)
 	}
@@ -290,6 +297,7 @@ func (e *ProductionToolExecutor) ExtractAudioFromVideo(ctx context.Context, inpu
 		output,
 	)
 
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("audio extraction failed: %w", err)
 	}
@@ -304,6 +312,7 @@ func (e *ProductionToolExecutor) QueryJSON(ctx context.Context, input, query str
 	}
 
 	cmd := exec.CommandContext(ctx, "jq", query, input)
+	suppressCommandWindow(cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("jq query failed: %w", err)
@@ -347,6 +356,7 @@ func (e *ProductionToolExecutor) ExecuteSQLQuery(ctx context.Context, dbPath, qu
 	}
 
 	cmd := exec.CommandContext(ctx, "sqlite3", dbPath, query)
+	suppressCommandWindow(cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("SQL query failed: %w", err)
@@ -375,6 +385,7 @@ func (e *ProductionToolExecutor) GenerateDiagram(ctx context.Context, dotContent
 		dotFile,
 	)
 
+	suppressCommandWindow(cmd)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("diagram generation failed: %w", err)
 	}
@@ -398,6 +409,7 @@ func (e *ProductionToolExecutor) MakeHTTPRequest(ctx context.Context, url, metho
 	args = append(args, url)
 
 	cmd := exec.CommandContext(ctx, "curl", args...)
+	suppressCommandWindow(cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("HTTP request failed: %w", err)
