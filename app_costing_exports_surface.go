@@ -1239,12 +1239,19 @@ func (a *App) ExportCostingToExcel(data CostingExportData) (string, error) {
 		contactName = strings.TrimSpace(data.CustomerName)
 	}
 
+	// Wave 11 B1: the DISPLAY value on the exported document comes from the
+	// overlay (CompanyDisplayName), so a deployment re-skins the default division
+	// on its PDFs with no source edit. The switch LABELS stay literal on purpose —
+	// they route stored division rows, which this wave must not touch (stored-data
+	// caution). Only the assigned display value is de-literaled here; the
+	// Beacon-Controls trading suffix stays literal pending the division registry
+	// (see FABLE_WAVE11_SPEC_REPORT.md §B1 deferred coupling).
 	divisionValue := strings.TrimSpace(data.Division)
 	switch divisionValue {
 	case "Beacon Controls":
 		divisionValue = "Beacon Controls WLL"
 	case "", "Acme Instrumentation":
-		divisionValue = "Acme Instrumentation WLL"
+		divisionValue = activeOverlay.CompanyDisplayName
 	}
 
 	supplierCode := "EH"

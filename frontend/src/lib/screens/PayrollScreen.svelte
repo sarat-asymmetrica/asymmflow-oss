@@ -6,6 +6,7 @@
   import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime";
   import { toast } from "../stores/toasts";
   import { formatBHD } from "$lib/utils/formatters";
+  import { brand } from "$lib/brand";
   import { listEmployeeProfiles, type EmployeeProfile } from "$lib/api/collaboration";
   import {
     approvePayrollRun,
@@ -37,7 +38,7 @@
     presetEmployeeID?: string;
   }
 
-  let { embedded = false, mode = "compensation", company = "Acme Instrumentation", presetEmployeeID = "" }: Props = $props();
+  let { embedded = false, mode = "compensation", company = brand.defaultDivision as Props['company'], presetEmployeeID = "" }: Props = $props();
   let appliedPresetEmployeeID = $state("");
 
   let loading = $state(true);
@@ -96,7 +97,7 @@
   };
 
   function matchesCompany(division?: string) {
-    return (division || "Acme Instrumentation") === company;
+    return (division || brand.defaultDivision) === company;
   }
 
   function buildPayrollSummary(
@@ -300,7 +301,7 @@
       selectedRunID = run.id;
       selectedRun = await getPayrollRun(run.id);
       if (!matchesCompany(selectedRun.division)) {
-        throw new Error(`Generated payroll run belongs to ${selectedRun.division || "Acme Instrumentation"}, not ${company}`);
+        throw new Error(`Generated payroll run belongs to ${selectedRun.division || brand.defaultDivision}, not ${company}`);
       }
       await load();
       toast.success("Payroll run generated");

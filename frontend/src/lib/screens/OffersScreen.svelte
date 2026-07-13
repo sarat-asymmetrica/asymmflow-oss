@@ -1,6 +1,7 @@
 <script lang="ts">
   import { run, preventDefault } from 'svelte/legacy';
   import { motionMs } from "$lib/motion";
+  import { brand } from "$lib/brand";
 
   /**
    * OffersScreen - Production-Ready Offers Management
@@ -114,7 +115,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
   let offers: OfferDisplay[] = $state([]);
   let filteredOffers: OfferDisplay[] = $state([]);
   let loading = $state(true);
-  let selectedCompany: 'Acme Instrumentation' | 'Beacon Controls' = $state('Acme Instrumentation');
+  let selectedCompany: 'Acme Instrumentation' | 'Beacon Controls' = $state(brand.defaultDivision as 'Acme Instrumentation' | 'Beacon Controls');
   let selectedStage: OfferStage = $state('all');
   let offersWithNoItems: any[] = $state([]);
   let legacyOfferShells: any[] = $state([]);
@@ -163,7 +164,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
   }
 
   let formData = $state({
-    division: 'Acme Instrumentation',
+    division: brand.defaultDivision,
     offer_number: '',
     customer_id: '',
     customer_name: '',
@@ -353,7 +354,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
     { value: 'Lost', label: 'Lost', count: 0 }
   ]);
 
-  let companyScopedOffers = $derived(offers.filter((offer) => (offer.division || 'Acme Instrumentation') === selectedCompany));
+  let companyScopedOffers = $derived(offers.filter((offer) => (offer.division || brand.defaultDivision) === selectedCompany));
 
   // Computed: Update tab counts
   // Non-terminal offers that are expired belong ONLY to the Expired tab (and All) -
@@ -431,7 +432,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
       created_at: offer.created_at,
       updated_at: offer.updated_at,
       items: offer.items || [],
-      division: offer.division || 'Acme Instrumentation',
+      division: offer.division || brand.defaultDivision,
       days_until_expiry: daysUntilExpiry,
       is_expired: daysUntilExpiry < 0,
       is_expiring_soon: daysUntilExpiry >= 0 && daysUntilExpiry <= 7,

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte';
-  
+  import { brand } from '$lib/brand';
+
   interface Props {
     activeRoute?: string;
   }
@@ -52,7 +53,7 @@
   <!-- Brand Header -->
   <div class="flex items-center relative h-10" style="padding-left: var(--space-md); padding-right: var(--space-md); margin-bottom: var(--space-lg); gap: var(--space-sm)">
     <div class="w-8 h-8 bg-black rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold font-serif shadow-lg">P</div>
-    <h1 class="font-serif text-lg tracking-widest whitespace-nowrap transition-opacity duration-200 {collapsed ? 'opacity-0 w-0' : 'opacity-100'}">Acme Instrumentation</h1>
+    <h1 class="font-serif text-lg tracking-widest whitespace-nowrap transition-opacity duration-200 {collapsed ? 'opacity-0 w-0' : 'opacity-100'}">{brand.defaultDivision}</h1>
     
     <!-- Collapse Toggle -->
     <button class="absolute -right-3 top-1 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-black shadow-sm z-10" onclick={toggleCollapse}>

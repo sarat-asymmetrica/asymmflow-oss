@@ -1,6 +1,7 @@
 <script lang="ts">
   import { run, self } from 'svelte/legacy';
   import { motionMs } from "$lib/motion";
+  import { brand } from "$lib/brand";
 
   import { createEventDispatcher, onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -24,7 +25,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
     company?: 'Acme Instrumentation' | 'Beacon Controls';
   }
 
-  let { embedded = false, company = 'Acme Instrumentation' }: Props = $props();
+  let { embedded = false, company = brand.defaultDivision as Props['company'] }: Props = $props();
 
   let payments: any[] = $state([]);
   let invoices: any[] = $state([]);
@@ -41,7 +42,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
   let paymentSourceFilter: 'all' | 'supplier' | 'expense' = $state('all');
 
   function matchesCompany(division?: string) {
-    return (division || 'Acme Instrumentation') === company;
+    return (division || brand.defaultDivision) === company;
   }
 
   let permissionList = $derived(Array.isArray($permissions) ? $permissions : []);

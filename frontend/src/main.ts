@@ -2,6 +2,7 @@ import './assets/design-tokens.css'
 import './app.css'
 import './assets/theme.css'
 import './assets/layout.css'
+import './assets/phi-token-compat.css' // Wave 11 A2: bridge phi token names → loaded semantic tokens
 import App from './App.svelte'
 import { LogError } from '../wailsjs/runtime/runtime'
 import { mount } from "svelte";

@@ -3,6 +3,7 @@
   import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime";
   import { GenerateLicenseKey } from "../../../wailsjs/go/main/App";
   import { toast } from "../stores/toasts";
+  import { brand } from "$lib/brand";
   import { permissions as permissionsStore, currentUser } from "$lib/stores/authContext";
   import PayrollScreen from "./PayrollScreen.svelte";
   import {
@@ -126,7 +127,7 @@
 
   // B2: Payroll lives in People too — gated on payroll:view, with a preselect
   // deep-link from the employee record ("Set up payroll").
-  let payrollCompany: PayrollCompany = $state("Acme Instrumentation");
+  let payrollCompany: PayrollCompany = $state(brand.defaultDivision as PayrollCompany);
   let payrollPresetEmployeeID = $state("");
   let lastAppliedPeopleRouteKey = $state("");
 
@@ -1773,6 +1774,7 @@
 
   .detail-subtabs {
     display: flex;
+    align-items: center; /* Wave 11 A3: never let a pill stretch to container height (200px-oval guard) */
     gap: 8px;
     flex-wrap: wrap;
     margin-bottom: 4px;
@@ -1781,7 +1783,11 @@
   .detail-subtabs button {
     border-radius: 999px;
     padding: 8px 14px;
+    line-height: 1.2; /* compact, height driven by content+padding, not inherited leading */
+    white-space: nowrap;
+    border: 1px solid var(--border);
     background: color-mix(in srgb, var(--surface) 92%, var(--accent-primary) 8%);
+    cursor: pointer;
   }
 
   .detail-subtabs button.active {

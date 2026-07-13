@@ -1,6 +1,7 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
   import { motionMs } from "$lib/motion";
+  import { brand } from "$lib/brand";
 
   /**
    * BankReconciliationScreen - Bank Statement Import & Reconciliation
@@ -47,7 +48,7 @@ import { ImportBankStatementWithDialog, PreviewBankStatementImportWithDialog, Co
     company?: 'Acme Instrumentation' | 'Beacon Controls';
   }
 
-  let { embedded = false, company = 'Acme Instrumentation' }: Props = $props();
+  let { embedded = false, company = brand.defaultDivision as Props['company'] }: Props = $props();
 
   interface BankStatement {
     id: string;
@@ -157,7 +158,7 @@ import { ImportBankStatementWithDialog, PreviewBankStatementImportWithDialog, Co
   let editingLine: BankStatementLine | null = $state(null);
 
   function matchesCompany(division?: string) {
-    return (division || 'Acme Instrumentation') === company;
+    return (division || brand.defaultDivision) === company;
   }
 
 

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
     import { motionMs } from "$lib/motion";
+    import { brand } from "$lib/brand";
 
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
@@ -35,7 +36,7 @@
     let lastAppliedRouteKey = $state("");
 
     // E2: Company selector - 'Acme Instrumentation' is the default, 'Beacon Controls' is the sister company
-    let selectedCompany: CompanyName = $state("Acme Instrumentation");
+    let selectedCompany: CompanyName = $state(brand.defaultDivision as CompanyName);
     const companies: CompanyName[] = ["Acme Instrumentation", "Beacon Controls"];
 
     function isCompanyName(value: unknown): value is CompanyName {

@@ -6,6 +6,7 @@
   import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime";
   import { toast } from "../stores/toasts";
   import { formatBHD } from "$lib/utils/formatters";
+  import { brand } from "$lib/brand";
   import FormGroup from "$lib/components/ui/FormGroup.svelte";
   import {
     approveExpenseEntry,
@@ -43,7 +44,7 @@
     company?: "Acme Instrumentation" | "Beacon Controls";
   }
 
-  let { embedded = false, mode = "entries", company = "Acme Instrumentation" }: Props = $props();
+  let { embedded = false, mode = "entries", company = brand.defaultDivision as Props['company'] }: Props = $props();
 
   let loading = $state(true);
   let saving = $state(false);
@@ -107,7 +108,7 @@
   };
 
   function matchesCompany(division?: string) {
-    return (division || "Acme Instrumentation") === company;
+    return (division || brand.defaultDivision) === company;
   }
 
   function buildExpenseSummary(scopedEntries: ExpenseEntry[], scopedRecurring: RecurringExpense[]): ExpenseDashboardSummary {

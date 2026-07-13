@@ -2,6 +2,7 @@
     import { run } from 'svelte/legacy';
 
     import { devLog } from "$lib/utils/devLog";
+    import { brand } from "$lib/brand";
     import { onMount, onDestroy, tick } from "svelte";
 
     // ============================================
@@ -381,9 +382,9 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
             const targetScreen = typeToScreen[type];
             if (targetScreen) {
                 if (targetScreen === "finance" && type === "invoice") {
-                    navigate({ screen: "finance", tab: "invoices", company: mergedData.division || "Acme Instrumentation" });
+                    navigate({ screen: "finance", tab: "invoices", company: mergedData.division || brand.defaultDivision });
                 } else if (targetScreen === "finance" && type === "bank_statement") {
-                    navigate({ screen: "finance", tab: "bank_recon", company: mergedData.division || "Acme Instrumentation" });
+                    navigate({ screen: "finance", tab: "bank_recon", company: mergedData.division || brand.defaultDivision });
                 } else {
                     navigate(targetScreen);
                 }

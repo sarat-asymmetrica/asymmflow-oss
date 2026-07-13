@@ -37,6 +37,7 @@ import { GetSupportedCurrencies } from '../../../wailsjs/go/main/DocumentsServic
   import { confirm } from '$lib/stores/confirm';
   import { permissions, currentUser } from '$lib/stores/authContext';
   import { escapeHtml } from '$lib/utils/escapeHtml';
+  import { brand } from '$lib/brand';
 
   const dispatch = createEventDispatcher();
 
@@ -47,10 +48,10 @@ import { GetSupportedCurrencies } from '../../../wailsjs/go/main/DocumentsServic
     company?: 'Acme Instrumentation' | 'Beacon Controls';
   }
 
-  let { embedded = false, company = 'Acme Instrumentation' }: Props = $props();
+  let { embedded = false, company = brand.defaultDivision as Props['company'] }: Props = $props();
 
   function matchesCompany(division?: string) {
-    return (division || 'Acme Instrumentation') === company;
+    return (division || brand.defaultDivision) === company;
   }
 
   // Types
