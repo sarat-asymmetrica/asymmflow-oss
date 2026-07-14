@@ -27,6 +27,7 @@
     // Alt+N shortcut order, and the shell-level permission gate together.
     import { NAV_ITEMS, SCREEN_PERMISSIONS } from "./lib/config/navItems";
     import { t, initI18n } from "$lib/i18n";
+    import { initDivisions, getDefaultDivisionKey } from "$lib/divisions.svelte";
 
     // Error Boundary - Catch uncaught errors gracefully
     import ErrorBoundary from "./lib/components/ErrorBoundary.svelte";
@@ -382,9 +383,9 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
             const targetScreen = typeToScreen[type];
             if (targetScreen) {
                 if (targetScreen === "finance" && type === "invoice") {
-                    navigate({ screen: "finance", tab: "invoices", company: mergedData.division || brand.defaultDivision });
+                    navigate({ screen: "finance", tab: "invoices", company: mergedData.division || getDefaultDivisionKey() });
                 } else if (targetScreen === "finance" && type === "bank_statement") {
-                    navigate({ screen: "finance", tab: "bank_recon", company: mergedData.division || brand.defaultDivision });
+                    navigate({ screen: "finance", tab: "bank_recon", company: mergedData.division || getDefaultDivisionKey() });
                 } else {
                     navigate(targetScreen);
                 }
@@ -493,6 +494,10 @@ import { RegisterDevice, ValidateLicense, NeedsLicenseActivation } from "../wail
         // opened. Fire-and-forget: `messages` is reactive $state, so labels update
         // as soon as it loads; Settings re-inits on an explicit language change.
         void initI18n();
+        // Load the division registry (keys, legal names, aliases) at startup —
+        // Wave 12 B1 plumbing; consumers keep using brand.defaultDivision until
+        // a later wave migrates them onto this store.
+        void initDivisions();
 
         void (async () => {
 

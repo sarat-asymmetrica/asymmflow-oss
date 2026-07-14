@@ -11,7 +11,7 @@
 
   import { fade, fly } from 'svelte/transition';
   import { motionMs } from "$lib/motion";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey } from "$lib/divisions.svelte";
   import { toast } from '$lib/stores/toasts';
   import {
     ValidateOneDrivePath } from '../../../wailsjs/go/main/App';
@@ -355,7 +355,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
                   class:input-error={entry.validation && !entry.validation.valid}
                   class:input-success={entry.validation?.valid}
                   bind:value={entry.value}
-                  placeholder={`e.g. /Users/yourname/OneDrive - ${brand.defaultDivision}/Offers/2025`}
+                  placeholder={`e.g. /Users/yourname/OneDrive - ${getDefaultDivisionKey()}/Offers/2025`}
                   onkeydown={e => e.key === 'Enter' && validatePath(entry)}
                 />
 
@@ -449,7 +449,7 @@ import { ScanOneDrivePaths, ConfirmOneDriveDeal, ImportOneDriveDeals } from '../
         <h3>Tips</h3>
         <ul class="tips-list">
           <li>On Mac, OneDrive typically syncs to <code>~/Library/CloudStorage/OneDrive-…</code> or <code>~/OneDrive</code></li>
-          <li>On Windows, usually <code>C:\Users\You\OneDrive - {brand.defaultDivision} WLL\Offers\2025</code></li>
+          <li>On Windows, usually <code>C:\Users\You\OneDrive - {getDefaultDivisionKey()} WLL\Offers\2025</code></li>
           <li>Validate each path before scanning — validation checks folder accessibility and counts deal subfolders</li>
           <li>Add multiple paths if 2025 offers are split across separate base folders</li>
           <li>The scan reads folder names and file metadata only — no file content is uploaded</li>

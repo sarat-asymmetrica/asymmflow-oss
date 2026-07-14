@@ -6,7 +6,7 @@
   import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime";
   import { toast } from "../stores/toasts";
   import { formatBHD } from "$lib/utils/formatters";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey, normalizeDivision } from "$lib/divisions.svelte";
   import FormGroup from "$lib/components/ui/FormGroup.svelte";
   import {
     approveExpenseEntry,
@@ -41,10 +41,10 @@
   interface Props {
     embedded?: boolean;
     mode?: "entries" | "recurring" | "approvals" | "workspace";
-    company?: "Acme Instrumentation" | "Beacon Controls";
+    company?: string;
   }
 
-  let { embedded = false, mode = "entries", company = brand.defaultDivision as Props['company'] }: Props = $props();
+  let { embedded = false, mode = "entries", company = getDefaultDivisionKey() }: Props = $props();
 
   let loading = $state(true);
   let saving = $state(false);
@@ -108,7 +108,7 @@
   };
 
   function matchesCompany(division?: string) {
-    return (division || brand.defaultDivision) === company;
+    return normalizeDivision(division || getDefaultDivisionKey()) === normalizeDivision(company);
   }
 
   function buildExpenseSummary(scopedEntries: ExpenseEntry[], scopedRecurring: RecurringExpense[]): ExpenseDashboardSummary {

@@ -72,6 +72,24 @@ func currentCompanyIdentity() (name, industry, country string) {
 	return activeOverlay.CompanyDisplayName, activeOverlay.Industry, activeOverlay.Country
 }
 
+// divisionsSummaryLine renders the registry's divisions as a compact
+// "Key (primary) + Key (secondary)" line for AI system prompts, so butler
+// prompt text lists whatever divisions the active overlay declares instead
+// of a frozen "Acme Instrumentation + Beacon Controls" literal. The default
+// division is labelled "primary"; every other configured division is
+// labelled "secondary".
+func divisionsSummaryLine() string {
+	parts := make([]string, 0, len(activeOverlay.Divisions))
+	for _, d := range activeOverlay.Divisions {
+		role := "secondary"
+		if d.Key == activeOverlay.DefaultDivisionKey {
+			role = "primary"
+		}
+		parts = append(parts, d.Key+" ("+role+")")
+	}
+	return strings.Join(parts, " + ")
+}
+
 func detectPDFImageType(imagePath string) string {
 	switch strings.ToLower(filepath.Ext(imagePath)) {
 	case ".jpg", ".jpeg":

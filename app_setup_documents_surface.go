@@ -19,7 +19,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"ph_holdings_app/pkg/ocr"
+	"ph_holdings_app/pkg/overlay"
 )
+
+// divisionKeys returns the canonical Key of every division in the overlay,
+// in declaration order. Used to build dynamic validation error messages that
+// list the registry's actual vocabulary instead of a frozen literal pair.
+func divisionKeys(o *overlay.CompanyOverlay) []string {
+	keys := make([]string, 0, len(o.Divisions))
+	for _, div := range o.Divisions {
+		keys = append(keys, div.Key)
+	}
+	return keys
+}
 
 func (a *App) getSettingsFilePath() string {
 	dbDir := filepath.Dir(a.config.Database.Path)
@@ -459,7 +471,7 @@ func (a *App) SeedBankDemoData() error {
 			ID:            "bank-demo-" + uuid.New().String(),
 			BankName:      "National Bank of Bahrain",
 			AccountNumber: "0012-345678-001",
-			AccountName:   "Acme Instrumentation WLL - Operating",
+			AccountName:   activeOverlay.CompanyDisplayName + " - Operating",
 			Currency:      "BHD",
 			IsActive:      true,
 			DisplayOrder:  1,
@@ -1898,7 +1910,9 @@ func (a *App) CreateFolderStructure(basePath string, companyName string) (Folder
 	if companyName != "" {
 		companies = append(companies, companyName)
 	} else {
-		companies = []string{"Acme Instrumentation", "Beacon Controls"}
+		for _, div := range activeOverlay.Divisions {
+			companies = append(companies, div.Key)
+		}
 	}
 
 	for _, company := range companies {
@@ -1956,8 +1970,8 @@ func (a *App) CreateCustomerFolder(basePath string, company string, customerName
 		return "", fmt.Errorf("basePath, company, and customerName are all required")
 	}
 	// Validate company is an allowed value
-	if company != "Acme Instrumentation" && company != "Beacon Controls" {
-		return "", fmt.Errorf("invalid company: must be 'Acme Instrumentation' or 'Beacon Controls'")
+	if !activeOverlay.IsKnownDivision(company) {
+		return "", fmt.Errorf("invalid company: must be one of %s", strings.Join(divisionKeys(activeOverlay), ", "))
 	}
 	// Validate basePath doesn't contain traversal
 	absBase, err := filepath.Abs(basePath)
@@ -1995,8 +2009,8 @@ func (a *App) CreateSupplierFolder(basePath string, company string, supplierName
 		return "", fmt.Errorf("basePath, company, and supplierName are all required")
 	}
 	// Validate company is an allowed value
-	if company != "Acme Instrumentation" && company != "Beacon Controls" {
-		return "", fmt.Errorf("invalid company: must be 'Acme Instrumentation' or 'Beacon Controls'")
+	if !activeOverlay.IsKnownDivision(company) {
+		return "", fmt.Errorf("invalid company: must be one of %s", strings.Join(divisionKeys(activeOverlay), ", "))
 	}
 	// Validate basePath doesn't contain traversal
 	absBase, err := filepath.Abs(basePath)

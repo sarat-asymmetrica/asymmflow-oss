@@ -5,7 +5,7 @@
     import { fade, scale } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
     import { motionMs } from "$lib/motion";
-    import { brand } from "$lib/brand";
+    import { getDefaultDivisionKey, getDivisionKeys, normalizeDivision } from "$lib/divisions.svelte";
 
     // Motion vocabulary (Wave 10 B2): timing mirrors design-tokens.css --motion-base (200ms).
     // Svelte transitions run in JS and cannot read CSS custom properties directly, so the
@@ -64,7 +64,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 
     // Editable document data (populated from OCR + Butler)
     let editableData = $state({
-        division: brand.defaultDivision,
+        division: getDefaultDivisionKey(),
         customer_name: "",
         supplier_name: "",
         project: "",
@@ -292,7 +292,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
 
         // Populate editable fields from OCR
         editableData = {
-            division: (typeof data.division === 'string' && data.division.trim() !== '') ? data.division : brand.defaultDivision,
+            division: (typeof data.division === 'string' && data.division.trim() !== '') ? data.division : getDefaultDivisionKey(),
             customer_name: data.customer_name || data.company_name || "",
             supplier_name: data.supplier_name || "",
             project: data.project || data.subject || extractProjectFromFileName(fileName),
@@ -833,7 +833,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
         butlerAutoTriggered = false;
         // Reset editable data to clean state (includes bank-specific fields)
         editableData = {
-            division: brand.defaultDivision,
+            division: getDefaultDivisionKey(),
             customer_name: "",
             supplier_name: "",
             project: "",
@@ -1147,7 +1147,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
             // Pass structured data for backend
             documentData: {
                 ...editableData,
-                division: editableData.division || brand.defaultDivision,
+                division: editableData.division || getDefaultDivisionKey(),
                 total: finalTotal,
                 line_items: lineItems,
                 bank_account_id: selectedBankAccountId,
@@ -1191,7 +1191,7 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
     let filteredSuppliers = $derived(supplierSearchTerm.length > 0
         ? suppliers.filter(s => s.supplier_name?.toLowerCase().includes(supplierSearchTerm.toLowerCase()))
         : suppliers.slice(0, 50));
-    let filteredBankAccounts = $derived(bankAccounts.filter((account) => (account.division || brand.defaultDivision) === editableData.division));
+    let filteredBankAccounts = $derived(bankAccounts.filter((account) => normalizeDivision(account.division || getDefaultDivisionKey()) === normalizeDivision(editableData.division)));
     // Reset state when modal opens (prevent state leak between opens)
     run(() => {
         if (show) {
@@ -1377,8 +1377,9 @@ import { GetActiveBankAccounts } from "../../../wailsjs/go/main/FinanceService";
                                         <label for={fieldKey}>{formatFieldLabel(fieldKey)}</label>
                                         {#if fieldKey === 'division'}
                                             <select id={fieldKey} bind:value={editableData[fieldKey]}>
-                                                <option value={brand.defaultDivision}>{brand.defaultDivision}</option>
-                                                <option value="Beacon Controls">Beacon Controls</option>
+                                                {#each getDivisionKeys() as divKey}
+                                                    <option value={divKey}>{divKey}</option>
+                                                {/each}
                                             </select>
                                         {:else if fieldKey === 'notes'}
                                             <textarea

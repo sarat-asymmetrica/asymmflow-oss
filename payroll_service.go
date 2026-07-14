@@ -59,10 +59,11 @@ func (a *App) ensurePayrollFoundationInternal() error {
 			}
 		}
 	}
-	a.addColumnIfNotExists("employee_compensation_profiles", "division", "TEXT DEFAULT 'Acme Instrumentation'")
-	a.addColumnIfNotExists("payroll_periods", "division", "TEXT DEFAULT 'Acme Instrumentation'")
-	a.addColumnIfNotExists("payroll_runs", "division", "TEXT DEFAULT 'Acme Instrumentation'")
-	a.addColumnIfNotExists("payroll_payouts", "division", "TEXT DEFAULT 'Acme Instrumentation'")
+	payrollDivisionDefaultDDL := "TEXT DEFAULT " + sqlStringLiteral(activeOverlay.DefaultDivision())
+	a.addColumnIfNotExists("employee_compensation_profiles", "division", payrollDivisionDefaultDDL)
+	a.addColumnIfNotExists("payroll_periods", "division", payrollDivisionDefaultDDL)
+	a.addColumnIfNotExists("payroll_runs", "division", payrollDivisionDefaultDDL)
+	a.addColumnIfNotExists("payroll_payouts", "division", payrollDivisionDefaultDDL)
 
 	return nil
 }

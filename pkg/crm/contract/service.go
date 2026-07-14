@@ -734,7 +734,7 @@ func (s *Service) SeedContractClauses() error {
 		{
 			Category:            "Warranty",
 			Title:               "Manufacturer Warranty",
-			Text:                "Equipment is covered by manufacturer's standard warranty. Acme Instrumentation will facilitate warranty claims as necessary.",
+			Text:                "Equipment is covered by manufacturer's standard warranty. " + overlay.Active().DefaultDivision() + " will facilitate warranty claims as necessary.",
 			IsOptional:          false,
 			PaymentGradeMinimum: "D",
 			IsProtective:        false,
@@ -743,7 +743,7 @@ func (s *Service) SeedContractClauses() error {
 		{
 			Category:            "Warranty",
 			Title:               "Service Warranty - Extended",
-			Text:                "Acme Instrumentation warrants installation and commissioning services for 12 months from completion. Grade A customers receive priority support.",
+			Text:                overlay.Active().DefaultDivision() + " warrants installation and commissioning services for 12 months from completion. Grade A customers receive priority support.",
 			IsOptional:          true,
 			PaymentGradeMinimum: "A",
 			IsProtective:        false,
@@ -754,7 +754,7 @@ func (s *Service) SeedContractClauses() error {
 		{
 			Category:            "Liability",
 			Title:               "Limitation of Liability",
-			Text:                "Acme Instrumentation's total liability under this contract shall not exceed the contract value. No liability for consequential damages.",
+			Text:                overlay.Active().DefaultDivision() + "'s total liability under this contract shall not exceed the contract value. No liability for consequential damages.",
 			IsOptional:          false,
 			PaymentGradeMinimum: "D",
 			IsProtective:        true,
@@ -792,7 +792,7 @@ func (s *Service) SeedContractClauses() error {
 		{
 			Category:            "Termination",
 			Title:               "Non-Payment Termination",
-			Text:                "Acme Instrumentation may immediately terminate and retain all payments if Customer fails to make payment within 15 days of due date.",
+			Text:                overlay.Active().DefaultDivision() + " may immediately terminate and retain all payments if Customer fails to make payment within 15 days of due date.",
 			IsOptional:          false,
 			PaymentGradeMinimum: "C",
 			IsProtective:        true,

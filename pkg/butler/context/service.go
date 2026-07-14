@@ -30,6 +30,7 @@ import (
 	financepayroll "ph_holdings_app/pkg/finance/payroll"
 	"ph_holdings_app/pkg/infra"
 	"ph_holdings_app/pkg/kernel/text"
+	"ph_holdings_app/pkg/overlay"
 )
 
 // HostPort is what the context builder needs from the host application:
@@ -3398,11 +3399,26 @@ func (svc *Service) getFinancialContext() map[string]any {
 	result["total_payables_bhd"] = totalAP
 	result["unpaid_supplier_invoices"] = apCount
 
-	// Division-wise revenue breakdown (Acme Instrumentation vs Beacon Controls)
+	// Division-wise revenue breakdown (primary/default division vs the first
+	// configured secondary division). Both sides of the comparison canonicalize
+	// through the overlay's DivisionNormalizationCase so a stored alias/casing
+	// variant of a division still buckets correctly (Spec-07 law) — for the
+	// synthetic seed (exact-literal stored values, no aliases in use) this
+	// returns byte-identical rows to the old hardcoded literals.
+	ov := overlay.Active()
+	primaryDivision := ov.DefaultDivision()
+	secondaryDivision := primaryDivision
+	for _, d := range ov.Divisions {
+		if d.Key != primaryDivision {
+			secondaryDivision = d.Key
+			break
+		}
+	}
+	divisionCase := ov.DivisionNormalizationCase("division")
 	var phRevenue, ahsRevenue float64
-	svc.db.Model(&Invoice{}).Where("division = ?", "Acme Instrumentation").
+	svc.db.Model(&Invoice{}).Where(divisionCase+" = ?", primaryDivision).
 		Select("COALESCE(SUM(grand_total_bhd), 0)").Scan(&phRevenue)
-	svc.db.Model(&Invoice{}).Where("division = ?", "Beacon Controls").
+	svc.db.Model(&Invoice{}).Where(divisionCase+" = ?", secondaryDivision).
 		Select("COALESCE(SUM(grand_total_bhd), 0)").Scan(&ahsRevenue)
 	result["division_revenue"] = map[string]any{
 		"ph_trading":  phRevenue,

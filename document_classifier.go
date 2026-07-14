@@ -456,7 +456,7 @@ func (c *DocumentClassifier) classifyByKeywords(text string, filename string) *C
 			(strings.Contains(lower, "bill to") || strings.Contains(lower, "ship to")) &&
 			(strings.Contains(lower, "vendor") || strings.Contains(lower, "seller") || strings.Contains(lower, "issued by")) {
 			bestMatch.DocumentType = "SupplierInvoice"
-			bestMatch.Explanation = "Invoice addressed to Acme Instrumentation by a supplier (vendor/seller)"
+			bestMatch.Explanation = "Invoice addressed to " + activeOverlay.CompanyDisplayName + " by a supplier (vendor/seller)"
 		}
 	}
 
@@ -478,7 +478,7 @@ func (c *DocumentClassifier) classifyByHeuristics(text string, filename string) 
 	// Heuristic 1: Filename contains document type
 	if strings.Contains(lowerFilename, "invoice") {
 		if strings.Contains(lowerText, "acme instrumentation") && (strings.Contains(lowerText, "bill to") || strings.Contains(lowerText, "ship to") || strings.Contains(lowerText, "vendor")) {
-			return c.createHeuristicResult("SupplierInvoice", 0.65, "Invoice appears addressed to Acme Instrumentation by a supplier")
+			return c.createHeuristicResult("SupplierInvoice", 0.65, "Invoice appears addressed to "+activeOverlay.CompanyDisplayName+" by a supplier")
 		}
 		return c.createHeuristicResult("Invoice", 0.6, "Filename contains 'invoice'")
 	}

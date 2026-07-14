@@ -6,7 +6,7 @@
   import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime";
   import { toast } from "../stores/toasts";
   import { formatBHD } from "$lib/utils/formatters";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey, normalizeDivision } from "$lib/divisions.svelte";
   import { listEmployeeProfiles, type EmployeeProfile } from "$lib/api/collaboration";
   import {
     approvePayrollRun,
@@ -31,14 +31,14 @@
   interface Props {
     embedded?: boolean;
     mode?: "compensation" | "runs" | "payouts" | "workspace";
-    company?: "Acme Instrumentation" | "Beacon Controls";
+    company?: string;
     // Wave 9.4 B2: "Set up payroll" deep-link from an employee record. Placement/nav
     // only — preselects (or opens a fresh) compensation profile for this employee;
     // no change to the generate/approve/post/pay state machine below.
     presetEmployeeID?: string;
   }
 
-  let { embedded = false, mode = "compensation", company = brand.defaultDivision as Props['company'], presetEmployeeID = "" }: Props = $props();
+  let { embedded = false, mode = "compensation", company = getDefaultDivisionKey(), presetEmployeeID = "" }: Props = $props();
   let appliedPresetEmployeeID = $state("");
 
   let loading = $state(true);
@@ -97,7 +97,7 @@
   };
 
   function matchesCompany(division?: string) {
-    return (division || brand.defaultDivision) === company;
+    return normalizeDivision(division || getDefaultDivisionKey()) === normalizeDivision(company);
   }
 
   function buildPayrollSummary(
@@ -301,7 +301,7 @@
       selectedRunID = run.id;
       selectedRun = await getPayrollRun(run.id);
       if (!matchesCompany(selectedRun.division)) {
-        throw new Error(`Generated payroll run belongs to ${selectedRun.division || brand.defaultDivision}, not ${company}`);
+        throw new Error(`Generated payroll run belongs to ${selectedRun.division || getDefaultDivisionKey()}, not ${company}`);
       }
       await load();
       toast.success("Payroll run generated");

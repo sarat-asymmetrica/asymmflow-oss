@@ -13,6 +13,8 @@ import (
 
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
+
+	"ph_holdings_app/pkg/overlay"
 )
 
 // =============================================================================
@@ -83,7 +85,7 @@ func canonicalizeOpportunityStageSSOT(raw string) string {
 // 1. Bahrain_Customer_Database_Clean.csv → CustomerMaster table
 // 2. opportunities created 2025.xlsx → Opportunity entities
 // 3. Payments to suppliers.xlsx → Payment tracking
-// 4. Acme Instrumentation Costing MasterFile.xlsx → Product costing
+// 4. <default division> Costing MasterFile.xlsx → Product costing
 //
 // PHILOSOPHY:
 // - Batch inserts for performance (Williams batching!)
@@ -337,8 +339,10 @@ func ImportAllSSOT(db *gorm.DB, dataDir string) (*ImportResult, error) {
 		}
 	}
 
-	// Import product costing from Excel
-	costingFile := filepath.Join(dataDir, "Acme Instrumentation Costing MasterFile.xlsx")
+	// Import product costing from Excel. The masterfile is named after the
+	// deployment's default division (Wave 12: registry-driven, not a literal),
+	// so an overlay with a different default division finds its own file.
+	costingFile := filepath.Join(dataDir, overlay.Active().DefaultDivision()+" Costing MasterFile.xlsx")
 	if _, err := os.Stat(costingFile); err == nil {
 		if err := importProductCostingFromExcel(db, costingFile, result); err != nil {
 			result.ProductErrors = append(result.ProductErrors, err.Error())

@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"ph_holdings_app/pkg/overlay"
 )
 
 // DOCUMENT TYPE ROUTING CLASSIFIER
@@ -462,7 +464,7 @@ func (c *DocumentClassifier) classifyByHeuristics(text string, filename string) 
 	// Heuristic 1: Filename contains document type
 	if strings.Contains(lowerFilename, "invoice") {
 		if strings.Contains(lowerText, "acme instrumentation") && (strings.Contains(lowerText, "bill to") || strings.Contains(lowerText, "ship to") || strings.Contains(lowerText, "vendor")) {
-			return c.createHeuristicResult("SupplierInvoice", 0.65, "Invoice appears addressed to Acme Instrumentation by a supplier")
+			return c.createHeuristicResult("SupplierInvoice", 0.65, "Invoice appears addressed to "+overlay.Active().CompanyDisplayName+" by a supplier")
 		}
 		return c.createHeuristicResult("Invoice", 0.6, "Filename contains 'invoice'")
 	}

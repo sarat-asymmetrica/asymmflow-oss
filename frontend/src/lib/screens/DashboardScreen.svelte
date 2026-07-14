@@ -1,7 +1,7 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
     import { motionMs } from "$lib/motion";
-    import { brand } from "$lib/brand";
+    import { getDefaultDivisionKey } from "$lib/divisions.svelte";
 
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
@@ -314,7 +314,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
         navigateTo({
             screen: "finance",
             tab: "invoices",
-            company: brand.defaultDivision,
+            company: getDefaultDivisionKey(),
             ...(bucket.invoiceFilter ? { invoiceFilter: bucket.invoiceFilter } : {}),
             ...(bucket.agingBucket ? { agingBucket: bucket.agingBucket } : {}),
         });
@@ -326,7 +326,7 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
                 // Bank Recon tab id in FinanceHub is "bank_recon" (underscore) -
                 // the previous "bank-recon" value never matched, so this action
                 // silently landed on the Finance dashboard tab instead.
-                navigateTo({ screen: "finance", tab: "bank_recon", company: brand.defaultDivision });
+                navigateTo({ screen: "finance", tab: "bank_recon", company: getDefaultDivisionKey() });
                 return;
             case "review_credit":
             case "chase_overdue":
@@ -334,12 +334,12 @@ import { ListFollowUps } from "../../../wailsjs/go/main/CRMService";
                 navigateTo({
                     screen: "finance",
                     tab: "invoices",
-                    company: brand.defaultDivision,
+                    company: getDefaultDivisionKey(),
                     ...(stats.arDaysOverdue > 0 ? { invoiceFilter: "Overdue" } : {}),
                 });
                 return;
             case "review_revenue":
-                navigateTo({ screen: "finance", tab: "dashboard", company: brand.defaultDivision });
+                navigateTo({ screen: "finance", tab: "dashboard", company: getDefaultDivisionKey() });
                 return;
             case "open_followups":
                 navigateTo({ screen: "work" });

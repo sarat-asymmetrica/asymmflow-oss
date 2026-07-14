@@ -1028,7 +1028,7 @@ RBAC AND SALES-SAFE RULES:
 COMPANY PROFILE:
 - Industry: Process Instrumentation & Control Systems (Bahrain)
 - Currency: BHD (Bahraini Dinar, 3 decimal places = fils)
-- Divisions: Acme Instrumentation (primary) + Beacon Controls (secondary)
+- Divisions: `+divisionsSummaryLine()+`
 - VAT Rate: 10%%
 
 ROLE-SCOPED DATA ACCESS — you may have live data on:

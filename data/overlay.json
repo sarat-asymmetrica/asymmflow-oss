@@ -33,7 +33,9 @@
       "bank_details": [],
       "letterhead_asset_name": "letterhead",
       "letterhead_file": "Acme Instrumentation Letterhead.png",
-      "aliases": []
+      "aliases": [],
+      "document_display_name": "Acme Instrumentation WLL",
+      "dashboard_variant": ""
     },
     {
       "key": "Beacon Controls",
@@ -53,7 +55,9 @@
         "beacon controls wll",
         "beacon controls w.l.l",
         "beacon controls w.l.l."
-      ]
+      ],
+      "document_display_name": "Beacon Controls WLL",
+      "dashboard_variant": "ahs"
     }
   ],
   "_business_rules_comment": "Costing/approval policy numbers. Margins/discounts are fractions (0.15 = 15%). These reproduce the built-in defaults; edit to ship a different vertical's policy without recompiling.",

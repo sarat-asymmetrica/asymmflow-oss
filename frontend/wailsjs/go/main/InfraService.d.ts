@@ -164,6 +164,8 @@ export function GetDeviceUsers(arg1:string):Promise<Array<infra.DeviceUser>>;
 
 export function GetDiscrepanciesByType(arg1:string,arg2:string,arg3:string):Promise<Array<main.DataDiscrepancy>>;
 
+export function GetDivisionRegistry():Promise<main.DivisionRegistry>;
+
 export function GetFinancialDashboard():Promise<main.FinancialDashboard>;
 
 export function GetFinancialDashboardForYear(arg1:number):Promise<main.FinancialDashboard>;

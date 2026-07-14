@@ -39,16 +39,16 @@ import { GenerateInvoicePDF } from '../../../wailsjs/go/main/DocumentsService';
   import { devLog } from '$lib/utils/devLog';
   import { escapeHtml } from '$lib/utils/escapeHtml';
   import { debounce } from '$lib/utils/debounce';
-  import { brand } from '$lib/brand';
+  import { getDefaultDivisionKey, normalizeDivision } from '$lib/divisions.svelte';
 
   const dispatch = createEventDispatcher();
 
 
-  
+
   interface Props {
     // Props
     embedded?: boolean;
-    company?: 'Acme Instrumentation' | 'Beacon Controls';
+    company?: string;
     // Wave 9 B1.4: lets FinanceHub thread a status filter in from a dashboard/360 drill-through.
     invoiceFilter?: string;
     // C5: lets FinanceHub thread an AR-aging bucket in from the dashboard drill
@@ -56,7 +56,7 @@ import { GenerateInvoicePDF } from '../../../wailsjs/go/main/DocumentsService';
     agingBucket?: string;
   }
 
-  let { embedded = false, company = brand.defaultDivision as Props['company'], invoiceFilter = undefined, agingBucket = undefined }: Props = $props();
+  let { embedded = false, company = getDefaultDivisionKey(), invoiceFilter = undefined, agingBucket = undefined }: Props = $props();
 
   // Types
   type StatusFilter = 'All' | 'Draft' | 'Sent' | 'Paid' | 'Overdue' | 'PartiallyPaid' | 'Proforma';
@@ -309,7 +309,7 @@ import { GenerateInvoicePDF } from '../../../wailsjs/go/main/DocumentsService';
   let pdfLoadingMap: Record<string, boolean> = $state({});
 
   function matchesCompany(division?: string) {
-    return (division || brand.defaultDivision) === company;
+    return normalizeDivision(division || getDefaultDivisionKey()) === normalizeDivision(company);
   }
 
   // P1-1 FIX: Track which invoice is being sent to prevent double-clicks

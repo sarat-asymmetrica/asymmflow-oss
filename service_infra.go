@@ -5,6 +5,7 @@ import (
 
 	"ph_holdings_app/pkg/i18n"
 	"ph_holdings_app/pkg/infra/release"
+	"ph_holdings_app/pkg/overlay"
 )
 
 // InfraService exposes domain-specific Wails bindings by delegating to App.
@@ -53,6 +54,49 @@ func (s *InfraService) GetAvailableLocales() []string {
 
 func (s *InfraService) ValidateCSRFToken(token string) bool {
 	return s.app.ValidateCSRFToken(token)
+}
+
+// DivisionEntry is one division's public (frontend-facing) identity: the
+// canonical Key, its printed LegalName, and the raw aliases NormalizeDivision
+// on the frontend needs to mirror overlay.NormalizeDivisionName exactly.
+type DivisionEntry struct {
+	Key       string   `json:"key"`
+	LegalName string   `json:"legalName"`
+	Aliases   []string `json:"aliases"`
+	// DashboardVariant is an optional per-division dashboard/audited-data
+	// variant key (e.g. "ahs"). Blank means the standard dashboard path.
+	DashboardVariant string `json:"dashboardVariant"`
+}
+
+// DivisionRegistry is the read-only snapshot of the active overlay's division
+// vocabulary, loaded once at frontend startup (Wave 12 B1 — see
+// FABLE_WAVE12_SPEC_DIVISION_REGISTRY.md). The overlay is static per process,
+// so there is no caching cleverness here: every call simply re-reads
+// overlay.Active().
+type DivisionRegistry struct {
+	Divisions          []DivisionEntry `json:"divisions"`
+	DefaultKey         string          `json:"defaultKey"`
+	CompanyDisplayName string          `json:"companyDisplayName"`
+}
+
+// GetDivisionRegistry exposes the active overlay's division vocabulary to the
+// frontend (keys, legal names, aliases, default key, company display name).
+func (s *InfraService) GetDivisionRegistry() DivisionRegistry {
+	active := overlay.Active()
+	divisions := make([]DivisionEntry, 0, len(active.Divisions))
+	for _, div := range active.Divisions {
+		divisions = append(divisions, DivisionEntry{
+			Key:              div.Key,
+			LegalName:        div.LegalName,
+			Aliases:          div.Aliases,
+			DashboardVariant: div.DashboardVariant,
+		})
+	}
+	return DivisionRegistry{
+		Divisions:          divisions,
+		DefaultKey:         active.DefaultDivisionKey,
+		CompanyDisplayName: active.CompanyDisplayName,
+	}
 }
 
 // --- app_auth_rbac.go ---

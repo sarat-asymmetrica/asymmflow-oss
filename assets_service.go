@@ -92,8 +92,16 @@ func (a *App) HasAsset(name string) bool {
 func (a *App) InitializeDefaultAssets() {
 	a.EnsureAssetsTable()
 
-	a.ensureDefaultLetterheadAsset(AssetLetterhead, "Acme Instrumentation Letterhead.png", "Acme Instrumentation letterhead template for PDF generation")
-	a.ensureDefaultLetterheadAsset(AssetLetterheadAHS, "Beacon Controls Letterhead.jpg", "Beacon Controls letterhead template for PDF generation")
+	// Iterate the registry rather than hand-duplicating one call per division
+	// (the two literal calls this replaced could silently drift from
+	// DivisionProfile.LetterheadFile/LetterheadAssetName — exactly the class
+	// of bug the registry exists to prevent). Byte-identical for the
+	// synthetic overlay: LetterheadAssetName/LetterheadFile reproduce
+	// "letterhead"/"Acme Instrumentation Letterhead.png" and
+	// "letterhead_ahs"/"Beacon Controls Letterhead.jpg" exactly.
+	for _, div := range activeOverlay.Divisions {
+		a.ensureDefaultLetterheadAsset(div.LetterheadAssetName, div.LetterheadFile, div.Key+" letterhead template for PDF generation")
+	}
 }
 
 // ensureDefaultLetterheadAsset builds the host's candidate artwork paths

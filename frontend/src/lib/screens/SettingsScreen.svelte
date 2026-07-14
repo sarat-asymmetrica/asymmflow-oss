@@ -1,7 +1,7 @@
 <script lang="ts">
   import { run } from 'svelte/legacy';
   import { motionMs } from "$lib/motion";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey, getDivisionKeys } from "$lib/divisions.svelte";
 
   import { createEventDispatcher, onMount } from "svelte";
   import { fade } from "svelte/transition";
@@ -142,7 +142,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
   let loadingBankAccounts = $state(false);
   let editingBankAccount: BankAccount | null = $state(null);
   let bankAccountFormData = $state({
-    division: brand.defaultDivision,
+    division: getDefaultDivisionKey(),
     bank_name: '',
     account_name: '',
     account_number: '',
@@ -321,7 +321,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
   function resetBankAccountForm() {
     editingBankAccount = null;
     bankAccountFormData = {
-      division: brand.defaultDivision,
+      division: getDefaultDivisionKey(),
       bank_name: '',
       account_name: '',
       account_number: '',
@@ -335,7 +335,7 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
   function editBankAccount(account: BankAccount) {
     editingBankAccount = account;
     bankAccountFormData = {
-      division: account.division || brand.defaultDivision,
+      division: account.division || getDefaultDivisionKey(),
       bank_name: account.bank_name,
       account_name: account.account_name || '',
       account_number: account.account_number,
@@ -1215,8 +1215,9 @@ import { GetCurrentUserRole, GetPhase7RolloutStatus, GetPilotReadinessSummary, L
               <div class="form-group half">
                 <label for="ba-division">Company</label>
                 <select id="ba-division" bind:value={bankAccountFormData.division} class="input-clean">
-                  <option value={brand.defaultDivision}>{brand.defaultDivision}</option>
-                  <option value="Beacon Controls">Beacon Controls</option>
+                  {#each getDivisionKeys() as divKey}
+                    <option value={divKey}>{divKey}</option>
+                  {/each}
                 </select>
               </div>
               <div class="form-group half">

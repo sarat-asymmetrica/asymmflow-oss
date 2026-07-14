@@ -1,7 +1,7 @@
 <script lang="ts">
     import { stopPropagation, createBubbler } from 'svelte/legacy';
     import { motionMs } from "$lib/motion";
-    import { brand } from "$lib/brand";
+    import { getDefaultDivisionKey } from "$lib/divisions.svelte";
 
     const bubble = createBubbler();
     import { onMount, createEventDispatcher } from "svelte";
@@ -41,7 +41,7 @@ import { CreateCustomer, DeleteCustomer } from "../../../wailsjs/go/main/CRMServ
     let creating = $state(false);
     let filters = $state({ search: "", type: "All" });
 
-    const customerTypes = [
+    let customerTypes = $derived([
         { code: "EC", label: "End Customer" },
         { code: "CO", label: "Consultant" },
         { code: "EP", label: "Engineering/EPC" },
@@ -50,8 +50,8 @@ import { CreateCustomer, DeleteCustomer } from "../../../wailsjs/go/main/CRMServ
         { code: "PB", label: "Plant Builder" },
         { code: "SI", label: "System Integrator" },
         { code: "SP", label: "Service Provider" },
-        { code: "PH", label: brand.defaultDivision },
-    ];
+        { code: "PH", label: getDefaultDivisionKey() },
+    ]);
 
     // Payment terms options per Bahrain business rules
     const paymentTermsOptions = [

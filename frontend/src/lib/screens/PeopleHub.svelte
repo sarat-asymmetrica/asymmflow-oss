@@ -3,7 +3,7 @@
   import { EventsOff, EventsOn } from "../../../wailsjs/runtime/runtime";
   import { GenerateLicenseKey } from "../../../wailsjs/go/main/App";
   import { toast } from "../stores/toasts";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey, getDivisionKeys } from "$lib/divisions.svelte";
   import { permissions as permissionsStore, currentUser } from "$lib/stores/authContext";
   import PayrollScreen from "./PayrollScreen.svelte";
   import {
@@ -40,7 +40,6 @@
 
   type PeopleTab = "directory" | "org" | "contributions" | "payroll";
   type EmployeeDetailTab = "profile" | "work" | "access" | "compliance";
-  type PayrollCompany = "Acme Instrumentation" | "Beacon Controls";
   const PEOPLE_HUB_CACHE_TTL_MS = 30_000;
 
   interface Props {
@@ -127,7 +126,7 @@
 
   // B2: Payroll lives in People too — gated on payroll:view, with a preselect
   // deep-link from the employee record ("Set up payroll").
-  let payrollCompany: PayrollCompany = $state(brand.defaultDivision as PayrollCompany);
+  let payrollCompany: string = $state(getDefaultDivisionKey());
   let payrollPresetEmployeeID = $state("");
   let lastAppliedPeopleRouteKey = $state("");
 
@@ -1440,8 +1439,9 @@
       <div class="panel-head">
         <h2>Payroll</h2>
         <div class="company-toggle">
-          <button class:active={payrollCompany === "Acme Instrumentation"} onclick={() => (payrollCompany = "Acme Instrumentation")}>Acme Instrumentation</button>
-          <button class:active={payrollCompany === "Beacon Controls"} onclick={() => (payrollCompany = "Beacon Controls")}>Beacon Controls</button>
+          {#each getDivisionKeys() as divKey}
+            <button class:active={payrollCompany === divKey} onclick={() => (payrollCompany = divKey)}>{divKey}</button>
+          {/each}
         </div>
       </div>
       <PayrollScreen embedded mode="workspace" company={payrollCompany} presetEmployeeID={payrollPresetEmployeeID} />

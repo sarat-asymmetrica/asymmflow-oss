@@ -3,7 +3,7 @@
     import { motionMs } from "$lib/motion";
     import { fade, fly } from "svelte/transition";
     import { toast } from "../stores/toasts";
-    import { brand } from "$lib/brand";
+    import { getDefaultDivisionKey } from "$lib/divisions.svelte";
 
     const dispatch = createEventDispatcher();
 
@@ -93,7 +93,7 @@
                 <div class="logo">PH</div>
                 <h1>Welcome to<br />PH Sovereign.</h1>
                 <p class="intro">
-                    The unified professional infrastructure for {brand.defaultDivision}.
+                    The unified professional infrastructure for {getDefaultDivisionKey()}.
                 </p>
                 <button class="btn-primary" onclick={nextStep}>
                     Begin Setup

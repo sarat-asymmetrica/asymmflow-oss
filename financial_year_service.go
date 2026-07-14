@@ -863,10 +863,16 @@ type DivisionFinancialSummary struct {
 	HasData          bool    `json:"has_data"`
 }
 
-func getAHSAuditedDivisionData() map[int]DivisionFinancialSummary {
+// getAHSAuditedDivisionData returns the synthetic audited-financials demo
+// numbers for the division whose overlay DashboardVariant is "ahs". The
+// numbers themselves are demo data (canon) and stay literal; only the
+// Division field is parameterized on the caller's (already normalized)
+// division key so this no longer hardcodes "Beacon Controls" as a literal
+// vocabulary comparison.
+func getAHSAuditedDivisionData(divisionKey string) map[int]DivisionFinancialSummary {
 	return map[int]DivisionFinancialSummary{
 		2023: {
-			Division:         "Beacon Controls",
+			Division:         divisionKey,
 			Year:             2023,
 			Source:           "Demo financial data (Audited)",
 			IsAudited:        true,
@@ -885,7 +891,7 @@ func getAHSAuditedDivisionData() map[int]DivisionFinancialSummary {
 			HasData:          true,
 		},
 		2024: {
-			Division:         "Beacon Controls",
+			Division:         divisionKey,
 			Year:             2024,
 			Source:           "Demo financial data (Audited)",
 			IsAudited:        true,
@@ -915,8 +921,7 @@ func (a *App) GetFinancialDashboardByDivision(year int, division string) (Divisi
 		return DivisionFinancialSummary{}, newError("DB_NOT_INITIALIZED", "Database connection not available", "")
 	}
 	// Validate division
-	validDivisions := map[string]bool{"Acme Instrumentation": true, "Beacon Controls": true}
-	if !validDivisions[division] {
+	if !activeOverlay.IsKnownDivision(division) {
 		return DivisionFinancialSummary{}, fmt.Errorf("invalid division: %s", division)
 	}
 	// Validate year bounds
@@ -924,13 +929,19 @@ func (a *App) GetFinancialDashboardByDivision(year int, division string) (Divisi
 		return DivisionFinancialSummary{}, fmt.Errorf("year must be between 2020 and %d", time.Now().Year()+1)
 	}
 
+	// Normalize to the canonical registry key so downstream comparisons and
+	// SQL filters compare canonicalized values (Spec-07 canonicalization law).
+	// For the synthetic overlay's exact keys this is identity — byte-identical
+	// behavior for the default deployment.
+	division = activeOverlay.NormalizeDivisionName(division)
+
 	summary := DivisionFinancialSummary{
 		Division: division,
 		Year:     year,
 	}
 
-	if division == "Beacon Controls" {
-		if audited, ok := getAHSAuditedDivisionData()[year]; ok {
+	if activeOverlay.Profile(division).DashboardVariant == "ahs" {
+		if audited, ok := getAHSAuditedDivisionData(division)[year]; ok {
 			return audited, nil
 		}
 	}
