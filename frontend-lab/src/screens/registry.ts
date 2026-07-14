@@ -42,6 +42,9 @@ import { ahsFinanceDescriptor } from './dashboards/ahs-finance.hub'
 import { dataQualityDescriptor } from './data-quality.descriptor'
 import Customer360 from './Customer360.svelte'
 import BookBankRecon from './BookBankRecon.svelte'
+import { bankAccountsDescriptor } from './bank-accounts.descriptor'
+import { currencyRatesDescriptor } from './currency-rates.descriptor'
+import BusinessSettings from './BusinessSettings.svelte'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -102,6 +105,10 @@ export const screens: ScreenEntry[] = [
   // K4 tranche 3 — bespoke detail + reconciliation
   { key: 'customer-360', label: 'Customer 360', group: 'Sales', archetype: 'bespoke', component: Customer360 },
   { key: 'book-bank-recon', label: 'Book vs Bank Recon', group: 'Finance', archetype: 'bespoke', component: BookBankRecon },
+  // K4 tranche 3 — Settings split (one 2497-line monster -> 3 kernel pieces)
+  { key: 'bank-accounts', label: 'Bank Accounts', group: 'System', archetype: 'ledger', descriptor: bankAccountsDescriptor },
+  { key: 'currency-rates', label: 'Currency Rates', group: 'System', archetype: 'ledger', descriptor: currencyRatesDescriptor },
+  { key: 'business-settings', label: 'Business Settings', group: 'System', archetype: 'bespoke', component: BusinessSettings },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]
