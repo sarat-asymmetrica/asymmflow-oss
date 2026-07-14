@@ -2,17 +2,36 @@
   import { usingWails } from './bridge'
   import DocumentLedger from '$kernel/archetypes/DocumentLedger.svelte'
   import EntityMaster from '$kernel/archetypes/EntityMaster.svelte'
+  import Hub from '$kernel/archetypes/Hub.svelte'
+  import type { NavIntent } from '$kernel/hub'
+  import type { LedgerQuery } from '$kernel/ledger-core'
   import { screens, screensByGroup, type ScreenEntry } from './screens/registry'
 
   let activeKey = $state(screens[0]?.key ?? '')
+  // Drill-down seed for the screen we navigated TO (parity #4). Cleared on a
+  // manual tab click so a hand-picked screen never inherits a stale filter.
+  let pendingQuery = $state<Partial<LedgerQuery> | undefined>(undefined)
   const active = $derived(screens.find((s) => s.key === activeKey) ?? screens[0])
   const groups = screensByGroup()
+
+  function pick(key: string) {
+    pendingQuery = undefined
+    activeKey = key
+  }
+  function navigate(intent: NavIntent) {
+    if (!screens.some((s) => s.key === intent.key)) return
+    pendingQuery = intent.query
+    activeKey = intent.key
+  }
 
   function isLedger(s: ScreenEntry) {
     return s.archetype === 'ledger'
   }
   function isEntity(s: ScreenEntry) {
     return s.archetype === 'entity'
+  }
+  function isHub(s: ScreenEntry) {
+    return s.archetype === 'hub'
   }
 </script>
 
@@ -24,7 +43,7 @@
         <div class="lab-group">
           <span class="lab-group-label">{g.group}</span>
           {#each g.items as s (s.key)}
-            <button class="lab-tab" class:active={activeKey === s.key} onclick={() => (activeKey = s.key)}>
+            <button class="lab-tab" class:active={activeKey === s.key} onclick={() => pick(s.key)}>
               {s.label}
             </button>
           {/each}
@@ -40,11 +59,15 @@
     {#if active}
       {#if isLedger(active)}
         {#key active.key}
-          <DocumentLedger descriptor={active.descriptor} />
+          <DocumentLedger descriptor={active.descriptor} initialQuery={pendingQuery} />
         {/key}
       {:else if isEntity(active)}
         {#key active.key}
-          <EntityMaster descriptor={active.descriptor} />
+          <EntityMaster descriptor={active.descriptor} initialQuery={pendingQuery} />
+        {/key}
+      {:else if isHub(active)}
+        {#key active.key}
+          <Hub descriptor={active.descriptor} {navigate} />
         {/key}
       {:else if active.component}
         {@const Bespoke = active.component}

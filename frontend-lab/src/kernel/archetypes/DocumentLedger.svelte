@@ -22,7 +22,7 @@
   }: {
     descriptor: LedgerDescriptor<Row>
     /** Parity #4: dashboard drills seed filters/search on arrival. */
-    initialQuery?: Partial<LedgerQuery>
+    initialQuery?: Partial<LedgerQuery> | undefined
   } = $props()
 
   // VM rebuilds if (and only if) the descriptor prop changes; the effect

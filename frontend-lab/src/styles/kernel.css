@@ -28,6 +28,19 @@
   --k-tone-warning-bg: rgba(180, 120, 10, 0.12);
   --k-tone-danger-fg: #b3261e;
   --k-tone-danger-bg: rgba(179, 38, 30, 0.1);
+
+  /* Categorical series palette for Hub charts (donut / multi-series). Fixed
+   * order, assigned by slot — never cycled (dataviz law). CVD-validated on a
+   * white surface: worst adjacent ΔE 24.2 (>=12 target). The aqua/yellow
+   * sub-3:1 contrast WARN is satisfied by the relief rule — every Hub widget
+   * ships visible labels/legend, so identity is never colour-alone. Status
+   * meaning stays with --k-tone-* (reserved), never a categorical slot. */
+  --k-series-1: #2a78d6; /* blue */
+  --k-series-2: #1baf7a; /* aqua */
+  --k-series-3: #eda100; /* yellow */
+  --k-series-4: #008300; /* green */
+  --k-series-5: #4a3aa7; /* violet */
+  --k-series-6: #e34948; /* red */
 }
 
 *,

@@ -36,7 +36,7 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 | K0 | Baseline verified + scaffolding + engine spine | ✅ done |
 | K1 | Ledger blitz — 12 ledgers built, gated, detector-clean; report written | ✅ done (awaiting review) |
 | K2 | Entity blitz — Suppliers/Users/widen-Customers/Inventory DONE; Pricing+Cust360→K4 | ✅ done (awaiting review) |
-| K3 | Hub archetype + dashboards | ⏳ next |
+| K3 | Hub archetype + dashboards | 🔨 building (engine first) |
 | K3 | Hub archetype + dashboards | ⏳ |
 | K4 | Bespoke screens on primitives | ⏳ |
 | K5 | App shell + INTEG completion + harness | ⏳ |
@@ -103,6 +103,34 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
   Backward-compat (existing 0-arg forms still valid). Green (check 0/0, test 26). This
   unblocks batch-2 reason-on-row actions (PO Cancel, Cheque Cancel/Stale, Expenses
   Reject, Payments Reverse). RFQ's 4-button stage workaround can later fold to 1 form.
+
+## K3 rulings (orchestrator, from recon-K3a + recon-K3b)
+- **Real Hub targets = 4 dashboards:** DashboardScreen (main), Finance Overview
+  (FinancialDashboard), CRM Customer Overview, CRM Supplier Overview. AHSDashboard =
+  a division-subset variant of Finance Overview (ledger/consolidate). Sales Hub dashboard
+  = net-new (optional).
+- **NOT Hubs (→ K5 nav / K4):** FinanceHub/SalesHub/CRMHub/OperationsHub = tab-shell
+  navigators → become a K5 `TabShell`. IntelligenceHub = Butler chat wrapper → K4 bespoke.
+  PeopleHub = directory+payroll (PII-sensitive) → K4/EntityMaster later. WorkHub = kanban
+  workspace → K4 bespoke.
+- **Chart lib: NONE** — all dashboards hand-roll div/CSS bars; kernel widgets are SVG/CSS
+  on the palette. No dependency added. Sparkline/time-series NEVER built anywhere → no
+  line-chart widget in v1 (KPI delta text covers trend).
+- **Widget library v1:** KPI tile (+delta+tone+nav), distribution-bar (h/v, tone),
+  ranked-bar-list (Top-N), stat-tile-grid (tone thresholds), list, activity-feed, callout,
+  **donut** (NEW anti-card win for grade/type mix — owner-mandate-driven, no old precedent),
+  comparison-bars (YoY), bespoke slot. Types in kernel/hub.ts.
+- **Categorical palette** --k-series-1..6 (blue/aqua/yellow/green/violet/red) added to
+  kernel.css; CVD-VALIDATED on white surface (worst adjacent ΔE 24.2; aqua/yellow contrast
+  WARN satisfied by the relief rule — every widget ships labels/legend). Status stays with
+  --k-tone-* (reserved, never a series slot).
+- **Drill-downs** wired: HubDescriptor KPIs/widgets carry `nav: NavIntent{key,query}`;
+  App.navigate() switches screen + seeds initialQuery into the target ledger (parity #4).
+  initialQuery added to EntityMaster too.
+- **Build split:** orchestrator built the engine (hub.ts types, HubViewModel, Hub.svelte
+  archetype, DonutWidget, nav); bldWidgets agent built the 7 mechanical widgets; dashboard
+  descriptors → agents next. Per-widget independent async (backend resilience) = ledgered
+  ENGINE for K5 (K3 mock = one fetch).
 
 ## K2 COMPLETE (2026-07-14)
 Built+gated: Suppliers (EntityMaster), Users (read-only EntityMaster, RBAC-safe),

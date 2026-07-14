@@ -26,6 +26,7 @@ import { expensesDescriptor } from './expenses.descriptor'
 import { suppliersDescriptor } from './suppliers.descriptor'
 import { usersDescriptor } from './users.descriptor'
 import { inventoryFulfillmentDescriptor } from './inventory-fulfillment.descriptor'
+import { mainDashboardDescriptor } from './dashboards/main-dashboard.hub'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -44,6 +45,8 @@ export interface ScreenEntry {
 }
 
 export const screens: ScreenEntry[] = [
+  // K3 — Hub archetype + dashboards
+  { key: 'dashboard', label: 'Dashboard', group: 'Home', archetype: 'hub', descriptor: mainDashboardDescriptor },
   // Pilots
   { key: 'invoices', label: 'Invoices', group: 'Finance', archetype: 'ledger', descriptor: invoicesDescriptor },
   { key: 'customers', label: 'Customers', group: 'Sales', archetype: 'entity', descriptor: customersDescriptor },
@@ -70,7 +73,7 @@ export const screens: ScreenEntry[] = [
 ]
 
 /** Stable group order for the nav. Unknown groups append alphabetically. */
-export const GROUP_ORDER = ['Sales', 'Finance', 'Operations', 'People', 'System', 'Lab']
+export const GROUP_ORDER = ['Home', 'Sales', 'Finance', 'Operations', 'People', 'System', 'Lab']
 
 export function screensByGroup(): { group: string; items: ScreenEntry[] }[] {
   const groups = new Map<string, ScreenEntry[]>()

@@ -1,5 +1,6 @@
 <script lang="ts" generics="Row">
   import type { EntityDescriptor } from '../descriptor'
+  import type { LedgerQuery } from '../ledger-core'
   import { LedgerViewModel } from '../ledger.svelte'
   import ActionHost from './ActionHost.svelte'
   import PageShell from '../primitives/PageShell.svelte'
@@ -17,11 +18,18 @@
   import EmptyState from '../controls/EmptyState.svelte'
   import { renderCell } from '../content'
 
-  let { descriptor }: { descriptor: EntityDescriptor<Row> } = $props()
+  let {
+    descriptor,
+    initialQuery,
+  }: {
+    descriptor: EntityDescriptor<Row>
+    /** Drill-down seeding (parity #4) — same as DocumentLedger. */
+    initialQuery?: Partial<LedgerQuery> | undefined
+  } = $props()
 
   // Same viewmodel as DocumentLedger — one query path (L2); the archetypes
   // differ only in how they RENDER the selection.
-  const vm = $derived(new LedgerViewModel(descriptor))
+  const vm = $derived(new LedgerViewModel(descriptor, initialQuery))
   let host = $state<ReturnType<typeof ActionHost>>()
   $effect(() => {
     void vm.load()
