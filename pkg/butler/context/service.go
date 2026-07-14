@@ -3399,31 +3399,20 @@ func (svc *Service) getFinancialContext() map[string]any {
 	result["total_payables_bhd"] = totalAP
 	result["unpaid_supplier_invoices"] = apCount
 
-	// Division-wise revenue breakdown (primary/default division vs the first
-	// configured secondary division). Both sides of the comparison canonicalize
-	// through the overlay's DivisionNormalizationCase so a stored alias/casing
-	// variant of a division still buckets correctly (Spec-07 law) — for the
-	// synthetic seed (exact-literal stored values, no aliases in use) this
-	// returns byte-identical rows to the old hardcoded literals.
 	ov := overlay.Active()
-	primaryDivision := ov.DefaultDivision()
-	secondaryDivision := primaryDivision
-	for _, d := range ov.Divisions {
-		if d.Key != primaryDivision {
-			secondaryDivision = d.Key
-			break
-		}
-	}
 	divisionCase := ov.DivisionNormalizationCase("division")
-	var phRevenue, ahsRevenue float64
-	svc.db.Model(&Invoice{}).Where(divisionCase+" = ?", primaryDivision).
-		Select("COALESCE(SUM(grand_total_bhd), 0)").Scan(&phRevenue)
-	svc.db.Model(&Invoice{}).Where(divisionCase+" = ?", secondaryDivision).
-		Select("COALESCE(SUM(grand_total_bhd), 0)").Scan(&ahsRevenue)
-	result["division_revenue"] = map[string]any{
-		"ph_trading":  phRevenue,
-		"ahs_trading": ahsRevenue,
+	// Wave 12.5 B4: emit one revenue entry PER configured division (keyed by the
+	// division's registry Key) instead of a frozen two-slot primary/secondary
+	// breakdown, so a 3rd+ division's revenue is no longer silently dropped. This
+	// feeds Butler's LLM context only — no document identity is stamped here.
+	divisionRevenue := make(map[string]any, len(ov.Divisions))
+	for _, d := range ov.Divisions {
+		var rev float64
+		svc.db.Model(&Invoice{}).Where(divisionCase+" = ?", d.Key).
+			Select("COALESCE(SUM(grand_total_bhd), 0)").Scan(&rev)
+		divisionRevenue[d.Key] = rev
 	}
+	result["division_revenue"] = divisionRevenue
 
 	var latestInvoice Invoice
 	if err := svc.db.Order("invoice_date DESC").Limit(1).First(&latestInvoice).Error; err == nil {

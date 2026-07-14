@@ -251,7 +251,23 @@ func (a *App) GenerateEInvoiceXML(invoiceID string) (string, error) {
 	return xmlPath, nil
 }
 
-// ExportVATReturnData exports VAT return data for a specific quarter as CSV
+// vatReturnBucket accumulates one division's (one TRN's) VAT-return figures.
+type vatReturnBucket struct {
+	standardRatedSupplies, vatCollected, zeroRated, exempt float64
+	cnDeductions, cnVATDeductions                         float64
+	invoiceCount, creditNoteCount                         int
+}
+
+// ExportVATReturnData exports VAT return data for a specific quarter as CSV,
+// ONE CSV per configured division (Wave 12.5, owner-sanctioned). Each division
+// is a distinct VAT-registered legal entity with its own TRN, so it files its
+// own return covering only its own supplies — filing a division's sales under
+// another division's TRN would mis-report to the NBR. Every invoice/credit note
+// is attributed to exactly one division (empty/unknown division falls back to
+// the default, so nothing is silently dropped). For a single-division
+// deployment this emits exactly one CSV with all supplies under that TRN —
+// byte-identical in content to the pre-Wave-12.5 aggregate. Returns the export
+// directory holding the per-division CSVs.
 func (a *App) ExportVATReturnData(year, quarter int) (string, error) {
 	if err := a.requirePermission("finance:read"); err != nil {
 		return "", err
@@ -288,40 +304,79 @@ func (a *App) ExportVATReturnData(year, quarter int) (string, error) {
 		return "", fmt.Errorf("failed to query credit notes: %w", err)
 	}
 
-	// Aggregate VAT data
-	var standardRatedSupplies, vatCollected, zeroRated, exempt float64
-	var cnDeductions, cnVATDeductions float64
+	// Bucket every invoice/credit note by its (normalized) division so each
+	// division's return reflects only its own TRN's supplies. normalizeDivisionName
+	// maps empty/unknown values to the default division, so no invoice is dropped.
+	buckets := map[string]*vatReturnBucket{}
+	bucketFor := func(key string) *vatReturnBucket {
+		b := buckets[key]
+		if b == nil {
+			b = &vatReturnBucket{}
+			buckets[key] = b
+		}
+		return b
+	}
 
 	for _, inv := range invoices {
+		b := bucketFor(normalizeDivisionName(inv.Division))
 		if inv.VATPercent > 0 {
-			standardRatedSupplies += inv.SubtotalBHD
-			vatCollected += inv.VATBHD
+			b.standardRatedSupplies += inv.SubtotalBHD
+			b.vatCollected += inv.VATBHD
 		} else {
-			zeroRated += inv.SubtotalBHD
+			b.zeroRated += inv.SubtotalBHD
 		}
+		b.invoiceCount++
 	}
 
 	for _, cn := range creditNotes {
-		cnDeductions += cn.SubtotalBHD
-		cnVATDeductions += cn.VATBHD
+		// Credit notes carry no Division of their own — resolve it from the
+		// linked invoice's division (chain lookup) so the deduction lands on
+		// the same TRN that reported the original supply.
+		b := bucketFor(a.resolveCreditNoteDivision(cn))
+		b.cnDeductions += cn.SubtotalBHD
+		b.cnVATDeductions += cn.VATBHD
+		b.creditNoteCount++
 	}
 
-	// Net figures
-	netSupplies := standardRatedSupplies - cnDeductions
-	netVAT := vatCollected - cnVATDeductions
-
-	// Write CSV
 	paths := a.getAppPaths()
 	if paths == nil {
 		return "", fmt.Errorf("application paths not available")
 	}
 	exportDir := a.getExportDir("report", "", "", year)
-	filename := fmt.Sprintf("VAT_Return_Q%d_%d.csv", quarter, year)
+
+	// Emit one CSV per configured division (a registered TRN files a return even
+	// in a nil quarter). Iterating activeOverlay.Divisions keeps output
+	// deterministic and covers every registration.
+	for _, division := range activeOverlay.Divisions {
+		b := buckets[division.Key]
+		if b == nil {
+			b = &vatReturnBucket{}
+		}
+		if err := a.writeVATReturnCSV(exportDir, division.Key, year, quarter, startDate, endDate, b); err != nil {
+			return "", err
+		}
+	}
+
+	log.Printf("✅ VAT Return CSVs exported: %s (Q%d %d: %d invoices, %d credit notes across %d division TRNs)",
+		exportDir, quarter, year, len(invoices), len(creditNotes), len(activeOverlay.Divisions))
+	return exportDir, nil
+}
+
+// writeVATReturnCSV writes one division's VAT-return CSV, stamped with that
+// division's TRN and legal name.
+func (a *App) writeVATReturnCSV(exportDir, division string, year, quarter int, startDate, endDate time.Time, b *vatReturnBucket) error {
+	profile := companyDocumentProfile(division)
+
+	// Net figures
+	netSupplies := b.standardRatedSupplies - b.cnDeductions
+	netVAT := b.vatCollected - b.cnVATDeductions
+
+	filename := fmt.Sprintf("VAT_Return_Q%d_%d_%s.csv", quarter, year, sanitizeFilename(profile.Division))
 	csvPath := filepath.Join(exportDir, filename)
 
 	file, err := os.Create(csvPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to create CSV file: %w", err)
+		return fmt.Errorf("failed to create CSV file: %w", err)
 	}
 	defer file.Close()
 
@@ -333,30 +388,30 @@ func (a *App) ExportVATReturnData(year, quarter int) (string, error) {
 	// Data rows
 	// Label carries the overlay VAT rate (byte-identical "(10%)" for the
 	// built-in default) so a different-rate deployment's return is truthful.
-	writer.Write([]string{fmt.Sprintf("Standard-Rated Supplies (%g%%)", activeOverlay.DefaultVATRate), fmt.Sprintf("%.3f", standardRatedSupplies), fmt.Sprintf("%.3f", vatCollected), fmt.Sprintf("%d invoices", len(invoices))})
-	writer.Write([]string{"Credit Notes", fmt.Sprintf("-%.3f", cnDeductions), fmt.Sprintf("-%.3f", cnVATDeductions), fmt.Sprintf("%d credit notes", len(creditNotes))})
+	writer.Write([]string{fmt.Sprintf("Standard-Rated Supplies (%g%%)", activeOverlay.DefaultVATRate), fmt.Sprintf("%.3f", b.standardRatedSupplies), fmt.Sprintf("%.3f", b.vatCollected), fmt.Sprintf("%d invoices", b.invoiceCount)})
+	writer.Write([]string{"Credit Notes", fmt.Sprintf("-%.3f", b.cnDeductions), fmt.Sprintf("-%.3f", b.cnVATDeductions), fmt.Sprintf("%d credit notes", b.creditNoteCount)})
 	writer.Write([]string{"Net Standard-Rated Supplies", fmt.Sprintf("%.3f", netSupplies), fmt.Sprintf("%.3f", netVAT), ""})
-	writer.Write([]string{"Zero-Rated Supplies", fmt.Sprintf("%.3f", zeroRated), "0.000", ""})
-	writer.Write([]string{"Exempt Supplies", fmt.Sprintf("%.3f", exempt), "0.000", ""})
+	writer.Write([]string{"Zero-Rated Supplies", fmt.Sprintf("%.3f", b.zeroRated), "0.000", ""})
+	writer.Write([]string{"Exempt Supplies", fmt.Sprintf("%.3f", b.exempt), "0.000", ""})
 	writer.Write([]string{"", "", "", ""})
 	writer.Write([]string{"TOTAL OUTPUT VAT", "", fmt.Sprintf("%.3f", netVAT), fmt.Sprintf("Period: Q%d %d", quarter, year)})
 	writer.Write([]string{"", "", "", ""})
-	defaultProfile := companyDocumentProfile("")
-	writer.Write([]string{"TRN", defaultProfile.VATNumber, "", defaultProfile.LegalName})
+	writer.Write([]string{"Division", profile.Division, "", ""})
+	writer.Write([]string{"TRN", profile.VATNumber, "", profile.LegalName})
 	writer.Write([]string{"Period", fmt.Sprintf("Q%d %d", quarter, year), fmt.Sprintf("%s to %s", startDate.Format("2006-01-02"), endDate.AddDate(0, 0, -1).Format("2006-01-02")), ""})
 
 	// Flush CSV writer and check for write errors
 	writer.Flush()
 	if err := writer.Error(); err != nil {
-		return "", fmt.Errorf("CSV write error: %w", err)
+		return fmt.Errorf("CSV write error: %w", err)
 	}
 	if err := file.Sync(); err != nil {
-		return "", fmt.Errorf("failed to sync CSV file: %w", err)
+		return fmt.Errorf("failed to sync CSV file: %w", err)
 	}
 
-	log.Printf("✅ VAT Return CSV exported: %s (Q%d %d: %d invoices, %d credit notes)",
-		csvPath, quarter, year, len(invoices), len(creditNotes))
-	return csvPath, nil
+	log.Printf("✅ VAT Return CSV exported: %s (%s TRN %s, Q%d %d: %d invoices, %d credit notes)",
+		csvPath, profile.Division, profile.VATNumber, quarter, year, b.invoiceCount, b.creditNoteCount)
+	return nil
 }
 
 // xmlEscape escapes special XML characters

@@ -161,7 +161,7 @@ func buildCostingExportDataFromOffer(offer Offer, customer CustomerMaster, custo
 
 	terms := strings.TrimSpace(offer.TermsAndConditions)
 	if terms == "" {
-		terms = defaultOfferTermsAndConditions(vatRate)
+		terms = defaultOfferTermsAndConditions(normalizeDivisionName(offer.Division), vatRate)
 	}
 
 	customerName := firstNonEmptyString(strings.TrimSpace(offer.CustomerName), strings.TrimSpace(customer.BusinessName), strings.TrimSpace(offer.AttentionCompany))
@@ -216,10 +216,13 @@ func buildCostingExportDataFromOffer(offer Offer, customer CustomerMaster, custo
 	}
 }
 
-func defaultOfferTermsAndConditions(vatRate float64) string {
+func defaultOfferTermsAndConditions(division string, vatRate float64) string {
 	// Wave 11 B1: the trading entity named in the T&C comes from the overlay so a
 	// deployment's own name appears in generated quotations (no source edit).
-	company := activeOverlay.CompanyDisplayName
+	// Wave 12.5: the entity now resolves per the OFFER'S OWN division rather than
+	// always the company-level/default name, so a non-default-division offer's
+	// T&C correctly names that division (e.g. "Beacon Controls WLL").
+	company := activeOverlay.DivisionDocumentDisplayName(division)
 	return fmt.Sprintf(`1. QUOTATION VALIDITY
 This quotation is valid for thirty (30) days from the date of issue.
 

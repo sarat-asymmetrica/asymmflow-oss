@@ -20,6 +20,7 @@ import (
 	"ph_holdings_app/integration"
 	msgraph "ph_holdings_app/microsoft_graph"
 	"ph_holdings_app/pkg/compliance"
+	"ph_holdings_app/pkg/crm"
 	"ph_holdings_app/pkg/graph"
 	"ph_holdings_app/pkg/infra/audit"
 	"ph_holdings_app/pkg/infra/events"
@@ -358,6 +359,15 @@ func (a *App) startup(ctx context.Context) {
 	// platform app-data dir).
 	a.composition = composition.NewRoot()
 	setActiveOverlay(a.composition.LoadOverlay(composition.StandardOverlayDirs("AsymmFlow")))
+
+	// Wave 12.5 B3: wire the crm delivery-terms composer to the active overlay so
+	// a new offer's empty delivery terms compose from ITS division (not the
+	// hardcoded default-division column default). The default/empty case composes
+	// "DAP Bahrain at your store or Acme Instrumentation" — byte-identical to the
+	// legacy GORM column default.
+	crm.ComposeOfferDeliveryTerms = func(division string) string {
+		return "DAP Bahrain at your store or " + activeOverlay.NormalizeDivisionName(division)
+	}
 
 	// Initialize SQLite database (local, no network dependency)
 	dbPath := cfg.Database.Path
