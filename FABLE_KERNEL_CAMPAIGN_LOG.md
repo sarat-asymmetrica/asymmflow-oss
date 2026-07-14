@@ -120,7 +120,19 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 - **Tranche 2 DONE (commit 87217d6):** FX Revaluation (ledger, 2-state per fx.go),
   Serial Trace (bespoke, first ColumnSpec.cell L4 use), Notifications (bespoke feed),
   Pricing (bespoke + new RangeSlider control). 32 screens on the kernel.
-- **Tranche 2 residue:** Customer360 (bespoke detail view) NOT built — carry into tranche 3.
+- **Tranche 3-light DONE (commit 4d03d9d):** Customer360 (bespoke detail, 3 tabs) +
+  BookBankReconciliation (bespoke) + NEW BalanceComparisonPanel primitive. 34 screens on
+  the kernel. Detector CLEAN @1440+420. Mock-data polish note: a BookBankRecon row shows
+  status "Reconciled" with a non-zero variance (list/panel data pairing quirk — not a bug).
+- **REMAINING K4 (the hard L-monsters + deferred — genuinely multi-session):**
+  Settings (SPLIT into general/bank-accounts/currency/business-rules + retire Deployment tab),
+  Accounting (GL/journal/CoA console, no new primitive), CostingSheet (line-items editor +
+  doc workspace), BankReconciliation (+AllocationMatchPanel primitive), Butler (+chat-transcript
+  primitive), Payroll (PII; confirm $lib/api/payroll transport). Deferred: DeploymentHub,
+  PeopleHub, WorkHub, OneDriveImport (+operational-hub tabbed-console primitive).
+- **Windows gotcha for agents:** `entity.svelte.ts` VM collides case-insensitively with
+  `Entity.svelte` component (svelte-check ambiguous-import). Use a distinct stem (kebab vs
+  Pascal differ) or a `-vm.svelte.ts` suffix.
 - **New primitives still to build:** BalanceComparisonPanel (BookBankRecon), AllocationMatchPanel
   (BankRecon — reusable AR/AP), chat-transcript (Butler), operational-hub tabbed console
   (PeopleHub/WorkHub/maybe Settings/Accounting left-nav).
