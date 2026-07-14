@@ -53,6 +53,7 @@ func TestNoSyntheticDivisionLiteralsInLiveCode(t *testing.T) {
 	}
 	// Directory prefixes that are out of scope or generated.
 	exemptPrefix := []string{
+		"frontend-lab/",        // kernel-rebuild sandbox: mock fixtures = synthetic canon
 		"cmd/",                 // standalone tooling (export scripts, etc.)
 		"frontend/wailsjs/",    // generated Wails bindings
 		"frontend/tests/",      // e2e test fixtures

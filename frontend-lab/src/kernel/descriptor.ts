@@ -34,6 +34,8 @@ export interface ColumnSpec<Row> {
   minWidth?: number
   /** Column absorbs remaining space (at most one grower per ledger). */
   grow?: boolean
+  /** For money columns whose currency varies per row (default BHD). */
+  currency?: (row: Row) => string
   /** L4 ejection, cell granularity. */
   cell?: Component<{ row: Row }>
 }

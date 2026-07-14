@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import path from 'path'
@@ -19,5 +20,9 @@ export default defineConfig({
       // Allow importing design-tokens.css from ../frontend
       allow: ['..'],
     },
+  },
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.ts'],
   },
 })

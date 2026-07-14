@@ -3,6 +3,7 @@
  * until the flip — imported here, never copied. Kernel additions are
  * namespaced --k-* and never redefine existing tokens. */
 @import '$tokens/design-tokens.css';
+@import './fonts.css';
 
 :root {
   /* Kernel spacing scale — aligned with the semantic layer's values
@@ -43,4 +44,15 @@ h2,
 h3,
 p {
   margin: 0;
+}
+
+/* Reduced-motion law (L7): fully static. One global gate — kernel CSS
+ * transitions all use motion tokens, and this zeroes every one of them. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation: none !important;
+  }
 }
