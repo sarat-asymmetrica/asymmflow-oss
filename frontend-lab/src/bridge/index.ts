@@ -5,14 +5,10 @@
 
 import * as mock from './mock'
 import * as real from './real'
+import { pick, usingWails } from './runtime'
 
 export type { CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
-
-export function usingWails(): boolean {
-  return typeof window !== 'undefined' && !!(window as { go?: unknown }).go
-}
-
-const pick = <T>(r: T, m: T): T => (usingWails() ? r : m)
+export { usingWails }
 
 export const fetchInvoices = (): ReturnType<typeof mock.fetchInvoices> =>
   pick(real.fetchInvoices, mock.fetchInvoices)()

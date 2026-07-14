@@ -4,7 +4,12 @@
 
 import { SvelteSet } from 'svelte/reactivity'
 import type { LedgerDescriptor } from './descriptor'
-import { applyLedgerQuery, deriveFilterOptions, type LedgerQuery } from './ledger-core'
+import {
+  applyLedgerQuery,
+  computeSummary,
+  deriveFilterOptions,
+  type LedgerQuery,
+} from './ledger-core'
 
 const DEFAULT_PAGE_SIZE = 100
 
@@ -51,6 +56,10 @@ export class LedgerViewModel<Row> {
       options: deriveFilterOptions(f, this.rows),
     })),
   )
+
+  /** The summary strip, reduced over the VISIBLE (filtered) rows so it responds
+   * live to search/filters. null when the descriptor declares no summary. */
+  summary = $derived.by(() => computeSummary(this.descriptor.summary, this.visible))
 
   visibleColumns = $derived.by(() =>
     this.descriptor.columns.filter((c) => !this.hiddenColumns.has(c.key)),

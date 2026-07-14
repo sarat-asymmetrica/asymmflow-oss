@@ -95,6 +95,36 @@ export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
     },
   },
 
+  // Visual-diversity strip: replaces the old screen's card grid with a dense
+  // metric row + a status distribution bar, computed over the visible rows.
+  summary: {
+    metrics: [
+      { label: 'Invoices', content: 'quantity', value: (rows) => rows.length },
+      {
+        label: 'Total (BHD)',
+        content: 'money',
+        value: (rows) => rows.filter((r) => r.currency === 'BHD').reduce((s, r) => s + r.amount, 0),
+      },
+      {
+        label: 'Overdue',
+        content: 'quantity',
+        value: (rows) => rows.filter((r) => r.status === 'Overdue').length,
+        tone: (rows) => (rows.some((r) => r.status === 'Overdue') ? 'danger' : 'neutral'),
+      },
+    ],
+    distribution: {
+      label: 'By status',
+      value: (r) => r.status,
+      tones: {
+        Draft: 'neutral',
+        Sent: 'info',
+        Paid: 'success',
+        Overdue: 'danger',
+        Cancelled: 'neutral',
+      },
+    },
+  },
+
   filters: [
     {
       key: 'status',

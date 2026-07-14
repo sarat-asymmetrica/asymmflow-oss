@@ -65,9 +65,12 @@
               </td>
             {:else}
               {@const text = renderCell(col.content, col.value(row), col.currency?.(row))}
+              {@const cellTone = col.tone?.(row)}
               <td
                 class="k-td {cellFontClass(col.content)}"
                 style:text-align={cellAlign[col.content]}
+                style:color={cellTone ? `var(--k-tone-${cellTone}-fg)` : undefined}
+                style:font-weight={cellTone ? 600 : undefined}
                 title={text}
               >
                 {text}

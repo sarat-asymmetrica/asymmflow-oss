@@ -1,64 +1,113 @@
 <script lang="ts">
-  import Showcase from './screens/Showcase.svelte'
   import { usingWails } from './bridge'
   import DocumentLedger from '$kernel/archetypes/DocumentLedger.svelte'
   import EntityMaster from '$kernel/archetypes/EntityMaster.svelte'
-  import { invoicesDescriptor } from './screens/invoices.descriptor'
-  import { customersDescriptor } from './screens/customers.descriptor'
+  import { screens, screensByGroup, type ScreenEntry } from './screens/registry'
 
-  const views = ['Invoices', 'Customers', 'Showcase'] as const
-  type View = (typeof views)[number]
-  let view = $state<View>('Invoices')
+  let activeKey = $state(screens[0]?.key ?? '')
+  const active = $derived(screens.find((s) => s.key === activeKey) ?? screens[0])
+  const groups = screensByGroup()
+
+  function isLedger(s: ScreenEntry) {
+    return s.archetype === 'ledger'
+  }
+  function isEntity(s: ScreenEntry) {
+    return s.archetype === 'entity'
+  }
 </script>
 
 <div class="lab-shell">
-  <nav class="lab-nav">
-    <span class="lab-brand">Kernel Lab</span>
-    {#each views as v (v)}
-      <button class="lab-tab" class:active={view === v} onclick={() => (view = v)}>{v}</button>
-    {/each}
+  <aside class="lab-side">
+    <div class="lab-brand">Kernel Lab</div>
+    <nav class="lab-nav">
+      {#each groups as g (g.group)}
+        <div class="lab-group">
+          <span class="lab-group-label">{g.group}</span>
+          {#each g.items as s (s.key)}
+            <button class="lab-tab" class:active={activeKey === s.key} onclick={() => (activeKey = s.key)}>
+              {s.label}
+            </button>
+          {/each}
+        </div>
+      {/each}
+    </nav>
     <span class="lab-bridge" class:real={usingWails()}>
       bridge: {usingWails() ? 'REAL (Wails)' : 'mock'}
     </span>
-  </nav>
+  </aside>
+
   <main class="lab-main">
-    {#if view === 'Invoices'}
-      <DocumentLedger descriptor={invoicesDescriptor} />
-    {:else if view === 'Customers'}
-      <EntityMaster descriptor={customersDescriptor} />
-    {:else}
-      <Showcase />
+    {#if active}
+      {#if isLedger(active)}
+        {#key active.key}
+          <DocumentLedger descriptor={active.descriptor} />
+        {/key}
+      {:else if isEntity(active)}
+        {#key active.key}
+          <EntityMaster descriptor={active.descriptor} />
+        {/key}
+      {:else if active.component}
+        {@const Bespoke = active.component}
+        {#key active.key}
+          <Bespoke />
+        {/key}
+      {/if}
     {/if}
   </main>
 </div>
 
 <style>
-  /* Lab shell chrome — dev harness territory, not a product screen. */
+  /* Lab shell chrome — dev harness territory, not a product screen.
+   * The real app shell (sidebar nav, routing, auth) is built at K5. */
   .lab-shell {
     display: flex;
-    flex-direction: column;
     height: 100%;
     min-height: 0;
+    min-width: 0;
   }
-  .lab-nav {
+  .lab-side {
     display: flex;
-    align-items: center;
-    gap: var(--k-space-sm);
-    padding: 8px var(--page-padding);
-    border-bottom: var(--border-width) solid var(--border);
-    background: var(--surface);
+    flex-direction: column;
+    gap: var(--k-space-md);
+    width: 200px;
     flex-shrink: 0;
+    padding: var(--k-space-md);
+    border-right: var(--border-width) solid var(--border);
+    background: var(--surface);
+    overflow-y: auto;
   }
   .lab-brand {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: calc(13px * var(--ui-font-scale));
-    margin-right: var(--k-space-md);
+    font-size: calc(14px * var(--ui-font-scale));
+    flex-shrink: 0;
+  }
+  .lab-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-md);
+    flex: 1;
+    min-height: 0;
+  }
+  .lab-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .lab-group-label {
+    font-size: var(--label-size);
+    font-weight: var(--label-weight);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    padding: 0 8px;
+    margin-bottom: 2px;
   }
   .lab-tab {
     font: inherit;
     font-size: calc(13px * var(--ui-font-scale));
-    padding: 4px 12px;
+    text-align: left;
+    padding: 5px 8px;
     border: none;
     border-radius: var(--border-radius-sm);
     background: transparent;
@@ -76,7 +125,7 @@
     min-width: 0;
   }
   .lab-bridge {
-    margin-left: auto;
+    flex-shrink: 0;
     font-size: calc(11px * var(--ui-font-scale));
     font-weight: 600;
     color: var(--text-muted);
@@ -84,6 +133,7 @@
     border-radius: var(--border-radius-pill);
     background: var(--onyx-tint);
     white-space: nowrap;
+    text-align: center;
   }
   .lab-bridge.real {
     background: rgba(30, 130, 76, 0.12);

@@ -14,6 +14,20 @@
   --k-space-md: 16px;
   --k-space-lg: 24px;
   --k-space-xl: 32px;
+
+  /* Semantic tone palette — ONE source (L2) for Badge, summary distribution
+   * bars, and threshold-colored cells. Values match the pilot Badge exactly,
+   * so no visual regression. Namespaced --k-* (L3: never redefines a token). */
+  --k-tone-neutral-fg: var(--text-secondary);
+  --k-tone-neutral-bg: var(--onyx-tint);
+  --k-tone-info-fg: #0a5ab4;
+  --k-tone-info-bg: rgba(10, 90, 180, 0.1);
+  --k-tone-success-fg: #1e824c;
+  --k-tone-success-bg: rgba(30, 130, 76, 0.12);
+  --k-tone-warning-fg: #9a6700;
+  --k-tone-warning-bg: rgba(180, 120, 10, 0.12);
+  --k-tone-danger-fg: #b3261e;
+  --k-tone-danger-bg: rgba(179, 38, 30, 0.1);
 }
 
 *,

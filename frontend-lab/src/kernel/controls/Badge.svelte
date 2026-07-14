@@ -1,5 +1,11 @@
+<script lang="ts" module>
+  // Canonical tone type now lives in ../tones; re-exported here so existing
+  // `import type { Tone } from '../controls/Badge.svelte'` sites keep working.
+  export type { Tone } from '../tones'
+</script>
+
 <script lang="ts">
-  export type Tone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
+  import type { Tone } from '../tones'
 
   let {
     tone = 'neutral',
@@ -10,7 +16,11 @@
   } = $props()
 </script>
 
-<span class="k-badge k-badge-{tone}" title={label}>{label}</span>
+<span
+  class="k-badge"
+  style:background="var(--k-tone-{tone}-bg)"
+  style:color="var(--k-tone-{tone}-fg)"
+  title={label}>{label}</span>
 
 <style>
   .k-badge {
@@ -25,25 +35,5 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
-  }
-  .k-badge-neutral {
-    background: var(--onyx-tint);
-    color: var(--text-secondary);
-  }
-  .k-badge-info {
-    background: rgba(10, 90, 180, 0.1);
-    color: #0a5ab4;
-  }
-  .k-badge-success {
-    background: rgba(30, 130, 76, 0.12);
-    color: #1e824c;
-  }
-  .k-badge-warning {
-    background: rgba(180, 120, 10, 0.12);
-    color: #9a6700;
-  }
-  .k-badge-danger {
-    background: rgba(179, 38, 30, 0.1);
-    color: #b3261e;
   }
 </style>

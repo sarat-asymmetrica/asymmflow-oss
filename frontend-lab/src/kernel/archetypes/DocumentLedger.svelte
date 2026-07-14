@@ -9,6 +9,7 @@
   import Stack from '../primitives/Stack.svelte'
   import Row_ from '../primitives/Row.svelte'
   import DataTable from '../primitives/DataTable.svelte'
+  import LedgerSummary from '../primitives/LedgerSummary.svelte'
   import SearchInput from '../controls/SearchInput.svelte'
   import FilterChips from '../controls/FilterChips.svelte'
   import Button from '../controls/Button.svelte'
@@ -109,6 +110,12 @@
       />
     {/if}
   {:else}
+    <Stack gap="md">
+    {#if vm.summary}
+      <Card padding="lg">
+        <LedgerSummary summary={vm.summary} />
+      </Card>
+    {/if}
     <div class="k-ledger-body">
       <Card padding="none">
         <DataTable
@@ -158,6 +165,7 @@
         </div>
       {/if}
     </div>
+    </Stack>
   {/if}
 </PageShell>
 

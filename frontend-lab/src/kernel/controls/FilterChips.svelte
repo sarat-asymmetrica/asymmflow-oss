@@ -5,10 +5,12 @@
     selected = $bindable(''),
   }: {
     label: string
-    options: { value: string; label: string }[]
+    options: { value: string; label: string; count?: number }[]
     /** '' = All */
     selected?: string
   } = $props()
+
+  const totalCount = $derived(options.reduce((n, o) => n + (o.count ?? 0), 0))
 </script>
 
 <div class="k-chips" role="group" aria-label={label}>
@@ -17,7 +19,7 @@
     class:active={selected === ''}
     onclick={() => (selected = '')}
   >
-    All
+    All{#if options.some((o) => o.count != null)}<span class="k-chip-count">{totalCount}</span>{/if}
   </button>
   {#each options as opt (opt.value)}
     <button
@@ -26,7 +28,7 @@
       onclick={() => (selected = opt.value)}
       title={opt.label}
     >
-      {opt.label}
+      {opt.label}{#if opt.count != null}<span class="k-chip-count">{opt.count}</span>{/if}
     </button>
   {/each}
 </div>
@@ -62,5 +64,14 @@
     background: var(--onyx);
     border-color: var(--onyx);
     color: var(--canvas);
+  }
+  .k-chip-count {
+    display: inline-block;
+    margin-left: 6px;
+    font-family: var(--font-numeric);
+    font-feature-settings: var(--font-numeric-features);
+    font-size: 0.9em;
+    font-weight: 600;
+    opacity: 0.7;
   }
 </style>

@@ -13,6 +13,7 @@
 
 import type { Component } from 'svelte'
 import type { FormSpec } from './form'
+import type { Tone } from './tones'
 
 /** Drives formatting, alignment, fonts AND dev-time layout verification.
  * Each class has a known worst-case content shape (see verify/ later). */
@@ -37,6 +38,10 @@ export interface ColumnSpec<Row> {
   grow?: boolean
   /** For money columns whose currency varies per row (default BHD). */
   currency?: (row: Row) => string
+  /** Threshold/semantic colour for the cell text — e.g. GRN acceptance rate
+   * (green ≥95, amber ≥80, red <80), overdue dates, unapplied balances.
+   * Tints the text via the shared tone palette; never a raw hex in a screen. */
+  tone?: (row: Row) => Tone
   /** L4 ejection, cell granularity. */
   cell?: Component<{ row: Row }>
 }
@@ -44,7 +49,13 @@ export interface ColumnSpec<Row> {
 export interface StatusSpec<Row> {
   value: (row: Row) => string
   /** Finite vocabulary → badge tone. Unknown statuses render neutral, never crash. */
-  tones: Record<string, 'neutral' | 'info' | 'success' | 'warning' | 'danger'>
+  tones: Record<string, Tone>
+  /** Optional legal state machine: current status → allowed next statuses.
+   * Recurs across POs, cheques, supplier-invoices, expenses, credit-notes
+   * (recon K1-B synthesis #2). Actions gate on it via `nextStates()`; it is
+   * declared data, so a status graph is auditable rather than buried in
+   * per-screen `visible` predicates. */
+  transitions?: Record<string, string[]>
 }
 
 export interface FilterSpec<Row> {
@@ -71,6 +82,36 @@ export interface ActionSpec<Row> {
   run: (ctx: { row: Row | null; reload: () => Promise<void> }) => void | Promise<void>
 }
 
+/* ---- Summary strip: the declarative KPI/stats header (recon: ~10 of 13
+ * ledgers hand-roll a stats grid). Metrics are computed over the currently
+ * VISIBLE (filtered) rows, so the strip responds live to search/filters. This
+ * is the visual-diversity vehicle: a compact metric row + one status
+ * distribution bar, replacing card-heavy headers. Server-backed summaries
+ * (e.g. Expenses' GetExpenseDashboardSummary) are a later INTEG enhancement. */
+
+export interface SummaryMetricSpec<Row> {
+  label: string
+  content: ContentClass
+  /** Reduced over the visible rows. */
+  value: (rows: Row[]) => unknown
+  currency?: (rows: Row[]) => string
+  /** Optional emphasis tone (e.g. amber when total unapplied > 0). */
+  tone?: (rows: Row[]) => Tone
+}
+
+export interface SummaryDistributionSpec<Row> {
+  label?: string
+  /** Bucket key per row (usually the status). */
+  value: (row: Row) => string
+  /** Bucket key → tone; unknown buckets render neutral. */
+  tones: Record<string, Tone>
+}
+
+export interface SummarySpec<Row> {
+  metrics: SummaryMetricSpec<Row>[]
+  distribution?: SummaryDistributionSpec<Row>
+}
+
 /** The DocumentLedger archetype's contract: the pattern hand-written
  * ~15× in the old frontend (Invoices, Orders, POs, Cheques, GRNs, …). */
 export interface LedgerDescriptor<Row> {
@@ -88,6 +129,8 @@ export interface LedgerDescriptor<Row> {
   searchText: (row: Row) => string
   columns: ColumnSpec<Row>[]
   status?: StatusSpec<Row>
+  /** Declarative KPI/stats strip over the visible rows (visual-diversity). */
+  summary?: SummarySpec<Row>
   filters?: FilterSpec<Row>[]
   actions?: ActionSpec<Row>[]
   /** L4 ejection, panel granularity. */
