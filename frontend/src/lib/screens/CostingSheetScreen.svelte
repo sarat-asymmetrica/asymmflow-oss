@@ -4,7 +4,7 @@
     import { onDestroy, onMount } from "svelte";
     import { get } from "svelte/store";
     import { toast } from "$lib/stores/toasts";
-    import { brand } from "$lib/brand";
+    import { getDefaultDivisionKey, getDivisionKeys } from "$lib/divisions.svelte";
     import { confirm } from '$lib/stores/confirm';
     import { permissions, currentUser } from '$lib/stores/authContext';
     let permissionList = $derived(Array.isArray($permissions) ? $permissions : []);
@@ -213,18 +213,25 @@ import { GetSettings } from "../../../wailsjs/go/main/DocumentsService";
     // ========================================
     // HEADER SECTION - Matches Excel "Costing Sheet" header
     // ========================================
-    const defaultDeliveryTermsForDivision = (division: string) =>
-        division === 'Beacon Controls' ? 'DAP Bahrain at your store or Beacon Controls' : 'DAP Bahrain at your store or Acme Instrumentation';
+    // Composed FROM the registry value — byte-identical to the historic
+    // frozen literals for the synthetic default ("Acme Instrumentation") and
+    // sister division ("Beacon Controls") because both literals already had
+    // the shape "DAP Bahrain at your store or {division}".
+    const defaultDeliveryTermsForDivision = (division: string) => `DAP Bahrain at your store or ${division}`;
 
     const normaliseDeliveryTermsForDivision = (deliveryTerms: string, division: string) => {
         const trimmed = (deliveryTerms || '').trim();
-        if (!trimmed || trimmed === 'DAP Bahrain at your store or Acme Instrumentation' || trimmed === 'DAP Bahrain at your store or Beacon Controls') {
+        // Spec-07 both-sides canonicalization: "is this an auto-generated
+        // default for ANY known division" — recomputed from the live
+        // registry, never compared against a frozen literal.
+        const isKnownAutoDefault = getDivisionKeys().some((key) => trimmed === defaultDeliveryTermsForDivision(key));
+        if (!trimmed || isKnownAutoDefault) {
             return defaultDeliveryTermsForDivision(division);
         }
         return trimmed;
     };
 
-    function createDefaultHeader(division = brand.defaultDivision) {
+    function createDefaultHeader(division = getDefaultDivisionKey()) {
         // Wave 9.3 B2: default Prepared By to the current operator (Article
         // III.4) instead of leaving it blank — the picker still lets them
         // choose someone else (e.g. preparing on a colleague's behalf).
@@ -265,8 +272,6 @@ import { GetSettings } from "../../../wailsjs/go/main/DocumentsService";
 Please find our pricing and scope below. We trust the proposal meets your requirement and look forward to your valued order.`;
     let quotationBody = $state(defaultQuotationBody);
 
-    // Division options (sister companies)
-    const divisionOptions = ['Acme Instrumentation', 'Beacon Controls'];
     let lastAppliedDivision = header.division;
     // Wave 9.3 B2: "Prepared By" options come from GetPreparedByOptions()
     // (configured signature identities + employee names — synthetic canon by
@@ -302,13 +307,12 @@ Please find our pricing and scope below. We trust the proposal meets your requir
         '3-5 weeks', '4-6 weeks', '5-7 weeks', '7-9 weeks', '9-11 weeks',
         '12-14 weeks', '16-18 weeks', 'On request'
     ];
-    const deliveryTermsOptions = [
-        'DAP Bahrain at your store or Acme Instrumentation',
-        'DAP Bahrain at your store or Beacon Controls',
+    let deliveryTermsOptions = $derived([
+        ...getDivisionKeys().map(defaultDeliveryTermsForDivision),
         'Ex-Works (EXW)',
         'Free Carrier (FCA)',
         'Delivered Duty Paid (DDP)',
-    ];
+    ]);
     const paymentTermsOptions = [
         '100% Advance Payment with PO',
         '100% Payment Against Delivery',
@@ -358,7 +362,7 @@ All prices are in Bahraini Dinars (BHD) unless otherwise stated. Prices are excl
 As per the payment terms specified in this quotation. Late payments may incur interest charges.
 
 4. DELIVERY
-Delivery times are estimates and subject to manufacturer's confirmation. ${brand.defaultDivision} shall not be liable for delays beyond our control.
+Delivery times are estimates and subject to manufacturer's confirmation. ${getDefaultDivisionKey()} shall not be liable for delays beyond our control.
 
 5. WARRANTY
 All products carry the manufacturer's standard warranty. Extended warranty options are available upon request.
@@ -367,7 +371,7 @@ All products carry the manufacturer's standard warranty. Extended warranty optio
 Installation and commissioning services are available at additional cost unless included in the quotation.
 
 7. FORCE MAJEURE
-${brand.defaultDivision} shall not be liable for failure to perform due to causes beyond reasonable control.
+${getDefaultDivisionKey()} shall not be liable for failure to perform due to causes beyond reasonable control.
 
 8. GOVERNING LAW
 This quotation is governed by the laws of the Kingdom of Bahrain.`);
@@ -666,7 +670,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
         suppressDraftPersistence = true;
         try {
             const draftHeader = payload?.header || {};
-            const draftDivision = draftHeader.division || header.division || brand.defaultDivision;
+            const draftDivision = draftHeader.division || header.division || getDefaultDivisionKey();
             header = {
                 ...createDefaultHeader(draftDivision),
                 ...draftHeader,
@@ -925,7 +929,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
             const matchedCustomer = findMatchingCustomerByName(customerName);
 
             if (!restoredRevision) {
-                const nextDivision = selectedOpportunity.division || header.division || brand.defaultDivision;
+                const nextDivision = selectedOpportunity.division || header.division || getDefaultDivisionKey();
                 header = {
                     ...header,
                     customerName: matchedCustomer?.business_name || customerName,
@@ -1662,7 +1666,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
     <header class="page-header">
         <div>
             <h1>Costing Sheet</h1>
-            <p class="subtitle">{brand.defaultDivision} W.L.L. - Pricing Calculator</p>
+            <p class="subtitle">{getDefaultDivisionKey()} W.L.L. - Pricing Calculator</p>
         </div>
         <div class="header-actions">
             <Button variant="secondary" on:click={loadData}>Refresh</Button>
@@ -1954,7 +1958,7 @@ This quotation is governed by the laws of the Kingdom of Bahrain.`);
                         <div class="field-group">
                             <span class="field-label">Division</span>
                             <select bind:value={header.division} class="input-sm">
-                                {#each divisionOptions as div}<option value={div}>{div}</option>{/each}
+                                {#each getDivisionKeys() as div}<option value={div}>{div}</option>{/each}
                             </select>
                         </div>
                         <div class="field-group">

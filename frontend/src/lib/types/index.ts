@@ -1,5 +1,5 @@
 /**
- * Central Type Definitions for Acme Instrumentation Sovereign UI
+ * Central Type Definitions for the Sovereign UI
  *
  * This file consolidates ALL business domain types used across components.
  * Extracted from scattered definitions in OpportunityCard, OpportunityDetail,

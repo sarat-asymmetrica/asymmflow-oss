@@ -1,7 +1,7 @@
 <script lang="ts">
   import { run, preventDefault } from 'svelte/legacy';
   import { motionMs } from "$lib/motion";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey, getDivisionKeys, isKnownDivision, normalizeDivision } from "$lib/divisions.svelte";
 
   /**
    * OffersScreen - Production-Ready Offers Management
@@ -115,7 +115,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
   let offers: OfferDisplay[] = $state([]);
   let filteredOffers: OfferDisplay[] = $state([]);
   let loading = $state(true);
-  let selectedCompany: 'Acme Instrumentation' | 'Beacon Controls' = $state(brand.defaultDivision as 'Acme Instrumentation' | 'Beacon Controls');
+  let selectedCompany: string = $state(getDefaultDivisionKey());
   let selectedStage: OfferStage = $state('all');
   let offersWithNoItems: any[] = $state([]);
   let legacyOfferShells: any[] = $state([]);
@@ -164,7 +164,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
   }
 
   let formData = $state({
-    division: brand.defaultDivision,
+    division: getDefaultDivisionKey(),
     offer_number: '',
     customer_id: '',
     customer_name: '',
@@ -354,7 +354,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
     { value: 'Lost', label: 'Lost', count: 0 }
   ]);
 
-  let companyScopedOffers = $derived(offers.filter((offer) => (offer.division || brand.defaultDivision) === selectedCompany));
+  let companyScopedOffers = $derived(offers.filter((offer) => normalizeDivision(offer.division || getDefaultDivisionKey()) === normalizeDivision(selectedCompany)));
 
   // Computed: Update tab counts
   // Non-terminal offers that are expired belong ONLY to the Expired tab (and All) -
@@ -432,7 +432,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
       created_at: offer.created_at,
       updated_at: offer.updated_at,
       items: offer.items || [],
-      division: offer.division || brand.defaultDivision,
+      division: offer.division || getDefaultDivisionKey(),
       days_until_expiry: daysUntilExpiry,
       is_expired: daysUntilExpiry < 0,
       is_expiring_soon: daysUntilExpiry >= 0 && daysUntilExpiry <= 7,
@@ -468,7 +468,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
   }
 
   function handleCompanySelect(company: string) {
-    selectedCompany = company === 'Beacon Controls' ? 'Beacon Controls' : 'Acme Instrumentation';
+    selectedCompany = isKnownDivision(company) ? company : getDefaultDivisionKey();
     selectedStage = 'all';
   }
 
@@ -1146,7 +1146,7 @@ import { OpenExportedFile } from '../../../wailsjs/go/main/InfraService';
     <!-- Stage Filter Tabs -->
     <Card padding="sm">
       <div class="company-toggle" role="tablist" aria-label="Filter offers by company">
-        {#each ['Acme Instrumentation', 'Beacon Controls'] as company}
+        {#each getDivisionKeys() as company}
           <button
             class="company-toggle-btn"
             class:active={selectedCompany === company}

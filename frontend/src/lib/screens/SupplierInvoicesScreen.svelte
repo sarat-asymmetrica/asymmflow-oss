@@ -37,21 +37,21 @@ import { GetSupportedCurrencies } from '../../../wailsjs/go/main/DocumentsServic
   import { confirm } from '$lib/stores/confirm';
   import { permissions, currentUser } from '$lib/stores/authContext';
   import { escapeHtml } from '$lib/utils/escapeHtml';
-  import { brand } from '$lib/brand';
+  import { getDefaultDivisionKey, normalizeDivision } from '$lib/divisions.svelte';
 
   const dispatch = createEventDispatcher();
 
-  
+
   interface Props {
     // Props
     embedded?: boolean;
-    company?: 'Acme Instrumentation' | 'Beacon Controls';
+    company?: string;
   }
 
-  let { embedded = false, company = brand.defaultDivision as Props['company'] }: Props = $props();
+  let { embedded = false, company = getDefaultDivisionKey() }: Props = $props();
 
   function matchesCompany(division?: string) {
-    return (division || brand.defaultDivision) === company;
+    return normalizeDivision(division || getDefaultDivisionKey()) === normalizeDivision(company);
   }
 
   // Types

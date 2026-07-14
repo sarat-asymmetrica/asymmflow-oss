@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPANY BANK ACCOUNTS SERVICE
 //
-// MISSION: Manage Acme Instrumentation and Beacon Controls bank account details for invoices and reconciliation
+// MISSION: Manage each configured division's bank account details for invoices and reconciliation
 //          Provides the official bank accounts used across finance workflows
 //
 // USED BY: Invoice PDF generation (bank details section)
@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	finance "ph_holdings_app/pkg/finance"
@@ -74,7 +75,7 @@ func (a *App) seedCompanyBankAccountsInternal() error {
 			ID:            "bank-alpha",
 			Division:      activeOverlay.DefaultDivision(),
 			BankName:      "Demo Bank A",
-			AccountName:   "ACME INSTRUMENTATION WLL",
+			AccountName:   strings.ToUpper(activeOverlay.CompanyDisplayName),
 			AccountNumber: "10000000001",
 			IBAN:          "BH29DMOA10000000000001",
 			SwiftBIC:      "DMOABHBM",
@@ -88,7 +89,7 @@ func (a *App) seedCompanyBankAccountsInternal() error {
 			ID:            "bank-beta",
 			Division:      activeOverlay.DefaultDivision(),
 			BankName:      "Demo Bank B",
-			AccountName:   "ACME INSTRUMENTATION WLL",
+			AccountName:   strings.ToUpper(activeOverlay.CompanyDisplayName),
 			AccountNumber: "10000000002",
 			IBAN:          "BH29DMOB10000000000002",
 			SwiftBIC:      "DMOBBHBM",
@@ -102,7 +103,7 @@ func (a *App) seedCompanyBankAccountsInternal() error {
 			ID:            "bank-gamma",
 			Division:      activeOverlay.DefaultDivision(),
 			BankName:      "Demo Bank C",
-			AccountName:   "ACME INSTRUMENTATION WLL",
+			AccountName:   strings.ToUpper(activeOverlay.CompanyDisplayName),
 			AccountNumber: "10000000003",
 			IBAN:          "BH29DMOC10000000000003",
 			SwiftBIC:      "DMOCBHBM",
@@ -116,7 +117,7 @@ func (a *App) seedCompanyBankAccountsInternal() error {
 			ID:            "bank-delta",
 			Division:      activeOverlay.DefaultDivision(),
 			BankName:      "Demo Bank D",
-			AccountName:   "ACME INSTRUMENTATION WLL",
+			AccountName:   strings.ToUpper(activeOverlay.CompanyDisplayName),
 			AccountNumber: "10000000004",
 			IBAN:          "BH29DMOD10000000000004",
 			SwiftBIC:      "DMODBHBM",
@@ -130,7 +131,7 @@ func (a *App) seedCompanyBankAccountsInternal() error {
 			ID:            "bank-ahs-gamma",
 			Division:      nonDefaultDivisionKey(),
 			BankName:      "Demo Bank C",
-			AccountName:   "BEACON CONTROLS W.L.L.",
+			AccountName:   activeOverlay.Profile(nonDefaultDivisionKey()).LegalName,
 			AccountNumber: "20000000001",
 			IBAN:          "BH29DMOC20000000000001",
 			SwiftBIC:      "DMOCBHBM",

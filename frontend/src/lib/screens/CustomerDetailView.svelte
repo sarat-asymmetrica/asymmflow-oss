@@ -4,7 +4,7 @@
   const bubble = createBubbler();
   import { onMount, onDestroy, createEventDispatcher } from 'svelte';
   import Button from '$lib/components/ui/Button.svelte';
-  import { brand } from '$lib/brand';
+  import { getDefaultDivisionKey } from '$lib/divisions.svelte';
   import TableSkeleton from '$lib/components/ui/TableSkeleton.svelte';
   import CardGridSkeleton from '$lib/components/ui/CardGridSkeleton.svelte';
   import ContextTaskModal from '$lib/components/ContextTaskModal.svelte';
@@ -136,7 +136,7 @@ import { UpdateCustomer, DeleteCustomer } from '../../../wailsjs/go/main/CRMServ
       'asymmflow.pendingInvoiceFocus',
       JSON.stringify({ id: invoice.id, invoice_number: invoice.invoice_number })
     );
-    navigateTo({ screen: 'finance', tab: 'invoices', company: invoice.division || brand.defaultDivision });
+    navigateTo({ screen: 'finance', tab: 'invoices', company: invoice.division || getDefaultDivisionKey() });
   }
 
   function openRFQ(rfq: any) {

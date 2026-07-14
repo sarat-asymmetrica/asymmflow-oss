@@ -2,14 +2,16 @@
     import { run } from 'svelte/legacy';
 
     /**
-     * AHSDashboard - Financial dashboard for Beacon Controls WLL (sister company)
-     * E2: Shows division-filtered financial data for Beacon Controls
+     * AHSDashboard - Financial dashboard for the sister-company division
+     * (the registry division whose dashboard variant is "ahs")
+     * E2: Shows division-filtered financial data for that division
      */
     import { onMount } from 'svelte';
     import WabiSpinner from '$lib/components/ui/WabiSpinner.svelte';
     import { toast } from '$lib/stores/toasts';
     import { GetFinancialDashboardByDivision } from '../../../wailsjs/go/main/App';
 import { GetFinancialReportYears } from '../../../wailsjs/go/main/FinanceService';
+    import { getDivisions, getDashboardVariant } from '$lib/divisions.svelte';
 
     interface Props {
         embedded?: boolean;
@@ -19,6 +21,12 @@ import { GetFinancialReportYears } from '../../../wailsjs/go/main/FinanceService
     run(() => {
         embedded;
     });
+
+    // The division whose dashboard variant is "ahs" — this screen IS that
+    // division's bespoke dashboard, so its display name follows the flag,
+    // not a hardcoded literal (Wave 12 division registry).
+    let ahsDivisionKey = $derived(getDivisions().find((d) => getDashboardVariant(d.key) === 'ahs')?.key ?? '');
+    let ahsCompanyBadge = $derived(`${ahsDivisionKey} WLL`);
 
     let loading = $state(true);
     let data: any = $state(null);
@@ -60,11 +68,11 @@ import { GetFinancialReportYears } from '../../../wailsjs/go/main/FinanceService
     async function loadDashboard() {
         loading = true;
         try {
-            data = await GetFinancialDashboardByDivision(selectedYear, 'Beacon Controls');
+            data = await GetFinancialDashboardByDivision(selectedYear, ahsDivisionKey);
         } catch (err) {
             console.error('Failed to load AHS dashboard:', err);
-            toast.danger(`Failed to load Beacon Controls data for ${selectedYear}`);
-            data = { division: 'Beacon Controls', year: selectedYear, has_data: false };
+            toast.danger(`Failed to load ${ahsDivisionKey} data for ${selectedYear}`);
+            data = { division: ahsDivisionKey, year: selectedYear, has_data: false };
         } finally {
             loading = false;
         }
@@ -93,7 +101,7 @@ import { GetFinancialReportYears } from '../../../wailsjs/go/main/FinanceService
                 {/each}
             </select>
         </div>
-        <div class="company-badge">Beacon Controls WLL</div>
+        <div class="company-badge">{ahsCompanyBadge}</div>
     </div>
 
     {#if data?.source}
@@ -117,13 +125,13 @@ import { GetFinancialReportYears } from '../../../wailsjs/go/main/FinanceService
                     <path d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
             </div>
-            <h3>No Data for Beacon Controls in FY{selectedYear}</h3>
+            <h3>No Data for {ahsDivisionKey} in FY{selectedYear}</h3>
             <p>
-                Beacon Controls financial data will appear here once invoices and orders
-                are tagged with the "Beacon Controls" division in the costing sheet.
+                {ahsDivisionKey} financial data will appear here once invoices and orders
+                are tagged with the "{ahsDivisionKey}" division in the costing sheet.
             </p>
             <p class="hint">
-                To tag data: Create a costing sheet with Division = "Beacon Controls",
+                To tag data: Create a costing sheet with Division = "{ahsDivisionKey}",
                 then convert it to an offer and order. The division will carry through
                 to invoices automatically.
             </p>
@@ -155,7 +163,7 @@ import { GetFinancialReportYears } from '../../../wailsjs/go/main/FinanceService
 
         <!-- Summary Table -->
         <div class="summary-section">
-            <h4>Financial Summary - Beacon Controls WLL</h4>
+            <h4>Financial Summary - {ahsCompanyBadge}</h4>
             <table class="summary-table">
                 <thead>
                     <tr>

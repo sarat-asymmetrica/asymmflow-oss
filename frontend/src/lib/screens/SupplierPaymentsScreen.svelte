@@ -1,7 +1,7 @@
 <script lang="ts">
   import { run, self } from 'svelte/legacy';
   import { motionMs } from "$lib/motion";
-  import { brand } from "$lib/brand";
+  import { getDefaultDivisionKey, normalizeDivision } from "$lib/divisions.svelte";
 
   import { createEventDispatcher, onMount } from 'svelte';
   import { fade } from 'svelte/transition';
@@ -22,10 +22,10 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
 
   interface Props {
     embedded?: boolean;
-    company?: 'Acme Instrumentation' | 'Beacon Controls';
+    company?: string;
   }
 
-  let { embedded = false, company = brand.defaultDivision as Props['company'] }: Props = $props();
+  let { embedded = false, company = getDefaultDivisionKey() }: Props = $props();
 
   let payments: any[] = $state([]);
   let invoices: any[] = $state([]);
@@ -42,7 +42,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
   let paymentSourceFilter: 'all' | 'supplier' | 'expense' = $state('all');
 
   function matchesCompany(division?: string) {
-    return (division || brand.defaultDivision) === company;
+    return normalizeDivision(division || getDefaultDivisionKey()) === normalizeDivision(company);
   }
 
   let permissionList = $derived(Array.isArray($permissions) ? $permissions : []);
@@ -213,7 +213,7 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
         ...row,
         source: row.source || 'Supplier Invoice',
       }));
-      const scopedExpensePaymentRows = company === 'Acme Instrumentation' ? expensePaymentRows : [];
+      const scopedExpensePaymentRows = company === getDefaultDivisionKey() ? expensePaymentRows : [];
       payments = [...supplierPaymentRows, ...scopedExpensePaymentRows].sort((left: any, right: any) => {
         const leftTime = new Date(left.payment_date || 0).getTime();
         const rightTime = new Date(right.payment_date || 0).getTime();
@@ -242,9 +242,9 @@ import { GetSupplierPayment, RecordSupplierPayment, GetSupplierInvoices, UpdateS
       });
 
       summary = {
-        total_paid_bhd: supplierPaymentRows.reduce((sum: number, row: any) => sum + (Number(row.amount_bhd) || 0), 0) + (company === 'Acme Instrumentation' ? paidExpenseTotal : 0),
-        outstanding_count: outstandingInvoices.length + (company === 'Acme Instrumentation' ? unpaidExpenseEntries.length : 0),
-        overdue_count: overdueInvoices.length + (company === 'Acme Instrumentation' ? overdueExpenseCount : 0),
+        total_paid_bhd: supplierPaymentRows.reduce((sum: number, row: any) => sum + (Number(row.amount_bhd) || 0), 0) + (company === getDefaultDivisionKey() ? paidExpenseTotal : 0),
+        outstanding_count: outstandingInvoices.length + (company === getDefaultDivisionKey() ? unpaidExpenseEntries.length : 0),
+        overdue_count: overdueInvoices.length + (company === getDefaultDivisionKey() ? overdueExpenseCount : 0),
       };
     } catch (e) {
       console.error('Failed to load supplier payments:', e);

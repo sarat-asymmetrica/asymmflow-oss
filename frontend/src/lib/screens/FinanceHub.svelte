@@ -1,7 +1,7 @@
 <script lang="ts">
     import { run } from 'svelte/legacy';
     import { motionMs } from "$lib/motion";
-    import { brand } from "$lib/brand";
+    import { getDivisionKeys, getDefaultDivisionKey, isKnownDivision, getDashboardVariant } from "$lib/divisions.svelte";
 
     import { onDestroy, onMount } from "svelte";
     import { fade } from "svelte/transition";
@@ -30,17 +30,16 @@
 
     let { params = {} }: Props = $props();
 
-    type CompanyName = "Acme Instrumentation" | "Beacon Controls";
-
     let activeTab = $state("dashboard");
     let lastAppliedRouteKey = $state("");
 
-    // E2: Company selector - 'Acme Instrumentation' is the default, 'Beacon Controls' is the sister company
-    let selectedCompany: CompanyName = $state(brand.defaultDivision as CompanyName);
-    const companies: CompanyName[] = ["Acme Instrumentation", "Beacon Controls"];
+    // E2: Company selector - default division is the default, other registry
+    // divisions (e.g. the sister company) are selectable alongside it.
+    let selectedCompany: string = $state(getDefaultDivisionKey());
+    let companies = $derived(getDivisionKeys());
 
-    function isCompanyName(value: unknown): value is CompanyName {
-        return value === "Acme Instrumentation" || value === "Beacon Controls";
+    function isCompanyName(value: unknown): value is string {
+        return typeof value === "string" && isKnownDivision(value);
     }
 
     // Wave 9.2 B7 — IA symmetry: AR pair (Customer Invoices / Customer Payments)
@@ -145,7 +144,7 @@
 
         <main class="content">
             {#if activeTab === "dashboard"}
-                {#if selectedCompany === 'Beacon Controls'}
+                {#if getDashboardVariant(selectedCompany) === 'ahs'}
                     <AHSDashboard embedded={true} />
                 {:else}
                     <FinancialDashboard embedded={true} />

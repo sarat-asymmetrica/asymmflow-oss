@@ -424,7 +424,7 @@ func (ce *CostingEngine) AssessRiskFull(sheet *CostingSheet, customer *predictio
 // PrintCostingSheet prints a formatted quotation
 func (ce *CostingEngine) PrintCostingSheet(sheet *CostingSheet) {
 	fmt.Println("╔═══════════════════════════════════════════════════════════════════════════╗")
-	fmt.Printf("║ ACME INSTRUMENTATION W.L.L - QUOTATION\n")
+	fmt.Printf("║ %s - QUOTATION\n", overlay.Active().Profile(overlay.Active().DefaultDivision()).LegalName)
 	fmt.Println("╠═══════════════════════════════════════════════════════════════════════════╣")
 	fmt.Printf("║ Customer:        %s (Grade %s)\n", sheet.CustomerName, sheet.CustomerGrade)
 	fmt.Printf("║ Customer ID:     %s\n", sheet.CustomerID)

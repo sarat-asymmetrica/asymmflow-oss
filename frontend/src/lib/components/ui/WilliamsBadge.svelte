@@ -38,7 +38,7 @@
         // Williams formula: √n × log₂(n)
         const optimal = Math.sqrt(n) * Math.log2(n);
 
-        // Memory estimation: ~3.3 KB per item (empirical from Acme Instrumentation data)
+        // Memory estimation: ~3.3 KB per item (empirical from production data)
         const memoryMB = (optimal * 3.3) / 1024;
 
         // Efficiency: linear / Williams

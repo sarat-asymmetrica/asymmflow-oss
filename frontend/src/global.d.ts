@@ -1,4 +1,4 @@
-// Global type declarations for Acme Instrumentation Sovereign UI
+// Global type declarations for the Sovereign UI
 
 declare global {
   interface Window {

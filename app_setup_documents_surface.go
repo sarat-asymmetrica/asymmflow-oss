@@ -471,7 +471,7 @@ func (a *App) SeedBankDemoData() error {
 			ID:            "bank-demo-" + uuid.New().String(),
 			BankName:      "National Bank of Bahrain",
 			AccountNumber: "0012-345678-001",
-			AccountName:   "Acme Instrumentation WLL - Operating",
+			AccountName:   activeOverlay.CompanyDisplayName + " - Operating",
 			Currency:      "BHD",
 			IsActive:      true,
 			DisplayOrder:  1,

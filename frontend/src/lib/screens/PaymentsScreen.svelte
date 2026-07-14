@@ -57,7 +57,7 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
   import { permissions } from '$lib/stores/authContext';
   import { buildWailsInput, toWailsDate } from '$lib/utils/wailsInterop';
   import { playPaidSettle } from '$lib/sound';
-  import { brand } from '$lib/brand';
+  import { getDefaultDivisionKey, normalizeDivision } from '$lib/divisions.svelte';
 
   // Wave 10 / B4: same tolerance the backend uses for BHD float comparisons
   // (FloatingPointTolerance, supplier_payment_service.go) — a receipt that
@@ -70,10 +70,10 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
   interface Props {
     // Props
     embedded?: boolean;
-    company?: 'Acme Instrumentation' | 'Beacon Controls';
+    company?: string;
   }
 
-  let { embedded = false, company = brand.defaultDivision as Props['company'] }: Props = $props();
+  let { embedded = false, company = getDefaultDivisionKey() }: Props = $props();
 
   // Types
   type TimeFilter = 'All' | 'This Month' | 'This Quarter';
@@ -189,7 +189,7 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
   let applyAmount = $state('');
 
   function matchesCompany(division?: string) {
-    return (division || brand.defaultDivision) === company;
+    return normalizeDivision(division || getDefaultDivisionKey()) === normalizeDivision(company);
   }
 
   // Debounced invoice search (300ms delay)
@@ -652,7 +652,7 @@ import { GetPayment, UpdatePayment, DeletePayment, ListCustomerInvoices } from '
     return invoices.filter(
       (inv) =>
         inv.customer_name === receipt.customer_name &&
-        (inv.division || brand.defaultDivision) === (receipt.division || brand.defaultDivision) &&
+        normalizeDivision(inv.division || getDefaultDivisionKey()) === normalizeDivision(receipt.division || getDefaultDivisionKey()) &&
         inv.outstanding_bhd > 0
     );
   }

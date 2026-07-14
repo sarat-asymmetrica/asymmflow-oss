@@ -403,7 +403,7 @@ type Order struct {
 	ContactPhone      string  `gorm:"size:50" json:"contact_phone"`
 	DiscountPercent   float64 `json:"discount_percent"`
 
-	// E2: Division field - 'Acme Instrumentation' or 'Beacon Controls' (sister companies)
+	// E2: Division field - the canonical key of one of the overlay's configured divisions
 	Division string `gorm:"size:100" json:"division"`
 
 	Items []OrderItem `gorm:"foreignKey:OrderID" json:"items,omitempty"`

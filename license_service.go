@@ -735,7 +735,7 @@ func seedLicenseKeys(a *App) error {
 				Key:       key,
 				Role:      role,
 				Activated: false,
-				Notes:     "Pre-generated for Acme Instrumentation org",
+				Notes:     fmt.Sprintf("Pre-generated for %s org", activeOverlay.DefaultDivision()),
 				CreatedBy: "system",
 			}
 
@@ -798,11 +798,11 @@ func phTradingEmployeeLicenseSpecs() []employeeLicenseSpec {
 
 func phTradingRoleTestLicenseSpecs() []employeeLicenseSpec {
 	return []employeeLicenseSpec{
-		{Role: "admin", DisplayName: "Admin Test", Key: "PH-ADM-6C9BF2", Notes: "Acme Instrumentation test key for admin role"},
-		{Role: "manager", DisplayName: "Manager Test", Key: "PH-MGR-49F07C", Notes: "Acme Instrumentation test key for manager role"},
-		{Role: "sales", DisplayName: "Sales Test", Key: "PH-SLS-B4AA10", Notes: "Acme Instrumentation test key for sales role"},
-		{Role: "operations", DisplayName: "Operations Test", Key: "PH-OPS-44490F", Notes: "Acme Instrumentation test key for operations role"},
-		{Role: "staff", DisplayName: "Staff Test", Key: "PH-STF-B47E0B", Notes: "Acme Instrumentation test key for staff role"},
+		{Role: "admin", DisplayName: "Admin Test", Key: "PH-ADM-6C9BF2", Notes: fmt.Sprintf("%s test key for admin role", activeOverlay.DefaultDivision())},
+		{Role: "manager", DisplayName: "Manager Test", Key: "PH-MGR-49F07C", Notes: fmt.Sprintf("%s test key for manager role", activeOverlay.DefaultDivision())},
+		{Role: "sales", DisplayName: "Sales Test", Key: "PH-SLS-B4AA10", Notes: fmt.Sprintf("%s test key for sales role", activeOverlay.DefaultDivision())},
+		{Role: "operations", DisplayName: "Operations Test", Key: "PH-OPS-44490F", Notes: fmt.Sprintf("%s test key for operations role", activeOverlay.DefaultDivision())},
+		{Role: "staff", DisplayName: "Staff Test", Key: "PH-STF-B47E0B", Notes: fmt.Sprintf("%s test key for staff role", activeOverlay.DefaultDivision())},
 	}
 }
 
@@ -892,7 +892,7 @@ func applyDeploymentLicenseActivationFlush(a *App) error {
 }
 
 // SeedEmployeeKeys creates specific license keys linked to named employees.
-// These are the primary keys given to Acme Instrumentation staff.
+// These are the primary keys given to the deployment's staff.
 // Called on startup after SeedLicenseKeys.
 func (a *App) SeedEmployeeKeys() error {
 	// Mission I (I-11): mints named credentials — gated; startup uses the

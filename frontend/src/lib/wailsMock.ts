@@ -100,11 +100,12 @@ if (DESIGN_MODE) {
     // DESIGN_MODE exercises the same shape GetDivisionRegistry returns for real.
     const mockDivisionRegistry = {
         divisions: [
-            { key: 'Acme Instrumentation', legalName: 'ACME INSTRUMENTATION W.L.L', aliases: [] },
+            { key: 'Acme Instrumentation', legalName: 'ACME INSTRUMENTATION W.L.L', aliases: [], dashboardVariant: '' },
             {
                 key: 'Beacon Controls',
                 legalName: 'BEACON CONTROLS W.L.L.',
                 aliases: ['beacon controls wll', 'beacon controls w.l.l', 'beacon controls w.l.l.'],
+                dashboardVariant: 'ahs',
             },
         ],
         defaultKey: 'Acme Instrumentation',
