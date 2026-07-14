@@ -7,25 +7,7 @@
 import { DeleteCustomerInvoice, ListCustomerInvoices } from '$wails/go/main/FinanceService'
 import { ListCustomers } from '$wails/go/main/CRMService'
 import type { CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
-
-/** Go time.Time → 'YYYY-MM-DD' ('' for Go zero time / garbage). */
-function goDate(value: unknown): string {
-  if (!value) return ''
-  const s = String(value)
-  if (s.startsWith('0001-01-01')) return '' // Go zero time
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime()) || d.getFullYear() < 1971) return ''
-  return s.slice(0, 10)
-}
-
-function str(v: unknown): string {
-  return v == null ? '' : String(v)
-}
-
-function num(v: unknown): number {
-  const n = typeof v === 'number' ? v : Number(v)
-  return Number.isNaN(n) ? 0 : n
-}
+import { goDate, num, str } from './map'
 
 /* ---- Invoices ---- */
 

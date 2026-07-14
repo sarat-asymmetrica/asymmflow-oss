@@ -33,6 +33,7 @@
 {#if formAction}
   <FormModal
     spec={formAction.action.form!}
+    row={formAction.row}
     onDone={() => {
       formAction = null
       void reload()

@@ -9,8 +9,13 @@ export class FormViewModel<Draft> {
   submitting = $state(false)
   submitError = $state<string | null>(null)
 
-  constructor(readonly spec: FormSpec<Draft>) {
-    this.draft = spec.initial()
+  /** `row` is the clicked row for row-scoped form actions (undefined for
+   * screen-level creates); threaded into initial() and submit(). */
+  constructor(
+    readonly spec: FormSpec<Draft>,
+    private readonly row: unknown = undefined,
+  ) {
+    this.draft = spec.initial(row)
   }
 
   validate(): boolean {
@@ -24,7 +29,7 @@ export class FormViewModel<Draft> {
     this.submitting = true
     this.submitError = null
     try {
-      await this.spec.submit(this.draft)
+      await this.spec.submit(this.draft, this.row)
       return true
     } catch (e) {
       this.submitError = e instanceof Error ? e.message : String(e)

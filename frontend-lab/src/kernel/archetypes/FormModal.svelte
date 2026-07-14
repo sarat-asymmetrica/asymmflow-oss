@@ -8,16 +8,19 @@
 
   let {
     spec,
+    row = null,
     onDone,
     onCancel,
   }: {
     spec: FormSpec<Draft>
+    /** The clicked row for row-scoped form actions; null for screen creates. */
+    row?: unknown
     /** Called after a successful submit (caller reloads + closes). */
     onDone: () => void
     onCancel: () => void
   } = $props()
 
-  const vm = $derived(new FormViewModel(spec))
+  const vm = $derived(new FormViewModel(spec, row))
 
   // Resolve async select options once per spec instance.
   let optionsMap = $state<Record<string, FormFieldOption[]>>({})

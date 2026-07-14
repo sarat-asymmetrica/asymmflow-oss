@@ -11,6 +11,12 @@
 import type { Component } from 'svelte'
 import { invoicesDescriptor } from './invoices.descriptor'
 import { customersDescriptor } from './customers.descriptor'
+import { ordersDescriptor } from './orders.descriptor'
+import { deliveryNotesDescriptor } from './delivery-notes.descriptor'
+import { rfqsDescriptor } from './rfqs.descriptor'
+import { offersDescriptor } from './offers.descriptor'
+import { grnsDescriptor } from './grns.descriptor'
+import { purchaseOrdersDescriptor } from './purchase-orders.descriptor'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -32,6 +38,14 @@ export const screens: ScreenEntry[] = [
   // Pilots
   { key: 'invoices', label: 'Invoices', group: 'Finance', archetype: 'ledger', descriptor: invoicesDescriptor },
   { key: 'customers', label: 'Customers', group: 'Sales', archetype: 'entity', descriptor: customersDescriptor },
+  // K1 — Ledger blitz (batch 1)
+  { key: 'orders', label: 'Orders', group: 'Sales', archetype: 'ledger', descriptor: ordersDescriptor },
+  { key: 'rfqs', label: 'RFQs', group: 'Sales', archetype: 'ledger', descriptor: rfqsDescriptor },
+  { key: 'offers', label: 'Offers', group: 'Sales', archetype: 'ledger', descriptor: offersDescriptor },
+  { key: 'purchase-orders', label: 'Purchase Orders', group: 'Operations', archetype: 'ledger', descriptor: purchaseOrdersDescriptor },
+  { key: 'delivery-notes', label: 'Delivery Notes', group: 'Operations', archetype: 'ledger', descriptor: deliveryNotesDescriptor },
+  { key: 'grns', label: 'Goods Received', group: 'Operations', archetype: 'ledger', descriptor: grnsDescriptor },
+  // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]
 
