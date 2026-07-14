@@ -1,6 +1,7 @@
 <script lang="ts" generics="Row">
   import type { EntityDescriptor } from '../descriptor'
   import { LedgerViewModel } from '../ledger.svelte'
+  import ActionHost from './ActionHost.svelte'
   import PageShell from '../primitives/PageShell.svelte'
   import Toolbar from '../primitives/Toolbar.svelte'
   import Card from '../primitives/Card.svelte'
@@ -20,6 +21,7 @@
   // Same viewmodel as DocumentLedger — one query path (L2); the archetypes
   // differ only in how they RENDER the selection.
   const vm = $derived(new LedgerViewModel(descriptor))
+  let host = $state<ReturnType<typeof ActionHost>>()
   $effect(() => {
     void vm.load()
   })
@@ -42,7 +44,7 @@
   {#snippet actions()}
     <Row_ gap="sm">
       {#each screenActions as action (action.key)}
-        <Button variant="primary" onclick={() => action.run({ row: null, reload })}>
+        <Button variant="primary" onclick={() => host?.run(action, null)}>
           {action.label}
         </Button>
       {/each}
@@ -150,7 +152,7 @@
               {#if rowActions.some((a) => !a.visible || a.visible(row))}
                 <Row_ gap="sm" wrap>
                   {#each rowActions.filter((a) => !a.visible || a.visible(row)) as action (action.key)}
-                    <Button onclick={() => action.run({ row, reload })}>{action.label}</Button>
+                    <Button onclick={() => host?.run(action, row)}>{action.label}</Button>
                   {/each}
                 </Row_>
               {/if}
@@ -161,6 +163,8 @@
     </div>
   {/if}
 </PageShell>
+
+<ActionHost bind:this={host} {reload} />
 
 <style>
   /* Archetype-owned layout. Entity work is profile-centric: the profile

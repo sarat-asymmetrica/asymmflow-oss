@@ -1,6 +1,8 @@
 <script lang="ts" generics="Row">
   import type { LedgerDescriptor } from '../descriptor'
+  import type { LedgerQuery } from '../ledger-core'
   import { LedgerViewModel } from '../ledger.svelte'
+  import ActionHost from './ActionHost.svelte'
   import PageShell from '../primitives/PageShell.svelte'
   import Toolbar from '../primitives/Toolbar.svelte'
   import Card from '../primitives/Card.svelte'
@@ -13,11 +15,19 @@
   import EmptyState from '../controls/EmptyState.svelte'
   import { renderCell } from '../content'
 
-  let { descriptor }: { descriptor: LedgerDescriptor<Row> } = $props()
+  let {
+    descriptor,
+    initialQuery,
+  }: {
+    descriptor: LedgerDescriptor<Row>
+    /** Parity #4: dashboard drills seed filters/search on arrival. */
+    initialQuery?: Partial<LedgerQuery>
+  } = $props()
 
   // VM rebuilds if (and only if) the descriptor prop changes; the effect
   // fetches once per VM instance (Wave-10 lesson: no double-fetch paths).
-  const vm = $derived(new LedgerViewModel(descriptor))
+  const vm = $derived(new LedgerViewModel(descriptor, initialQuery))
+  let host = $state<ReturnType<typeof ActionHost>>()
   $effect(() => {
     void vm.load()
   })
@@ -35,7 +45,7 @@
   {#snippet actions()}
     <Row_ gap="sm">
       {#each screenActions as action (action.key)}
-        <Button variant="primary" onclick={() => action.run({ row: null, reload })}>
+        <Button variant="primary" onclick={() => host?.run(action, null)}>
           {action.label}
         </Button>
       {/each}
@@ -55,6 +65,21 @@
           }
         />
       {/each}
+      {#snippet trailing()}
+        <!-- Parity #15: column visibility, engine-level. -->
+        <div class="k-col-toggles" role="group" aria-label="Columns">
+          {#each descriptor.columns as col (col.key)}
+            <button
+              class="k-col-toggle"
+              class:off={vm.hiddenColumns.has(col.key)}
+              onclick={() => vm.toggleColumn(col.key)}
+              title={vm.hiddenColumns.has(col.key) ? `Show ${col.label}` : `Hide ${col.label}`}
+            >
+              {col.label}
+            </button>
+          {/each}
+        </div>
+      {/snippet}
     </Toolbar>
   {/snippet}
 
@@ -87,13 +112,20 @@
     <div class="k-ledger-body">
       <Card padding="none">
         <DataTable
-          columns={descriptor.columns}
+          columns={vm.visibleColumns}
           rows={vm.visible}
           id={descriptor.id}
           status={descriptor.status}
           selectedId={vm.selectedId}
           onSelect={(row) => vm.select(vm.selectedId === descriptor.id(row) ? null : row)}
         />
+        {#if vm.hasMore}
+          <div class="k-load-more">
+            <Button onclick={() => vm.loadMore()} disabled={vm.loadingMore}>
+              {vm.loadingMore ? 'Loading…' : `Load more (${vm.rows.length} loaded)`}
+            </Button>
+          </div>
+        {/if}
       </Card>
 
       {#if vm.selected}
@@ -116,7 +148,7 @@
                 {#if rowActions.some((a) => !a.visible || a.visible(row))}
                   <Row_ gap="sm" wrap>
                     {#each rowActions.filter((a) => !a.visible || a.visible(row)) as action (action.key)}
-                      <Button onclick={() => action.run({ row, reload })}>{action.label}</Button>
+                      <Button onclick={() => host?.run(action, row)}>{action.label}</Button>
                     {/each}
                   </Row_>
                 {/if}
@@ -129,7 +161,42 @@
   {/if}
 </PageShell>
 
+<ActionHost bind:this={host} {reload} />
+
 <style>
+  .k-col-toggles {
+    display: flex;
+    align-items: center;
+    gap: var(--k-space-xs);
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .k-col-toggle {
+    font-family: var(--font-ui);
+    font-size: calc(11px * var(--ui-font-scale));
+    font-weight: 500;
+    color: var(--text-primary);
+    background: var(--onyx-tint);
+    border: none;
+    border-radius: var(--border-radius-pill);
+    padding: 3px 10px;
+    cursor: pointer;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .k-col-toggle.off {
+    background: transparent;
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+  .k-load-more {
+    display: flex;
+    justify-content: center;
+    padding: var(--k-space-sm);
+    border-top: var(--border-width) solid var(--border);
+  }
   /* Archetype-owned layout (archetypes are kernel; L1 binds screens). */
   .k-ledger-body {
     display: flex;

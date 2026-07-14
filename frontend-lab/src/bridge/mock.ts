@@ -88,6 +88,58 @@ export async function fetchInvoices(): Promise<InvoiceRow[]> {
   return [...invoices]
 }
 
+/** Paged variant — mirrors ListCustomerInvoices(limit, offset). */
+export async function fetchInvoicesPage(limit: number, offset: number): Promise<InvoiceRow[]> {
+  invoices ??= generate()
+  await new Promise((r) => setTimeout(r, offset === 0 ? 250 : 120))
+  return invoices.slice(offset, offset + limit)
+}
+
+export interface NewInvoiceDraft {
+  customer: string
+  division: string
+  issueDate: string
+  dueDate: string
+  amount: number | null
+  currency: string
+  notes: string
+}
+
+let createdCount = 0
+
+export async function createInvoice(draft: NewInvoiceDraft): Promise<void> {
+  invoices ??= generate()
+  createdCount++
+  invoices.unshift({
+    id: `inv-new-${createdCount}`,
+    number: `INV-2026-N${pad(createdCount, 3)}`,
+    customer: draft.customer,
+    division: draft.division,
+    status: 'Draft',
+    issueDate: draft.issueDate,
+    dueDate: draft.dueDate,
+    amount: draft.amount ?? 0,
+    currency: draft.currency,
+  })
+  await new Promise((r) => setTimeout(r, 150))
+}
+
+export async function deleteInvoice(id: string): Promise<void> {
+  invoices ??= generate()
+  invoices = invoices.filter((i) => i.id !== id)
+  await new Promise((r) => setTimeout(r, 120))
+}
+
+/** Select options — at INTEG these come from bindings / the divisions store. */
+export async function customerOptions(): Promise<{ value: string; label: string }[]> {
+  await new Promise((r) => setTimeout(r, 100))
+  return CUSTOMERS.filter((c) => c).map((c) => ({ value: c, label: c }))
+}
+
+export function divisionOptions(): { value: string; label: string }[] {
+  return DIVISIONS.map((d) => ({ value: d, label: d }))
+}
+
 export async function markInvoicePaid(id: string): Promise<void> {
   invoices ??= generate()
   const inv = invoices.find((i) => i.id === id)

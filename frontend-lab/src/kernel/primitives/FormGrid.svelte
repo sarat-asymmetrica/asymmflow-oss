@@ -11,16 +11,24 @@
   } = $props()
 </script>
 
-<div class="k-form-grid" data-cols={columns}>
-  {@render children()}
+<!-- The wrapper is the size container; the grid queries it. An element
+     cannot @container-query its own size — found live when FormGrid
+     rendered single-column inside Modal (no ancestor container there). -->
+<div class="k-form-grid-container">
+  <div class="k-form-grid" data-cols={columns}>
+    {@render children()}
+  </div>
 </div>
 
 <style>
+  .k-form-grid-container {
+    container-type: inline-size;
+    min-width: 0;
+  }
   .k-form-grid {
     display: grid;
     gap: var(--k-space-md);
     min-width: 0;
-    container-type: inline-size;
     grid-template-columns: 1fr;
   }
   .k-form-grid > :global(*) {

@@ -12,6 +12,7 @@
  */
 
 import type { Component } from 'svelte'
+import type { FormSpec } from './form'
 
 /** Drives formatting, alignment, fonts AND dev-time layout verification.
  * Each class has a known worst-case content shape (see verify/ later). */
@@ -62,6 +63,11 @@ export interface ActionSpec<Row> {
   kind: 'screen' | 'row'
   /** Visibility gate — e.g. only Draft invoices can be edited. */
   visible?: (row: Row | null) => boolean
+  /** Declared escalation: a form action opens FormModal (its submit IS the
+   * action); a confirm action gates run() behind ConfirmDialog. One path
+   * for all archetypes via ActionHost. */
+  form?: FormSpec<any>
+  confirm?: (row: Row | null) => string
   run: (ctx: { row: Row | null; reload: () => Promise<void> }) => void | Promise<void>
 }
 
@@ -73,6 +79,10 @@ export interface LedgerDescriptor<Row> {
   title: string
   /** Bridge call that loads the rows (mock bridge in the lab). */
   fetch: () => Promise<Row[]>
+  /** Paged loading (parity #1/#19): when present, the VM pages with
+   * fetchPage(limit, offset) + Load More instead of load-all fetch(). */
+  fetchPage?: (limit: number, offset: number) => Promise<Row[]>
+  pageSize?: number
   id: (row: Row) => string
   /** Fields swept by the search box — ONE search implementation (L2). */
   searchText: (row: Row) => string

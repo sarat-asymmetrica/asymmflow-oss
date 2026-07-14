@@ -2,12 +2,74 @@
  * Old frontend: 2,930 hand-written lines. This file: the whole screen. */
 
 import type { LedgerDescriptor } from '$kernel/descriptor'
-import { fetchInvoices, markInvoicePaid, type InvoiceRow } from '../bridge/mock'
+import type { FormSpec } from '$kernel/form'
+import {
+  createInvoice,
+  customerOptions,
+  deleteInvoice,
+  divisionOptions,
+  fetchInvoices,
+  fetchInvoicesPage,
+  markInvoicePaid,
+  type InvoiceRow,
+  type NewInvoiceDraft,
+} from '../bridge/mock'
+
+const newInvoiceForm: FormSpec<NewInvoiceDraft> = {
+  title: 'New Invoice',
+  submitLabel: 'Create Draft',
+  initial: () => ({
+    customer: '',
+    division: divisionOptions()[0]?.value ?? '',
+    issueDate: '',
+    dueDate: '',
+    amount: null,
+    currency: 'BHD',
+    notes: '',
+  }),
+  fields: [
+    { key: 'customer', label: 'Customer', kind: 'select', required: true, options: customerOptions },
+    { key: 'division', label: 'Division', kind: 'select', required: true, options: divisionOptions() },
+    { key: 'issueDate', label: 'Issue date', kind: 'date', required: true },
+    {
+      key: 'dueDate',
+      label: 'Due date',
+      kind: 'date',
+      required: true,
+      validate: (v, draft) =>
+        draft.issueDate && typeof v === 'string' && v < draft.issueDate
+          ? 'Due date cannot precede the issue date'
+          : null,
+    },
+    {
+      key: 'amount',
+      label: 'Amount',
+      kind: 'number',
+      required: true,
+      step: '0.001',
+      validate: (v) => (typeof v === 'number' && v <= 0 ? 'Amount must be positive' : null),
+    },
+    {
+      key: 'currency',
+      label: 'Currency',
+      kind: 'select',
+      required: true,
+      options: [
+        { value: 'BHD', label: 'BHD' },
+        { value: 'USD', label: 'USD' },
+      ],
+    },
+    { key: 'notes', label: 'Notes', kind: 'textarea', placeholder: 'Optional' },
+  ],
+  submit: (draft) => createInvoice(draft),
+}
 
 export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
   entity: 'invoices',
   title: 'Invoices',
   fetch: fetchInvoices,
+  fetchPage: fetchInvoicesPage,
+  pageSize: 100,
   id: (r) => r.id,
   searchText: (r) => `${r.number} ${r.customer}`,
 
@@ -57,8 +119,9 @@ export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
       key: 'new',
       label: '+ New Invoice',
       kind: 'screen',
+      form: newInvoiceForm,
       run: () => {
-        /* form archetype arrives in a later wave */
+        /* form actions submit via their FormSpec; run is unused */
       },
     },
     {
@@ -69,6 +132,18 @@ export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
       run: async ({ row, reload }) => {
         if (!row) return
         await markInvoicePaid(row.id)
+        await reload()
+      },
+    },
+    {
+      key: 'delete',
+      label: 'Delete Draft',
+      kind: 'row',
+      visible: (r) => r != null && r.status === 'Draft',
+      confirm: (r) => `Delete ${r ? (r as InvoiceRow).number : 'this draft'}? This cannot be undone.`,
+      run: async ({ row, reload }) => {
+        if (!row) return
+        await deleteInvoice(row.id)
         await reload()
       },
     },

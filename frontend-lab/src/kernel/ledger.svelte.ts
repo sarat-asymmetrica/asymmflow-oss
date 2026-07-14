@@ -1,9 +1,12 @@
 /* The ledger viewmodel — L5's reactive half. A thin rune shell over
  * ledger-core: state + derivations, no rendering, no layout. Views bind
- * to an instance of this; the DocumentLedger archetype owns its lifecycle. */
+ * to an instance of this; the archetypes own its lifecycle. */
 
+import { SvelteSet } from 'svelte/reactivity'
 import type { LedgerDescriptor } from './descriptor'
-import { applyLedgerQuery, deriveFilterOptions } from './ledger-core'
+import { applyLedgerQuery, deriveFilterOptions, type LedgerQuery } from './ledger-core'
+
+const DEFAULT_PAGE_SIZE = 100
 
 export class LedgerViewModel<Row> {
   rows = $state<Row[]>([])
@@ -13,7 +16,25 @@ export class LedgerViewModel<Row> {
   filters = $state<Record<string, string>>({})
   selectedId = $state<string | null>(null)
 
-  constructor(readonly descriptor: LedgerDescriptor<Row>) {}
+  /* Paged loading (parity #1/#19) — engaged when descriptor.fetchPage exists. */
+  hasMore = $state(false)
+  loadingMore = $state(false)
+
+  /* Column visibility (parity #15) — hidden column keys, per VM instance. */
+  hiddenColumns = new SvelteSet<string>()
+
+  constructor(
+    readonly descriptor: LedgerDescriptor<Row>,
+    /** Initial-query seeding (parity #4): dashboard drills pre-filter here. */
+    initialQuery?: Partial<LedgerQuery>,
+  ) {
+    if (initialQuery?.search) this.search = initialQuery.search
+    if (initialQuery?.filters) this.filters = { ...initialQuery.filters }
+  }
+
+  private get pageSize(): number {
+    return this.descriptor.pageSize ?? DEFAULT_PAGE_SIZE
+  }
 
   visible = $derived.by(() =>
     applyLedgerQuery(this.descriptor, this.rows, { search: this.search, filters: this.filters }),
@@ -31,15 +52,45 @@ export class LedgerViewModel<Row> {
     })),
   )
 
+  visibleColumns = $derived.by(() =>
+    this.descriptor.columns.filter((c) => !this.hiddenColumns.has(c.key)),
+  )
+
+  toggleColumn(key: string): void {
+    if (this.hiddenColumns.has(key)) this.hiddenColumns.delete(key)
+    else this.hiddenColumns.add(key)
+  }
+
   async load(): Promise<void> {
     this.loading = true
     this.error = null
     try {
-      this.rows = await this.descriptor.fetch()
+      if (this.descriptor.fetchPage) {
+        const page = await this.descriptor.fetchPage(this.pageSize, 0)
+        this.rows = page
+        this.hasMore = page.length === this.pageSize
+      } else {
+        this.rows = await this.descriptor.fetch()
+        this.hasMore = false
+      }
     } catch (e) {
       this.error = e instanceof Error ? e.message : String(e)
     } finally {
       this.loading = false
+    }
+  }
+
+  async loadMore(): Promise<void> {
+    if (!this.descriptor.fetchPage || this.loadingMore || !this.hasMore) return
+    this.loadingMore = true
+    try {
+      const page = await this.descriptor.fetchPage(this.pageSize, this.rows.length)
+      this.rows = [...this.rows, ...page]
+      this.hasMore = page.length === this.pageSize
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : String(e)
+    } finally {
+      this.loadingMore = false
     }
   }
 
