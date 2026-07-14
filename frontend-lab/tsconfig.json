@@ -16,7 +16,8 @@
     "paths": {
       "$kernel/*": ["./src/kernel/*"],
       "$screens/*": ["./src/screens/*"],
-      "$tokens/*": ["../frontend/src/assets/*"]
+      "$tokens/*": ["../frontend/src/assets/*"],
+      "$wails/*": ["../frontend/wailsjs/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "tests/**/*.ts"],

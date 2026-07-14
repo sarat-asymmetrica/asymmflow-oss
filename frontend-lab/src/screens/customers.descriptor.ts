@@ -3,7 +3,7 @@
  * same primitives, profile-centric rendering. */
 
 import type { EntityDescriptor } from '$kernel/descriptor'
-import { fetchCustomers, setCustomerStatus, type CustomerRow } from '../bridge/mock'
+import { fetchCustomers, setCustomerStatus, type CustomerRow } from '../bridge'
 
 export const customersDescriptor: EntityDescriptor<CustomerRow> = {
   entity: 'customers',

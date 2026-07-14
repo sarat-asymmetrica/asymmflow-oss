@@ -1,5 +1,6 @@
 <script lang="ts">
   import Showcase from './screens/Showcase.svelte'
+  import { usingWails } from './bridge'
   import DocumentLedger from '$kernel/archetypes/DocumentLedger.svelte'
   import EntityMaster from '$kernel/archetypes/EntityMaster.svelte'
   import { invoicesDescriptor } from './screens/invoices.descriptor'
@@ -16,6 +17,9 @@
     {#each views as v (v)}
       <button class="lab-tab" class:active={view === v} onclick={() => (view = v)}>{v}</button>
     {/each}
+    <span class="lab-bridge" class:real={usingWails()}>
+      bridge: {usingWails() ? 'REAL (Wails)' : 'mock'}
+    </span>
   </nav>
   <main class="lab-main">
     {#if view === 'Invoices'}
@@ -70,5 +74,19 @@
     flex: 1;
     min-height: 0;
     min-width: 0;
+  }
+  .lab-bridge {
+    margin-left: auto;
+    font-size: calc(11px * var(--ui-font-scale));
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 2px 10px;
+    border-radius: var(--border-radius-pill);
+    background: var(--onyx-tint);
+    white-space: nowrap;
+  }
+  .lab-bridge.real {
+    background: rgba(30, 130, 76, 0.12);
+    color: #1e824c;
   }
 </style>

@@ -12,6 +12,8 @@ export default defineConfig({
       // One-source law: the live semantic token layer stays in the old
       // frontend tree until the flip; the lab consumes it, never copies it.
       $tokens: path.resolve('../frontend/src/assets'),
+      // Generated Wails bindings (same generation the old frontend uses).
+      $wails: path.resolve('../frontend/wailsjs'),
     },
   },
   server: {

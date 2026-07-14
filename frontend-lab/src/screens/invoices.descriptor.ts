@@ -13,7 +13,7 @@ import {
   markInvoicePaid,
   type InvoiceRow,
   type NewInvoiceDraft,
-} from '../bridge/mock'
+} from '../bridge'
 
 const newInvoiceForm: FormSpec<NewInvoiceDraft> = {
   title: 'New Invoice',
