@@ -37,7 +37,7 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 | K1 | Ledger blitz — 12 ledgers built, gated, detector-clean; report written | ✅ done (awaiting review) |
 | K2 | Entity blitz — Suppliers/Users/widen-Customers/Inventory DONE; Pricing+Cust360→K4 | ✅ done (awaiting review) |
 | K3 | Hub archetype + 4 dashboards DONE (donut/comparison/ranked/stat-grid/etc) | ✅ done (awaiting review) |
-| K4 | Bespoke screens on primitives | ⏳ next |
+| K4 | Bespoke screens — tranche 1 ✅ (6 archetype-fit); tranches 2-3 pending | 🔨 |
 | K3 | Hub archetype + dashboards | ⏳ |
 | K4 | Bespoke screens on primitives | ⏳ |
 | K5 | App shell + INTEG completion + harness | ⏳ |
@@ -111,8 +111,14 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 - **Tranche 1 (building):** archetype-fit fast wins as descriptors — Reports+AHS (Hubs),
   Opportunities/ApprovalsQueue/DataQuality/AuditTrail (ledgers). Proves archetypes cover
   far past "ledgers". bldK4a + bldK4b.
-- **Tranche 2 (next):** auth chrome (Login/SetupAdmin/PendingApproval/LicenseActivation +
-  shared PasswordField) + Stepper primitive (SetupWizard) + SerialTrace + Customer360.
+- **Tranche 1 DONE (commit 814dd4f):** Reports+AHS hubs + Opportunities/Approvals/
+  DataQuality/AuditTrail ledgers. 28 screens total on the kernel. Archetype polish: Hub
+  hides empty widgets + period wraps; PageShell actions cap to header width.
+- **REFINED PLAN — auth chrome moved to K5** (the auth FLOW lives in the app shell; building
+  isolated login/activation forms now has little demonstrable value). Stepper primitive also
+  → K5 (SetupWizard is part of first-run flow).
+- **Tranche 2 (next):** self-contained business bespoke that render data NOW — SerialTrace,
+  FXRevaluation, Customer360, NotificationsScreen, PricingScreen (+ small range-slider).
 - **Tranche 3 (L-monsters, sequenced by risk):** Settings (SPLIT + retire its Deployment
   tab), FXRevaluation, Accounting, CostingSheet, BankRecon (build AllocationMatchPanel),
   BookBankRecon (BalanceComparisonPanel), Payroll (PII — confirm $lib/api/payroll transport

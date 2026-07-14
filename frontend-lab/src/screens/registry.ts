@@ -29,6 +29,10 @@ import { inventoryFulfillmentDescriptor } from './inventory-fulfillment.descript
 import { opportunitiesDescriptor } from './opportunities.descriptor'
 import { approvalsDescriptor } from './approvals.descriptor'
 import { auditTrailDescriptor } from './audit-trail.descriptor'
+import { fxRevaluationDescriptor } from './fx-revaluation.descriptor'
+import SerialTrace from './SerialTrace.svelte'
+import Notifications from './Notifications.svelte'
+import Pricing from './Pricing.svelte'
 import { mainDashboardDescriptor } from './dashboards/main-dashboard.hub'
 import { crmCustomerHubDescriptor } from './dashboards/crm-customer.hub'
 import { crmSupplierHubDescriptor } from './dashboards/crm-supplier.hub'
@@ -88,6 +92,11 @@ export const screens: ScreenEntry[] = [
   { key: 'reports', label: 'Reports', group: 'Reports', archetype: 'hub', descriptor: reportsDescriptor },
   { key: 'ahs-finance', label: 'AHS Division Finance', group: 'Finance', archetype: 'hub', descriptor: ahsFinanceDescriptor },
   { key: 'data-quality', label: 'Data Quality', group: 'System', archetype: 'ledger', descriptor: dataQualityDescriptor },
+  { key: 'notifications', label: 'Notifications', group: 'System', archetype: 'bespoke', component: Notifications },
+  { key: 'pricing', label: 'Pricing', group: 'Sales', archetype: 'bespoke', component: Pricing },
+  // K4 tranche 2 — FX Revaluation ledger + Serial Trace bespoke
+  { key: 'fx-revaluation', label: 'FX Revaluation', group: 'Finance', archetype: 'ledger', descriptor: fxRevaluationDescriptor },
+  { key: 'serial-trace', label: 'Serial Trace', group: 'Operations', archetype: 'bespoke', component: SerialTrace },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]
