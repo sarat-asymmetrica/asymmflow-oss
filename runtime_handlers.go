@@ -582,7 +582,7 @@ func buildPricingPrompt(customer string, historicalData map[string]any) string {
 	// Convert historical data to JSON for context
 	jsonData, _ := json.MarshalIndent(historicalData, "", "  ")
 
-	return fmt.Sprintf(`As a pricing strategist for Acme Instrumentation, analyze this customer and recommend optimal pricing:
+	return fmt.Sprintf(`As a pricing strategist for %s, analyze this customer and recommend optimal pricing:
 
 Customer: %s
 Historical Data:
@@ -607,7 +607,7 @@ Respond in JSON format matching this structure:
     {"margin": 0.15, "win_probability": 0.92, "risk": "low"},
     {"margin": 0.20, "win_probability": 0.78, "risk": "medium"}
   ]
-}`, customer, string(jsonData))
+}`, activeOverlay.CompanyDisplayName, customer, string(jsonData))
 }
 
 // parsePricingRecommendation parses AI response into structured recommendation

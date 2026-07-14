@@ -52,6 +52,21 @@ type DivisionProfile struct {
 	// Aliases are extra lowercase spellings that normalise to this division's Key.
 	// E.g. ["beacon controls wll", "beacon controls w.l.l"] all map to "Beacon Controls".
 	Aliases []string `json:"aliases"`
+
+	// DocumentDisplayName is the exact string historically printed on exported
+	// documents (PDF/costing sheets) for this division. It is deliberately
+	// separate from LegalName: LegalName is the full registered legal name
+	// (e.g. "BEACON CONTROLS W.L.L."), while documents have historically
+	// printed a shorter trading label (e.g. "Beacon Controls WLL") that does
+	// not byte-match LegalName's casing/punctuation. Optional: when blank,
+	// DivisionDocumentDisplayName falls back to CompanyDisplayName (for the
+	// default division) or LegalName, so a partial overlay still renders.
+	DocumentDisplayName string `json:"document_display_name"`
+
+	// DashboardVariant is an optional per-division dashboard/audited-data
+	// variant key (e.g. "ahs") that selects an alternate dashboard data path
+	// for this division. Blank means the standard/default dashboard path.
+	DashboardVariant string `json:"dashboard_variant"`
 }
 
 // CompanyOverlay holds the full company/division configuration.
@@ -298,6 +313,8 @@ func BuiltinDefaults() *CompanyOverlay {
 				LetterheadAssetName: "letterhead",
 				LetterheadFile:      "Acme Instrumentation Letterhead.png",
 				Aliases:             []string{},
+				DocumentDisplayName: "Acme Instrumentation WLL",
+				DashboardVariant:    "",
 			},
 			{
 				Key:                 "Beacon Controls",
@@ -313,6 +330,8 @@ func BuiltinDefaults() *CompanyOverlay {
 					"beacon controls w.l.l",
 					"beacon controls w.l.l.",
 				},
+				DocumentDisplayName: "Beacon Controls WLL",
+				DashboardVariant:    "ahs",
 			},
 		},
 		// BusinessRules reproduce the hardcoded thresholds from
@@ -476,6 +495,42 @@ func (o *CompanyOverlay) NormalizeDivisionName(raw string) string {
 		}
 	}
 	return o.DefaultDivisionKey
+}
+
+// DivisionDocumentDisplayName returns the document-display string for the
+// normalized division key, falling back to CompanyDisplayName (default
+// division) or LegalName when the profile leaves it blank, so partial
+// overlays still render.
+func (o *CompanyOverlay) DivisionDocumentDisplayName(key string) string {
+	div := o.Profile(key)
+	if strings.TrimSpace(div.DocumentDisplayName) != "" {
+		return div.DocumentDisplayName
+	}
+	if div.Key == o.DefaultDivisionKey && strings.TrimSpace(o.CompanyDisplayName) != "" {
+		return o.CompanyDisplayName
+	}
+	return div.LegalName
+}
+
+// IsKnownDivision reports whether raw matches a division Key or alias
+// (case-insensitive, trimmed). Unlike NormalizeDivisionName it does NOT
+// fall back to the default — it returns false for genuinely unknown values.
+func (o *CompanyOverlay) IsKnownDivision(raw string) bool {
+	needle := strings.TrimSpace(strings.ToLower(raw))
+	if needle == "" {
+		return false
+	}
+	for _, div := range o.Divisions {
+		if strings.ToLower(div.Key) == needle {
+			return true
+		}
+		for _, alias := range div.Aliases {
+			if alias == needle {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Profile returns the DivisionProfile for the given key (already normalised).

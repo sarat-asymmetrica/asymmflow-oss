@@ -1239,20 +1239,13 @@ func (a *App) ExportCostingToExcel(data CostingExportData) (string, error) {
 		contactName = strings.TrimSpace(data.CustomerName)
 	}
 
-	// Wave 11 B1: the DISPLAY value on the exported document comes from the
-	// overlay (CompanyDisplayName), so a deployment re-skins the default division
-	// on its PDFs with no source edit. The switch LABELS stay literal on purpose —
-	// they route stored division rows, which this wave must not touch (stored-data
-	// caution). Only the assigned display value is de-literaled here; the
-	// Beacon-Controls trading suffix stays literal pending the division registry
-	// (see FABLE_WAVE11_SPEC_REPORT.md §B1 deferred coupling).
-	divisionValue := strings.TrimSpace(data.Division)
-	switch divisionValue {
-	case "Beacon Controls":
-		divisionValue = "Beacon Controls WLL"
-	case "", "Acme Instrumentation":
-		divisionValue = activeOverlay.CompanyDisplayName
-	}
+	// Wave 12 B3: the exported document's division label comes from the
+	// registry's DocumentDisplayName (the exact string historically printed
+	// on documents), resolved via the normalized division key. This replaces
+	// the Wave 11 literal switch; DocumentDisplayName reproduces the historic
+	// values byte-for-byte for the synthetic pair ("Acme Instrumentation" /
+	// "" → "Acme Instrumentation WLL"; "Beacon Controls" → "Beacon Controls WLL").
+	divisionValue := activeOverlay.DivisionDocumentDisplayName(activeOverlay.NormalizeDivisionName(data.Division))
 
 	supplierCode := "EH"
 	if len(data.LineItems) > 0 && strings.TrimSpace(data.LineItems[0].Supplier) != "" {
@@ -1829,14 +1822,23 @@ func costingTemplateDownloadsCandidate() string {
 	if err != nil || home == "" {
 		return ""
 	}
-	return filepath.Join(home, "Downloads", "Acme Instrumentation Costing MasterFile.xlsx")
+	return filepath.Join(home, "Downloads", costingTemplateFileName())
+}
+
+// costingTemplateFileName returns the well-known costing template filename,
+// sourced from the overlay's default division so a re-skinned deployment
+// looks for its own template. Byte-identical for the synthetic default
+// overlay ("Acme Instrumentation Costing MasterFile.xlsx").
+func costingTemplateFileName() string {
+	return activeOverlay.DefaultDivision() + " Costing MasterFile.xlsx"
 }
 
 func findCostingTemplatePath(projectRoot string) string {
+	fileName := costingTemplateFileName()
 	candidates := []string{
-		filepath.Join(projectRoot, "Acme Instrumentation Costing MasterFile.xlsx"),
-		filepath.Join(projectRoot, "assets", "Acme Instrumentation Costing MasterFile.xlsx"),
-		filepath.Join(projectRoot, "templates", "Acme Instrumentation Costing MasterFile.xlsx"),
+		filepath.Join(projectRoot, fileName),
+		filepath.Join(projectRoot, "assets", fileName),
+		filepath.Join(projectRoot, "templates", fileName),
 		costingTemplateDownloadsCandidate(),
 	}
 

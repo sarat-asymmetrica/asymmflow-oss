@@ -28,6 +28,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"ph_holdings_app/pkg/overlay"
 )
 
 // ============================================================================
@@ -199,21 +201,27 @@ func (w *SetupWizard) SuggestFolders() FolderConfig {
 	// Try to detect OneDrive path
 	oneDrivePath := detectOneDrivePath()
 
+	// The suggested folder name is the deployment's default division key —
+	// sourced from the overlay registry so a re-skinned deployment gets
+	// correctly-named suggested folders too. Byte-identical for the
+	// synthetic default overlay ("Acme Instrumentation").
+	divisionFolderName := overlay.Active().DefaultDivision()
+
 	if oneDrivePath != "" {
 		// OneDrive detected - suggest paths within it
 		return FolderConfig{
-			RFQPath:       filepath.Join(oneDrivePath, "Acme Instrumentation", "RFQs"),
-			OffersPath:    filepath.Join(oneDrivePath, "Acme Instrumentation", "Offers"),
-			InvoicesPath:  filepath.Join(oneDrivePath, "Acme Instrumentation", "Invoices"),
-			EHXMLPath:     filepath.Join(oneDrivePath, "Acme Instrumentation", "Rhine Instruments Pricing"),
-			CustomersPath: filepath.Join(oneDrivePath, "Acme Instrumentation", "Customers"),
-			ReportsPath:   filepath.Join(oneDrivePath, "Acme Instrumentation", "Reports"),
+			RFQPath:       filepath.Join(oneDrivePath, divisionFolderName, "RFQs"),
+			OffersPath:    filepath.Join(oneDrivePath, divisionFolderName, "Offers"),
+			InvoicesPath:  filepath.Join(oneDrivePath, divisionFolderName, "Invoices"),
+			EHXMLPath:     filepath.Join(oneDrivePath, divisionFolderName, "Rhine Instruments Pricing"),
+			CustomersPath: filepath.Join(oneDrivePath, divisionFolderName, "Customers"),
+			ReportsPath:   filepath.Join(oneDrivePath, divisionFolderName, "Reports"),
 		}
 	}
 
 	// Fallback to Documents folder
 	homeDir, _ := os.UserHomeDir()
-	docsPath := filepath.Join(homeDir, "Documents", "Acme Instrumentation")
+	docsPath := filepath.Join(homeDir, "Documents", divisionFolderName)
 
 	return FolderConfig{
 		RFQPath:       filepath.Join(docsPath, "RFQs"),

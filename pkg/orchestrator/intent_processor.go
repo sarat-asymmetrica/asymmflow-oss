@@ -37,6 +37,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"ph_holdings_app/pkg/overlay"
 )
 
 // ============================================================================
@@ -537,7 +539,7 @@ func (p *IntentProcessor) prepareOfferEmail(intent *Intent) *EmailContent {
 	if c, ok := intent.Entities["customer"].(string); ok {
 		customer = c
 	}
-	email.Subject = fmt.Sprintf("Quotation for %s - Acme Instrumentation", customer)
+	email.Subject = fmt.Sprintf("Quotation for %s - %s", customer, overlay.Active().CompanyDisplayName)
 
 	// Set body
 	products := ""
@@ -561,7 +563,7 @@ Should you have any questions or require clarification, please do not hesitate t
 We look forward to your favorable response.
 
 Best regards,
-Acme Instrumentation
+`+overlay.Active().CompanyDisplayName+`
 `, products)
 
 	return email

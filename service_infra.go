@@ -63,6 +63,9 @@ type DivisionEntry struct {
 	Key       string   `json:"key"`
 	LegalName string   `json:"legalName"`
 	Aliases   []string `json:"aliases"`
+	// DashboardVariant is an optional per-division dashboard/audited-data
+	// variant key (e.g. "ahs"). Blank means the standard dashboard path.
+	DashboardVariant string `json:"dashboardVariant"`
 }
 
 // DivisionRegistry is the read-only snapshot of the active overlay's division
@@ -83,9 +86,10 @@ func (s *InfraService) GetDivisionRegistry() DivisionRegistry {
 	divisions := make([]DivisionEntry, 0, len(active.Divisions))
 	for _, div := range active.Divisions {
 		divisions = append(divisions, DivisionEntry{
-			Key:       div.Key,
-			LegalName: div.LegalName,
-			Aliases:   div.Aliases,
+			Key:              div.Key,
+			LegalName:        div.LegalName,
+			Aliases:          div.Aliases,
+			DashboardVariant: div.DashboardVariant,
 		})
 	}
 	return DivisionRegistry{

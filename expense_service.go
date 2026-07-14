@@ -91,10 +91,11 @@ func ensureExpenseFoundation(a *App) error {
 			return fmt.Errorf("failed to migrate %T: %w", model, err)
 		}
 	}
+	divisionDefaultDDL := "TEXT DEFAULT " + sqlStringLiteral(activeOverlay.DefaultDivision())
 	a.addColumnIfNotExists("expense_entries", "payment_method", "TEXT")
-	a.addColumnIfNotExists("expense_entries", "division", "TEXT DEFAULT 'Acme Instrumentation'")
-	a.addColumnIfNotExists("recurring_expenses", "division", "TEXT DEFAULT 'Acme Instrumentation'")
-	a.addColumnIfNotExists("bank_expense_entries", "division", "TEXT DEFAULT 'Acme Instrumentation'")
+	a.addColumnIfNotExists("expense_entries", "division", divisionDefaultDDL)
+	a.addColumnIfNotExists("recurring_expenses", "division", divisionDefaultDDL)
+	a.addColumnIfNotExists("bank_expense_entries", "division", divisionDefaultDDL)
 	if err := a.seedCompanyBankAccountsInternal(); err != nil {
 		return fmt.Errorf("failed to seed company bank accounts: %w", err)
 	}

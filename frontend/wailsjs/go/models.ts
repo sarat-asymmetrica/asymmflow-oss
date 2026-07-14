@@ -10857,6 +10857,7 @@ export namespace main {
 	    key: string;
 	    legalName: string;
 	    aliases: string[];
+	    dashboardVariant: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new DivisionEntry(source);
@@ -10867,6 +10868,7 @@ export namespace main {
 	        this.key = source["key"];
 	        this.legalName = source["legalName"];
 	        this.aliases = source["aliases"];
+	        this.dashboardVariant = source["dashboardVariant"];
 	    }
 	}
 	export class DivisionFinancialSummary {

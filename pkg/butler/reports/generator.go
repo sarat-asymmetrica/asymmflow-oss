@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/jung-kurt/gofpdf"
+
+	"ph_holdings_app/pkg/overlay"
 )
 
 var actionBlockRegex = regexp.MustCompile(`(?s)\[ACTIONS\](.*?)\[/ACTIONS\]`)
@@ -41,7 +43,8 @@ func RequiresFinanceAccess(reportType string) bool {
 }
 
 func BuildPrompt(reportType, query, contextJSON string) string {
-	return fmt.Sprintf(`You are a senior management consultant preparing a business intelligence brief for the executive team at Acme Instrumentation WLL, a process instrumentation and industrial automation company based in Bahrain.
+	ov := overlay.Active()
+	return fmt.Sprintf(`You are a senior management consultant preparing a business intelligence brief for the executive team at %s, a %s company based in %s.
 
 REPORT FOCUS: %s
 SPECIFIC SUBJECT: %s
@@ -81,7 +84,7 @@ WRITING STANDARDS:
 - If data is insufficient for a conclusion, state what additional data would be needed.
 - Do NOT use words like "regime", "stabilization phase", "exploration", "optimization" or any systems/mathematical terminology. Use plain business language only.
 
-Generate the report now.`, reportType, query, contextJSON)
+Generate the report now.`, ov.CompanyDisplayName, strings.ToLower(ov.Industry), ov.Country, reportType, query, contextJSON)
 }
 
 func HasDataForReport(reportType string, context map[string]any) bool {
@@ -147,7 +150,7 @@ func AddCoverPage(pdf *gofpdf.Fpdf, reportType, query string) {
 	pdf.SetFont("Helvetica", "", 10)
 	pdf.Cell(40, 6, "Prepared by:")
 	pdf.SetFont("Helvetica", "B", 10)
-	pdf.Cell(0, 6, "Acme Instrumentation Business Intelligence")
+	pdf.Cell(0, 6, overlay.Active().DefaultDivision()+" Business Intelligence")
 	pdf.Ln(14)
 
 	pdf.SetFont("Helvetica", "I", 8)
