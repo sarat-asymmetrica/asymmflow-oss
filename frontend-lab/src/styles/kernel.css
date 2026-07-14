@@ -1,0 +1,46 @@
+/* Kernel base layer.
+ * L3: the semantic token source of truth stays in the old frontend tree
+ * until the flip — imported here, never copied. Kernel additions are
+ * namespaced --k-* and never redefine existing tokens. */
+@import '$tokens/design-tokens.css';
+
+:root {
+  /* Kernel spacing scale — aligned with the semantic layer's values
+   * (card padding 16, page padding 24, section spacing 20, grid gap 16). */
+  --k-space-none: 0;
+  --k-space-xs: 4px;
+  --k-space-sm: 8px;
+  --k-space-md: 16px;
+  --k-space-lg: 24px;
+  --k-space-xl: 32px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: calc(14px * var(--ui-font-scale));
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
