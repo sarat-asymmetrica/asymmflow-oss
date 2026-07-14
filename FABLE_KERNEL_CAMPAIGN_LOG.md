@@ -105,6 +105,47 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
   unblocks batch-2 reason-on-row actions (PO Cancel, Cheque Cancel/Stale, Expenses
   Reject, Payments Reverse). RFQ's 4-button stage workaround can later fold to 1 form.
 
+## K4 plan (orchestrator, from recon-K4.md) — the bespoke grab-bag, run in tranches
+33 screens triaged: 5 auth-chrome, 7 archetype-fit, 11 bespoke-on-primitives, 4 defer-K5/K6,
+6 RETIRE. Nearly all already on real Wails bindings.
+- **Tranche 1 (building):** archetype-fit fast wins as descriptors — Reports+AHS (Hubs),
+  Opportunities/ApprovalsQueue/DataQuality/AuditTrail (ledgers). Proves archetypes cover
+  far past "ledgers". bldK4a + bldK4b.
+- **Tranche 2 (next):** auth chrome (Login/SetupAdmin/PendingApproval/LicenseActivation +
+  shared PasswordField) + Stepper primitive (SetupWizard) + SerialTrace + Customer360.
+- **Tranche 3 (L-monsters, sequenced by risk):** Settings (SPLIT + retire its Deployment
+  tab), FXRevaluation, Accounting, CostingSheet, BankRecon (build AllocationMatchPanel),
+  BookBankRecon (BalanceComparisonPanel), Payroll (PII — confirm $lib/api/payroll transport
+  first), Butler (chat-transcript primitive; subsumes IntelligenceHub). NotificationsScreen.
+- **Defer to K5/K6:** DeploymentHub, PeopleHub, WorkHub, OneDriveImport (need a shared
+  operational-hub tabbed-console primitive; OneDrive is currently disabled/unrouted).
+
+## K4 RETIRE — ✅ OWNER-RATIFIED 2026-07-14 ("let's retire them, brother")
+All 6 below are RETIRED with owner sign-off. Not rebuilt in the kernel. The old
+`frontend/` files stay as reference until the K6 flip deletes the whole tree. For
+CashPositionWidget, its 4 Go bindings are KEPT (re-plumb into a future cash-position
+tile); only the .svelte file retires. Recorded here + in the K4 report as the sign-off.
+1. **IntelligenceHub** — 58-line zero-logic wrapper around ButlerScreen (route Intelligence
+   → rebuilt Butler instead).
+2. **EntityDiscoveryScreen** — dead/unreferenced D3 graph explorer (internal debug tool).
+3. **ArchaeologistScreen** — dead/unreferenced file-scanner dev-tool; arbitrary server-side
+   path scan is a security smell for an ERP screen.
+4. **ArrivalCeremony** — unreachable (DEMO_SETUP_SCREEN=false), demo scaffold, legacy branding.
+5. **EcosystemDashboard** — non-Wails local-runtime dev/research tool (Edge-tab scraping),
+   unreferenced, out of ERP scope.
+6. **CashPositionWidget** — orphaned, redundant with StatTileGrid+ListWidget; KEEP its 4 Go
+   bindings, drop the file (re-plumb into a future cash-position tile).
+All 6 are dead/unreferenced/dev-tooling/demo. Owner ratifies during review.
+
+## K3 COMPLETE (2026-07-14, commits d7d1531 + 0206ed9)
+4th archetype `Hub` + 8-widget data-viz library (donut/distribution h+v/ranked/stat-grid/
+list/activity/callout/comparison, no chart lib) + 4 dashboards (main Dashboard, Finance
+Overview, CRM Customer, CRM Supplier). Categorical palette --k-series-* CVD-validated.
+Drill-downs proven live (AR KPI → Invoices Overdue). Responsive harness nav (off-canvas
+≤720px) so screens get full width. Gate green (check 0/0 249 files, test 26, build).
+Detector CLEAN on all 21 product screens @1440+420 w/ widgets. FABLE_WAVE_K3_REPORT.md.
+Campaign: 3/6 waves done; 22 screens on the kernel; 4 archetypes built.
+
 ## K3 rulings (orchestrator, from recon-K3a + recon-K3b)
 - **Real Hub targets = 4 dashboards:** DashboardScreen (main), Finance Overview
   (FinancialDashboard), CRM Customer Overview, CRM Supplier Overview. AHSDashboard =

@@ -26,10 +26,16 @@ import { expensesDescriptor } from './expenses.descriptor'
 import { suppliersDescriptor } from './suppliers.descriptor'
 import { usersDescriptor } from './users.descriptor'
 import { inventoryFulfillmentDescriptor } from './inventory-fulfillment.descriptor'
+import { opportunitiesDescriptor } from './opportunities.descriptor'
+import { approvalsDescriptor } from './approvals.descriptor'
+import { auditTrailDescriptor } from './audit-trail.descriptor'
 import { mainDashboardDescriptor } from './dashboards/main-dashboard.hub'
 import { crmCustomerHubDescriptor } from './dashboards/crm-customer.hub'
 import { crmSupplierHubDescriptor } from './dashboards/crm-supplier.hub'
 import { financeOverviewDescriptor } from './dashboards/finance-overview.hub'
+import { reportsDescriptor } from './dashboards/reports.hub'
+import { ahsFinanceDescriptor } from './dashboards/ahs-finance.hub'
+import { dataQualityDescriptor } from './data-quality.descriptor'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -74,6 +80,14 @@ export const screens: ScreenEntry[] = [
   { key: 'suppliers', label: 'Suppliers', group: 'Operations', archetype: 'entity', descriptor: suppliersDescriptor },
   { key: 'inventory-fulfillment', label: 'Inventory Fulfillment', group: 'Operations', archetype: 'ledger', descriptor: inventoryFulfillmentDescriptor },
   { key: 'users', label: 'Users', group: 'System', archetype: 'entity', descriptor: usersDescriptor },
+  // K4 — Opportunities/Approvals/AuditTrail ledgers
+  { key: 'opportunities', label: 'Opportunities', group: 'Sales', archetype: 'ledger', descriptor: opportunitiesDescriptor },
+  { key: 'approvals', label: 'Approvals Queue', group: 'System', archetype: 'ledger', descriptor: approvalsDescriptor },
+  { key: 'audit-trail', label: 'Audit Trail', group: 'System', archetype: 'ledger', descriptor: auditTrailDescriptor },
+  // K4 — Reports/AHS hubs + Data Quality ledger
+  { key: 'reports', label: 'Reports', group: 'Reports', archetype: 'hub', descriptor: reportsDescriptor },
+  { key: 'ahs-finance', label: 'AHS Division Finance', group: 'Finance', archetype: 'hub', descriptor: ahsFinanceDescriptor },
+  { key: 'data-quality', label: 'Data Quality', group: 'System', archetype: 'ledger', descriptor: dataQualityDescriptor },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]

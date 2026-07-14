@@ -37,6 +37,27 @@
   })
 
   const nav: Navigate = (intent) => navigate?.(intent)
+
+  // Hide a widget whose computed data is empty (conditional dashboards like
+  // Reports, where each category fills only some widgets) — no empty titled
+  // cards. Activity keeps its own empty state; bespoke decides for itself.
+  function hasContent(w: HubDescriptor<Data>['widgets'][number], d: Data): boolean {
+    switch (w.type) {
+      case 'distribution':
+      case 'donut':
+        return w.segments(d).length > 0
+      case 'ranked':
+      case 'list':
+      case 'comparison':
+        return w.rows(d).length > 0
+      case 'callout':
+        return w.items(d).length > 0
+      case 'stat-grid':
+        return w.sections(d).some((s) => s.items.length > 0)
+      default:
+        return true
+    }
+  }
 </script>
 
 <PageShell
@@ -111,6 +132,7 @@
       <!-- Widget grid -->
       <div class="k-hub-grid">
         {#each descriptor.widgets as widget, i (widget.title + i)}
+          {#if hasContent(widget, data)}
           <div class="k-hub-cell" class:wide={widget.span === 2}>
             <Card padding="lg">
               <Stack gap="sm">
@@ -150,6 +172,7 @@
               </Stack>
             </Card>
           </div>
+          {/if}
         {/each}
       </div>
     </Stack>
@@ -159,10 +182,13 @@
 <style>
   .k-hub-period {
     display: flex;
+    flex-wrap: wrap;
     gap: 2px;
     background: var(--onyx-tint);
-    border-radius: var(--border-radius-pill);
+    border-radius: var(--border-radius-lg);
     padding: 2px;
+    min-width: 0;
+    max-width: 100%;
   }
   .k-hub-period-btn {
     font: inherit;

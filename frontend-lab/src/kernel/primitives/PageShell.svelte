@@ -79,6 +79,11 @@
   }
   .k-page-actions {
     flex-shrink: 0;
+    /* Never exceed the header width — a wide action group (e.g. a Hub's
+     * period selector with many options) wraps within, rather than pushing
+     * the page. Narrow button rows are unaffected. */
+    max-width: 100%;
+    min-width: 0;
   }
   .k-page-toolbar {
     flex-shrink: 0;
