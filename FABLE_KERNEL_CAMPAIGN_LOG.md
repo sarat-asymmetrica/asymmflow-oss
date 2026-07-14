@@ -36,7 +36,8 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 | K0 | Baseline verified + scaffolding + engine spine | ✅ done |
 | K1 | Ledger blitz — 12 ledgers built, gated, detector-clean; report written | ✅ done (awaiting review) |
 | K2 | Entity blitz — Suppliers/Users/widen-Customers/Inventory DONE; Pricing+Cust360→K4 | ✅ done (awaiting review) |
-| K3 | Hub archetype + dashboards | 🔨 building (engine first) |
+| K3 | Hub archetype + 4 dashboards DONE (donut/comparison/ranked/stat-grid/etc) | ✅ done (awaiting review) |
+| K4 | Bespoke screens on primitives | ⏳ next |
 | K3 | Hub archetype + dashboards | ⏳ |
 | K4 | Bespoke screens on primitives | ⏳ |
 | K5 | App shell + INTEG completion + harness | ⏳ |

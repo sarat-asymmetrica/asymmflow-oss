@@ -27,6 +27,9 @@ import { suppliersDescriptor } from './suppliers.descriptor'
 import { usersDescriptor } from './users.descriptor'
 import { inventoryFulfillmentDescriptor } from './inventory-fulfillment.descriptor'
 import { mainDashboardDescriptor } from './dashboards/main-dashboard.hub'
+import { crmCustomerHubDescriptor } from './dashboards/crm-customer.hub'
+import { crmSupplierHubDescriptor } from './dashboards/crm-supplier.hub'
+import { financeOverviewDescriptor } from './dashboards/finance-overview.hub'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -47,6 +50,9 @@ export interface ScreenEntry {
 export const screens: ScreenEntry[] = [
   // K3 — Hub archetype + dashboards
   { key: 'dashboard', label: 'Dashboard', group: 'Home', archetype: 'hub', descriptor: mainDashboardDescriptor },
+  { key: 'finance-overview', label: 'Finance Overview', group: 'Finance', archetype: 'hub', descriptor: financeOverviewDescriptor },
+  { key: 'crm-customer', label: 'CRM Customer Overview', group: 'Sales', archetype: 'hub', descriptor: crmCustomerHubDescriptor },
+  { key: 'crm-supplier', label: 'CRM Supplier Overview', group: 'Operations', archetype: 'hub', descriptor: crmSupplierHubDescriptor },
   // Pilots
   { key: 'invoices', label: 'Invoices', group: 'Finance', archetype: 'ledger', descriptor: invoicesDescriptor },
   { key: 'customers', label: 'Customers', group: 'Sales', archetype: 'entity', descriptor: customersDescriptor },

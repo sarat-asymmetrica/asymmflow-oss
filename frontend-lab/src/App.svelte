@@ -8,6 +8,10 @@
   import { screens, screensByGroup, type ScreenEntry } from './screens/registry'
 
   let activeKey = $state(screens[0]?.key ?? '')
+  // Harness nav collapses to an overlay at narrow widths so product screens get
+  // the full viewport (the real K5 app shell will do the same). Closed by
+  // default at narrow — content is never squeezed by dev chrome.
+  let navOpen = $state(false)
   // Drill-down seed for the screen we navigated TO (parity #4). Cleared on a
   // manual tab click so a hand-picked screen never inherits a stale filter.
   let pendingQuery = $state<Partial<LedgerQuery> | undefined>(undefined)
@@ -17,6 +21,7 @@
   function pick(key: string) {
     pendingQuery = undefined
     activeKey = key
+    navOpen = false
   }
   function navigate(intent: NavIntent) {
     if (!screens.some((s) => s.key === intent.key)) return
@@ -35,8 +40,9 @@
   }
 </script>
 
-<div class="lab-shell">
-  <aside class="lab-side">
+<div class="lab-shell" class:nav-open={navOpen}>
+  <button class="lab-navtoggle" aria-label="Toggle navigation" onclick={() => (navOpen = !navOpen)}>☰</button>
+  <aside class="lab-side" class:open={navOpen}>
     <div class="lab-brand">Kernel Lab</div>
     <nav class="lab-nav">
       {#each groups as g (g.group)}
@@ -87,6 +93,22 @@
     height: 100%;
     min-height: 0;
     min-width: 0;
+    position: relative;
+  }
+  .lab-navtoggle {
+    display: none;
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 30;
+    width: 34px;
+    height: 34px;
+    border: var(--border-width) solid var(--border);
+    border-radius: var(--border-radius-sm);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 16px;
+    cursor: pointer;
   }
   .lab-side {
     display: flex;
@@ -161,5 +183,36 @@
   .lab-bridge.real {
     background: rgba(30, 130, 76, 0.12);
     color: #1e824c;
+  }
+
+  /* Narrow viewports: nav is an off-canvas overlay so product screens get the
+   * full width (dev chrome never squeezes content). The layout-detector runs
+   * with the nav closed → it measures true screen width, not width-minus-nav. */
+  @media (max-width: 720px) {
+    .lab-navtoggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .lab-side {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 20;
+      transform: translateX(-100%);
+      transition: transform var(--motion-medium, 200ms) var(--ease-standard, ease);
+    }
+    .lab-side.open {
+      transform: none;
+      box-shadow: 0 0 24px rgba(0, 0, 0, 0.18);
+    }
+    .lab-main {
+      width: 100%;
+    }
+    /* Give the page header room for the fixed toggle button. */
+    .lab-main :global(.k-page-header) {
+      padding-left: 40px;
+    }
   }
 </style>
