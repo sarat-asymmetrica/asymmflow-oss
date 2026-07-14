@@ -436,6 +436,29 @@ func getSystemFontPaths() []systemFontEntry {
 	}
 }
 
+// resolveContractProviderProfile resolves the provider (SERVICE PROVIDER)
+// identity for a contract.
+//
+// CHAIN-GAP fix (Wave 12.5): a Contract has no Division field of its own, but
+// its linked Order does. Resolve the provider identity from that order's
+// division (a read-only FK join) so a non-default-division contract prints
+// the correct legal entity — e.g. a Beacon-order contract prints Beacon's
+// legal name / TRN / address, not the default division's. Falls back to the
+// default division when the contract has no order, the order lookup fails,
+// or the order has no division (NormalizeDivisionName("") returns
+// DefaultDivisionKey) — byte-identical to the previous behavior for those
+// cases.
+func (s *Service) resolveContractProviderProfile(contract *Contract) overlay.DivisionProfile {
+	division := ""
+	if contract != nil && strings.TrimSpace(contract.OrderID) != "" {
+		var order crm.Order
+		if err := s.db.Select("division").First(&order, "id = ?", contract.OrderID).Error; err == nil {
+			division = order.Division
+		}
+	}
+	return overlay.Active().Profile(overlay.Active().NormalizeDivisionName(division))
+}
+
 // RenderContractPDF renders contract content to PDF
 func (s *Service) RenderContractPDF(gen *engines.PDFGenerator, contract *Contract, customer *crm.CustomerMaster, clauses []ClauseSelection) error {
 	gen.Doc().AddPage()
@@ -490,10 +513,7 @@ func (s *Service) RenderContractPDF(gen *engines.PDFGenerator, contract *Contrac
 	gen.Doc().SetXY(50, y)
 	gen.Doc().Cell(nil, "PARTIES TO THIS AGREEMENT:")
 
-	// Look up the provider identity from the overlay. Contracts have no division
-	// field, so we use the default division (NormalizeDivisionName("") returns
-	// the DefaultDivisionKey — i.e. "Acme Instrumentation").
-	providerProfile := overlay.Active().Profile(overlay.Active().NormalizeDivisionName(""))
+	providerProfile := s.resolveContractProviderProfile(contract)
 	providerAddress := ""
 	if len(providerProfile.AddressLines) > 0 {
 		providerAddress = providerProfile.AddressLines[0]
