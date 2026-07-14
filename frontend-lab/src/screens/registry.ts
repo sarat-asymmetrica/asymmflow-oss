@@ -40,6 +40,8 @@ import { financeOverviewDescriptor } from './dashboards/finance-overview.hub'
 import { reportsDescriptor } from './dashboards/reports.hub'
 import { ahsFinanceDescriptor } from './dashboards/ahs-finance.hub'
 import { dataQualityDescriptor } from './data-quality.descriptor'
+import Customer360 from './Customer360.svelte'
+import BookBankRecon from './BookBankRecon.svelte'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -97,6 +99,9 @@ export const screens: ScreenEntry[] = [
   // K4 tranche 2 — FX Revaluation ledger + Serial Trace bespoke
   { key: 'fx-revaluation', label: 'FX Revaluation', group: 'Finance', archetype: 'ledger', descriptor: fxRevaluationDescriptor },
   { key: 'serial-trace', label: 'Serial Trace', group: 'Operations', archetype: 'bespoke', component: SerialTrace },
+  // K4 tranche 3 — bespoke detail + reconciliation
+  { key: 'customer-360', label: 'Customer 360', group: 'Sales', archetype: 'bespoke', component: Customer360 },
+  { key: 'book-bank-recon', label: 'Book vs Bank Recon', group: 'Finance', archetype: 'bespoke', component: BookBankRecon },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]
