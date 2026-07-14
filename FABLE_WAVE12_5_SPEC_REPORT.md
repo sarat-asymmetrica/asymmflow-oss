@@ -5,7 +5,7 @@ DEFAULT (or company-level) division identity onto records that belong to a speci
 before convergence, so migrated multi-division data emits correct documents from day one.
 
 **Branch:** `feat/fable-wave12-5-division-emission` (off `main`, post-Wave-12 merge `32402db`). No merge, no push, no tag.
-**Scale:** SMALL — 1 orchestrator + Sonnet-5 coders, one day. Census read-only; 3 GAP/CHAIN-GAP fixes + B3 hook + B4 stretch; 4 documented stop-and-report/defer items.
+**Scale:** SMALL — 1 orchestrator + Sonnet-5 coders, one day. Census read-only; 4 GAP/CHAIN-GAP fixes (incl. the owner-sanctioned per-TRN VAT return, B1d) + B3 hook + B4 stretch; 3 remaining defer items (all off the live document path).
 
 ---
 
@@ -50,7 +50,7 @@ Verdicts: **CORRECT** (record division flows to profile) · **GAP** (record has 
 
 | emission point | record | division? | identity source today | verdict |
 |---|---|---|---|---|
-| **einvoice_service.go ExportVATReturnData** | quarterly VAT CSV | invoices span divisions (no filter) | `companyDocumentProfile("")` = default TRN | **STOP-AND-REPORT** (§4.1 — finance-sacred) |
+| **einvoice_service.go ExportVATReturnData** | quarterly VAT CSV | invoices span divisions (no filter) | `companyDocumentProfile("")` = default TRN | **GAP → FIXED (B1d, owner-sanctioned)** |
 | statement_export_service.go Balance Sheet / GL / Journal CSV | whole-entity ledger | ledger has no division column | `CompanyDisplayName` title | COMPANY-LEVEL BY DESIGN |
 | pkg/compliance/saudi/zatca.go renderParty / QR | ZATCA UBL / QR | identity injected by caller | `inv.Seller` (caller resolves `invoice.Division`) | COMPANY-LEVEL BY DESIGN (stateless engine) |
 
@@ -84,6 +84,8 @@ All default-division output is byte-identical (proven by tests + the pre-existin
 
 **B1c — Contract provider identity** (`pkg/crm/contract/service.go`): new `resolveContractProviderProfile(contract)` does a read-only `orders.division` lookup on `contract.OrderID` (existing FK — no schema change), then `Profile(NormalizeDivisionName(division))`. Empty OrderID → default (byte-identical fallback). `SeedContractClauses` untouched.
 
+**B1d — VAT return per-TRN partitioning** (`einvoice_service.go ExportVATReturnData`) — **owner-sanctioned tax-behavior change** (was §4.1 stop-and-report; the owner confirmed each division is a distinct VAT-registered entity with its own TRN, verified against the OG PH deployment which carries two distinct real TRNs for its two `W.L.L.` divisions). The export now emits **one CSV per configured division**, each stamped with that division's TRN/legal name and covering **only that division's supplies**. Every invoice is bucketed by `normalizeDivisionName(inv.Division)` and every credit note by `resolveCreditNoteDivision(cn)` (chain lookup) — empty/unknown falls back to the default division, so **no supply is silently dropped**. A single-division deployment emits exactly one CSV with all supplies under that TRN (content byte-identical to the pre-Wave-12.5 aggregate). Return type stays `(string, error)` — now the export **directory** (holds the per-division CSVs); the frontend toast and the one Go caller are unaffected.
+
 **B2 — Butler letterheads:** verified all 5 `butler_reports.go` sites (+ `generator.go` "Prepared by") are cross-division portfolio BI → **COMPANY-LEVEL BY DESIGN, no change**. No new report shapes.
 
 **B3 — Delivery-terms hook** (`pkg/crm/offer_hooks.go` new + `app.go` wiring): `Offer.BeforeCreate` mints the ID via the embedded `Base` hook, then fills empty `DeliveryTerms` from a DI seam `ComposeOfferDeliveryTerms` (a `func` var — pkg/crm stays overlay-free by design). `app.go` startup wires it to `"DAP Bahrain at your store or " + activeOverlay.NormalizeDivisionName(division)`. **Struct tag and `division_literal_audit_test.go` exemption both left untouched** — the literal remains physically in source (so the tripwire exemption is still required) but the column default is now vestigial. Empty/default → `"…or Acme Instrumentation"` (byte-identical to the DB default); Beacon → `"…or Beacon Controls"`.
@@ -103,6 +105,7 @@ For a **Beacon Controls** record, output changed as follows (Acme unchanged):
 | Contract SERVICE PROVIDER | `ACME INSTRUMENTATION W.L.L` / TRN `990000000000000` | `BEACON CONTROLS W.L.L.` / TRN `990000000000001` |
 | Offer delivery terms (empty→composed) | `DAP Bahrain at your store or Acme Instrumentation` | `DAP Bahrain at your store or Beacon Controls` |
 | Butler `division_revenue` keys | `{ph_trading, ahs_trading}` (2, drops 3rd+) | `{Acme Instrumentation, Beacon Controls, …}` (N) |
+| VAT return (B1d) | 1 CSV, all divisions' VAT under the default TRN `…000` | N CSVs — Beacon's VAT (`…001`) only in Beacon's return, Acme's (`…000`) only in Acme's |
 
 Each is locked by a new before/after test (see §5).
 
@@ -110,7 +113,7 @@ Each is locked by a new before/after test (see §5).
 
 ## 4. Stop-and-report / deferred (with fix sketches)
 
-**4.1 — VAT-return multi-TRN (STOP-AND-REPORT, finance-sacred).** `einvoice_service.go ExportVATReturnData` aggregates every division's invoices (no division filter) yet stamps the default TRN (`990000000000000`). Because the synthetic overlay carries **two distinct TRNs**, a single-TRN return covering both divisions is only correct if the deployment is a single/group VAT registration. Whether to file one consolidated return or one per TRN is a **tax-behavior decision** (CLAUDE.md invariant #5 — stop-and-ask), so this wave did **not** change it. **Sketch:** loop `activeOverlay.Divisions`, filter invoices by `invoice.Division`, emit one CSV per division TRN. **Owner decision required.**
+**4.1 — VAT-return multi-TRN — RESOLVED & IMPLEMENTED (B1d).** Originally raised here as a finance-sacred stop-and-report. The owner confirmed (cross-checked against the OG PH deployment, whose two `W.L.L.` divisions carry two distinct real TRNs) that each division is a distinct VAT-registered entity that files its own NBR return. Implemented as B1d — see §2/§3. No longer deferred.
 
 **4.2 — Contract seeded clause prose (DEFER).** `SeedContractClauses` bakes `DefaultDivision()` into stored clause `Text` (warranty/liability/termination). Making it division-aware needs render-time token substitution or a stored-value rewrite — the hard boundary forbids stored-value rewrites this wave. The primary identity stamp (the SERVICE PROVIDER party) *is* fixed (B1c). **Sketch:** seed a `{{PROVIDER}}` token in clause text; substitute at `RenderContractPDF` with the already-resolved provider display name.
 
@@ -122,7 +125,7 @@ Each is locked by a new before/after test (see §5).
 
 ## 5. Gates
 
-- **New Wave-12.5 tests (all green):** `division_emission_wave125_test.go` (PO account name via real pdftotext render + Offer T&C byte-identity), `pkg/crm/contract/division_provider_test.go` (Beacon-order→Beacon provider + empty-order→Acme fallback), `pkg/crm/offer_delivery_terms_test.go` (Beacon compose + ID minting + nil-seam legacy), `pkg/butler/context/division_revenue_test.go` (3-division "Gamma Devices" proof).
+- **New Wave-12.5 tests (all green):** `division_emission_wave125_test.go` (PO account name via real pdftotext render + Offer T&C byte-identity), `pkg/crm/contract/division_provider_test.go` (Beacon-order→Beacon provider + empty-order→Acme fallback), `pkg/crm/offer_delivery_terms_test.go` (Beacon compose + ID minting + nil-seam legacy), `pkg/butler/context/division_revenue_test.go` (3-division "Gamma Devices" proof), `vat_return_division_test.go` (B1d — Beacon VAT lands only in Beacon's TRN return, never Acme's).
 - **Wave-12 tripwire** `TestNoSyntheticDivisionLiteralsInLiveCode` — GREEN with all changes in tree (no new synthetic division literals in live code).
 - **Full suite run alone** (`go test ./...`): package `main` GREEN (`ok ph_holdings_app 244s`); all Wave-12.5-relevant packages GREEN (crm, crm/contract, butler/context, overlay, engines, compliance/saudi, …). `go build ./...` clean.
 - **One pre-existing flake, out of scope:** `pkg/ocr/predator TestPredatorVision_Process_BasicImage` is non-deterministic (passes in isolation; ok/FAIL/ok across repeated runs) and its dependency graph does **not** include any Wave-12.5-touched package — it cannot be caused by this wave. Not fixed (out of scope).
@@ -132,6 +135,6 @@ Each is locked by a new before/after test (see §5).
 
 ## 6. What convergence can now assume
 
-**Every document emitted for a division-bearing record — or one whose deal chain (Order/RFQ) carries a division — now carries THAT division's identity:** legal name, TRN, address, letterhead, bank-account name, signature/company line, and (for offers) the composed delivery terms. Migrated multi-division data emits correct documents from day one. The only residual exceptions are the four documented items in §4 — all either finance-gated (the VAT-return TRN question, owner's call), dead code, or stored-template work — and **none sits on the live transactional document path.**
+**Every document emitted for a division-bearing record — or one whose deal chain (Order/RFQ) carries a division — now carries THAT division's identity:** legal name, TRN, address, letterhead, bank-account name, signature/company line, (for offers) the composed delivery terms, and (for VAT returns) a per-TRN filing. Migrated multi-division data emits correct documents from day one. The only residual exceptions are the three documented items in §4 (seeded contract clause prose, dead costing console, latent pdf_generator) — and **none sits on the live transactional document path.**
 
-**Files:** 5 modified (`app.go`, `offer_pdf_service.go`, `purchase_order_pdf_service.go`, `pkg/crm/contract/service.go`, `pkg/butler/context/service.go`) + 5 new (`pkg/crm/offer_hooks.go` + 4 test files). +55 / −33 in non-test source.
+**Files:** 6 modified (`app.go`, `offer_pdf_service.go`, `purchase_order_pdf_service.go`, `pkg/crm/contract/service.go`, `pkg/butler/context/service.go`, `einvoice_service.go`) + 6 new (`pkg/crm/offer_hooks.go` + 5 test files).
