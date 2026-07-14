@@ -17,6 +17,12 @@ import { rfqsDescriptor } from './rfqs.descriptor'
 import { offersDescriptor } from './offers.descriptor'
 import { grnsDescriptor } from './grns.descriptor'
 import { purchaseOrdersDescriptor } from './purchase-orders.descriptor'
+import { paymentsDescriptor } from './payments.descriptor'
+import { creditNotesDescriptor } from './credit-notes.descriptor'
+import { supplierInvoicesDescriptor } from './supplier-invoices.descriptor'
+import { supplierPaymentsDescriptor } from './supplier-payments.descriptor'
+import { chequeRegisterDescriptor } from './cheque-register.descriptor'
+import { expensesDescriptor } from './expenses.descriptor'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -45,6 +51,13 @@ export const screens: ScreenEntry[] = [
   { key: 'purchase-orders', label: 'Purchase Orders', group: 'Operations', archetype: 'ledger', descriptor: purchaseOrdersDescriptor },
   { key: 'delivery-notes', label: 'Delivery Notes', group: 'Operations', archetype: 'ledger', descriptor: deliveryNotesDescriptor },
   { key: 'grns', label: 'Goods Received', group: 'Operations', archetype: 'ledger', descriptor: grnsDescriptor },
+  // K1 — Ledger blitz (batch 2, finance)
+  { key: 'payments', label: 'Payments', group: 'Finance', archetype: 'ledger', descriptor: paymentsDescriptor },
+  { key: 'credit-notes', label: 'Credit Notes', group: 'Finance', archetype: 'ledger', descriptor: creditNotesDescriptor },
+  { key: 'supplier-invoices', label: 'Supplier Invoices', group: 'Finance', archetype: 'ledger', descriptor: supplierInvoicesDescriptor },
+  { key: 'supplier-payments', label: 'Supplier Payments', group: 'Finance', archetype: 'ledger', descriptor: supplierPaymentsDescriptor },
+  { key: 'cheque-register', label: 'Cheque Register', group: 'Finance', archetype: 'ledger', descriptor: chequeRegisterDescriptor },
+  { key: 'expenses', label: 'Expenses', group: 'Finance', archetype: 'ledger', descriptor: expensesDescriptor },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]

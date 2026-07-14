@@ -33,8 +33,8 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 
 | Wave | Scope | Status |
 |---|---|---|
-| K0 | Baseline verified (check 0/0, test 19/19, build clean) + scaffolding | ✅ in progress |
-| K1 | Ledger blitz (12 ledgers + credit-notes) | ⏳ |
+| K0 | Baseline verified + scaffolding + engine spine | ✅ done |
+| K1 | Ledger blitz — 12 ledgers built, gated, detector-clean; report written | ✅ done (awaiting review) |
 | K2 | Entity blitz (suppliers, users, products, warehouse; fold detail views) | ⏳ |
 | K3 | Hub archetype + dashboards | ⏳ |
 | K4 | Bespoke screens on primitives | ⏳ |
@@ -73,10 +73,25 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
   StatusSpec.transitions + nextStates(), single-source tone palette (tones.ts + --k-tone-*).
   Invoices pilot upgraded with a summary as the reference. bridge/map.ts extracted (goDate/
   str/num). Gates green (check 0/0, test 26, build), detector 0 violations @1440/420.
-- **K1 build batch 1 (2026-07-14, in flight):** 3 Sonnet agents building 6 ledgers
-  (Orders+DeliveryNotes / RFQs+Offers / GRNs+PurchaseOrders) against K1_BUILD_BRIEF.md.
-  Each writes disjoint NEW files: bridge/<entity>.ts + <entity>.descriptor.ts + parity doc.
-  Orchestrator wires registry + gates. Batch 2 (finance 6) after batch-1 gate.
+- **K1 build batch 1 (2026-07-14, commit 8103fbe):** 6 ledgers built+gated+committed —
+  Orders, RFQs, Offers, PurchaseOrders, DeliveryNotes, GRNs. All reviewed by orchestrator
+  (types, parity honesty, mock adversarial-ness, real mapping, INTEG-gap discipline).
+  Highlights: PO 9-state transition machine w/ approval-threshold guard; GRN weighted
+  acceptance-rate tone; Offers two-signal validity tone + computed Expired. Registry wired.
+  Full gate green (check 0/0 212 files, test 26, build). Playwright detector CLEAN on all
+  8 product screens @1440+420. Showcase (dev kitchen-sink, intentional 3000px overflow demo)
+  = detector-EXEMPT, not a product screen, will not ship.
+- **K1 build batch 2 (2026-07-14, done):** 6 finance ledgers built+gated — Payments
+  (Receipts), CreditNotes, SupplierInvoices, SupplierPayments, ChequeRegister, Expenses.
+  All reviewed by orchestrator. Highlights: Payments row-aware Reverse form (validates the
+  new engine feature from an agent's hands); SupplierInvoices dual-status (match badge +
+  payment toned column); SupplierPayments 2-source bridge merge; ChequeRegister cheque
+  status machine + row-aware Cancel; Expenses = card-list→TABLE + all 3 "fix don't preserve"
+  gaps FIXED (approve/post confirms + operator reject-reason form). All wired.
+- **K1 COMPLETE (2026-07-14):** full gate green (check 0/0 224 files, test 26, build).
+  Layout-detector CLEAN on all 14 product screens @1440+420. FABLE_WAVE_K1_REPORT.md written
+  (per-screen parity + engine features + consolidated deferred ledger + hot-zone preservation).
+  Awaiting Fable review before K2. QuotationScreen reclassified (not a ledger) → K4.
 
 ## Engine additions mid-K1 (orchestrator-built on agent findings)
 - **Row-aware forms** (2026-07-14): bldPipeline (STOP-and-reported per brief) found
