@@ -64,6 +64,21 @@ function mapCustomer(c: Record<string, unknown>): CustomerRow {
     balance: num(c.outstanding_bhd ?? c.balance_bhd),
     openOrders: num(c.open_orders),
     lastOrderDate: goDate(c.last_order_date),
+    // CustomerFullProfile fields — blank/zero here (INTEG gap: ListCustomers
+    // does not return them; GetCustomerFullProfile is a second fetch this
+    // bridge does not wire). Mock generates full values. See Customers.parity.md.
+    trn: '',
+    industry: '',
+    relationYears: 0,
+    paymentTermsDays: 0,
+    isCreditBlocked: false,
+    arCurrent: 0,
+    ar30: 0,
+    ar60: 0,
+    ar90: 0,
+    rfqsFloated: 0,
+    rfqsWon: 0,
+    winRate: 0,
   }
 }
 

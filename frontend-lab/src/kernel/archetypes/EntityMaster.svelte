@@ -9,6 +9,7 @@
   import Row_ from '../primitives/Row.svelte'
   import FormGrid from '../primitives/FormGrid.svelte'
   import DataTable from '../primitives/DataTable.svelte'
+  import LedgerSummary from '../primitives/LedgerSummary.svelte'
   import SearchInput from '../controls/SearchInput.svelte'
   import FilterChips from '../controls/FilterChips.svelte'
   import Button from '../controls/Button.svelte'
@@ -88,6 +89,12 @@
         : 'Nothing matches the current search and filters.'}
     />
   {:else}
+    <Stack gap="md">
+    {#if vm.summary}
+      <Card padding="lg">
+        <LedgerSummary summary={vm.summary} />
+      </Card>
+    {/if}
     <div class="k-master-body">
       <Card padding="none">
         <DataTable
@@ -123,9 +130,12 @@
               {#if descriptor.profile.kpis?.length}
                 <div class="k-profile-kpis">
                   {#each descriptor.profile.kpis as kpi (kpi.label)}
+                    {@const kpiTone = kpi.tone?.(row)}
                     <div class="k-kpi">
                       <span class="k-kpi-label">{kpi.label}</span>
-                      <span class="k-kpi-value"
+                      <span
+                        class="k-kpi-value"
+                        style:color={kpiTone ? `var(--k-tone-${kpiTone}-fg)` : undefined}
                         >{renderCell(kpi.content, kpi.value(row), kpi.currency?.(row))}</span
                       >
                     </div>
@@ -161,6 +171,7 @@
         </div>
       {/if}
     </div>
+    </Stack>
   {/if}
 </PageShell>
 

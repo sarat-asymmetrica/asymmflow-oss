@@ -162,11 +162,37 @@ export interface CustomerRow {
   balance: number
   openOrders: number
   lastOrderDate: string
+  /* ---- CustomerFullProfile fields (K2 widen — see Customers.parity.md) ----
+   * Profile-only: only populated after GetCustomerFullProfile, which the
+   * list fetch (ListCustomers) does not return. Real mapping blanks/zeroes
+   * these (INTEG gap); mock generates full adversarial values. */
+  trn: string
+  industry: string
+  relationYears: number
+  paymentTermsDays: number
+  isCreditBlocked: boolean
+  arCurrent: number
+  ar30: number
+  ar60: number
+  ar90: number
+  rfqsFloated: number
+  rfqsWon: number
+  winRate: number
 }
 
 const CITIES = ['Manama', 'Sitra', 'Riffa', 'Muharraq', 'Hamad Town', '']
 const TERMS = ['Net 30', 'Net 60', 'Advance', 'LC 90 days']
 const CUSTOMER_STATUSES = ['Active', 'Dormant', 'On Hold', 'Blacklisted']
+const INDUSTRIES = [
+  'Oil & Gas',
+  'Construction',
+  'Manufacturing',
+  'Healthcare',
+  'Retail',
+  'Logistics',
+  'Government',
+  '',
+]
 
 let customers: CustomerRow[] | null = null
 
@@ -177,6 +203,18 @@ function generateCustomers(): CustomerRow[] {
     const name = CUSTOMERS[i % CUSTOMERS.length]!
     const monthIdx = Math.floor(rand() * 18)
     const year = 2025 + Math.floor(monthIdx / 12)
+    const balance = i % 53 === 0 ? -12345.678 : Math.round(rand() * 3_000_000) / 100
+    // AR aging buckets split the balance across current/30/60/90 — a monster
+    // row (i%37===0) parks the entire balance in the 90+ bucket to exercise
+    // the danger-tone threshold on a fully-overdue receivable.
+    const allOverdue = i % 37 === 0
+    const arCurrent = allOverdue ? 0 : Math.round(balance * (0.3 + rand() * 0.3) * 100) / 100
+    const ar30 = allOverdue ? 0 : Math.round(balance * rand() * 0.2 * 100) / 100
+    const ar60 = allOverdue ? 0 : Math.round(balance * rand() * 0.15 * 100) / 100
+    const ar90 = allOverdue ? balance : Math.round((balance - arCurrent - ar30 - ar60) * 100) / 100
+    const rfqsFloated = i % 59 === 0 ? 0 : Math.floor(rand() * 40)
+    const rfqsWon = rfqsFloated === 0 ? 0 : Math.floor(rand() * rfqsFloated)
+
     rows.push({
       id: `cus-${i}`,
       code: `C-${pad(i, 4)}`,
@@ -190,9 +228,21 @@ function generateCustomers(): CustomerRow[] {
           : `finance${i}@example.bh`,
       paymentTerms: TERMS[i % TERMS.length]!,
       creditLimit: i % 89 === 0 ? 999999999.999 : Math.round(rand() * 5_000_000) / 100,
-      balance: i % 53 === 0 ? -12345.678 : Math.round(rand() * 3_000_000) / 100,
+      balance,
       openOrders: i % 29 === 0 ? 0 : Math.floor(rand() * 14),
       lastOrderDate: i % 29 === 0 ? '' : `${year}-${pad((monthIdx % 12) + 1, 2)}-${pad(1 + Math.floor(rand() * 27), 2)}`,
+      trn: i % 11 === 0 ? '' : `TRN-${pad(200000 + i, 9)}`,
+      industry: INDUSTRIES[i % INDUSTRIES.length]!,
+      relationYears: i % 97 === 0 ? 0 : Math.floor(rand() * 20),
+      paymentTermsDays: i % 89 === 0 ? 999 : [30, 60, 0, 90][i % 4]!,
+      isCreditBlocked: i % 19 === 0,
+      arCurrent,
+      ar30,
+      ar60,
+      ar90,
+      rfqsFloated,
+      rfqsWon,
+      winRate: rfqsFloated === 0 ? 0 : Math.round((rfqsWon / rfqsFloated) * 1000) / 10,
     })
   }
   return rows

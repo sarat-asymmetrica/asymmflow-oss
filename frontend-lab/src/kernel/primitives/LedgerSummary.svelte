@@ -50,7 +50,7 @@
         {#each dist.segments as seg (seg.key)}
           <span class="k-dist-key">
             <span class="k-dist-dot" style:background={`var(--k-tone-${seg.tone}-fg)`}></span>
-            {seg.key}
+            <span class="k-dist-name">{seg.key}</span>
             <span class="k-dist-count">{seg.count}</span>
           </span>
         {/each}
@@ -132,7 +132,16 @@
     gap: var(--k-space-xs);
     font-size: calc(11px * var(--ui-font-scale));
     color: var(--text-secondary);
+    min-width: 0;
+    max-width: 100%;
+  }
+  /* The bucket label truncates rather than forcing the strip wider than its
+   * card (anti-collapse: long labels like "Warehouse Supervisor" at 420px). */
+  .k-dist-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
   }
   .k-dist-dot {
     width: 8px;
@@ -145,5 +154,6 @@
     font-feature-settings: var(--font-numeric-features);
     font-weight: 600;
     color: var(--text-primary);
+    flex-shrink: 0;
   }
 </style>

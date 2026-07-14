@@ -1,6 +1,12 @@
 /* The second pilot: CustomersScreen as an EntityMaster descriptor.
  * Proves the archetype pattern generalizes past ledgers: same viewmodel,
- * same primitives, profile-centric rendering. */
+ * same primitives, profile-centric rendering.
+ *
+ * K2 widen (see Customers.parity.md): the pilot's original profile (Contact +
+ * Commercial, 3 KPIs) was a strict subset of CustomerFullProfile. Widened to
+ * carry TRN/industry/relationship-years/payment-terms-days/credit-block,
+ * AR aging, and RFQ performance — all profile-only fields the real bridge
+ * blanks/zeroes until GetCustomerFullProfile is wired (K5). */
 
 import type { EntityDescriptor } from '$kernel/descriptor'
 import { fetchCustomers, setCustomerStatus, type CustomerRow } from '../bridge'
@@ -27,6 +33,40 @@ export const customersDescriptor: EntityDescriptor<CustomerRow> = {
       Dormant: 'neutral',
       'On Hold': 'warning',
       Blacklisted: 'danger',
+    },
+  },
+
+  // Visual-diversity strip (K2 widen): count/active/rate + total outstanding,
+  // plus a status distribution bar — same shape as Invoices/GRNs/Suppliers.
+  summary: {
+    metrics: [
+      { label: 'Customers', content: 'quantity', value: (rows) => rows.length },
+      { label: 'Active', content: 'quantity', value: (rows) => rows.filter((r) => r.status === 'Active').length },
+      {
+        // Percentage points as a plain number (house convention — see GRNs'
+        // Acceptance Rate); the % lives in the label, not the value.
+        label: 'Active Rate %',
+        content: 'quantity',
+        value: (rows) =>
+          rows.length === 0
+            ? 0
+            : Math.round((rows.filter((r) => r.status === 'Active').length / rows.length) * 1000) / 10,
+      },
+      {
+        label: 'Total Outstanding (BHD)',
+        content: 'money',
+        value: (rows) => rows.reduce((s, r) => s + r.balance, 0),
+      },
+    ],
+    distribution: {
+      label: 'By status',
+      value: (r) => r.status,
+      tones: {
+        Active: 'success',
+        Dormant: 'neutral',
+        'On Hold': 'warning',
+        Blacklisted: 'danger',
+      },
     },
   },
 
@@ -92,10 +132,17 @@ export const customersDescriptor: EntityDescriptor<CustomerRow> = {
         Blacklisted: 'danger',
       },
     },
+    // A credit-blocked customer's Balance shows in danger red (ProfileKpiSpec.tone).
     kpis: [
-      { label: 'Balance', content: 'money', value: (r) => r.balance },
+      {
+        label: 'Balance',
+        content: 'money',
+        value: (r) => r.balance,
+        tone: (r) => (r.isCreditBlocked ? 'danger' : 'neutral'),
+      },
       { label: 'Credit limit', content: 'money', value: (r) => r.creditLimit },
       { label: 'Open orders', content: 'quantity', value: (r) => r.openOrders },
+      { label: 'RFQ Win Rate %', content: 'quantity', value: (r) => r.winRate },
     ],
     sections: [
       {
@@ -109,10 +156,32 @@ export const customersDescriptor: EntityDescriptor<CustomerRow> = {
       {
         title: 'Commercial',
         fields: [
+          { label: 'TRN', content: 'code', value: (r) => r.trn },
+          { label: 'Industry', content: 'text', value: (r) => r.industry },
+          { label: 'Relationship (years)', content: 'quantity', value: (r) => r.relationYears },
           { label: 'Payment terms', content: 'text', value: (r) => r.paymentTerms },
+          { label: 'Payment terms (days)', content: 'quantity', value: (r) => r.paymentTermsDays },
           { label: 'Credit limit', content: 'money', value: (r) => r.creditLimit },
           { label: 'Balance', content: 'money', value: (r) => r.balance },
+          { label: 'Credit blocked', content: 'text', value: (r) => (r.isCreditBlocked ? 'Yes' : 'No') },
           { label: 'Last order', content: 'date', value: (r) => r.lastOrderDate },
+        ],
+      },
+      {
+        title: 'Receivables Aging',
+        fields: [
+          { label: 'Current', content: 'money', value: (r) => r.arCurrent },
+          { label: '30 days', content: 'money', value: (r) => r.ar30 },
+          { label: '60 days', content: 'money', value: (r) => r.ar60 },
+          { label: '90+ days', content: 'money', value: (r) => r.ar90 },
+        ],
+      },
+      {
+        title: 'RFQ Performance',
+        fields: [
+          { label: 'RFQs floated', content: 'quantity', value: (r) => r.rfqsFloated },
+          { label: 'RFQs won', content: 'quantity', value: (r) => r.rfqsWon },
+          { label: 'Win rate %', content: 'quantity', value: (r) => r.winRate },
         ],
       },
     ],

@@ -162,6 +162,9 @@ export interface ProfileKpiSpec<Row> {
   content: ContentClass
   value: (row: Row) => unknown
   currency?: (row: Row) => string
+  /** Semantic colour for the KPI value — e.g. a credit-blocked customer's
+   * balance in danger red. Mirrors ColumnSpec.tone / SummaryMetricSpec.tone. */
+  tone?: (row: Row) => Tone
 }
 
 /** The EntityMaster archetype's contract: master list + rich profile.

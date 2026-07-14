@@ -35,7 +35,8 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 |---|---|---|
 | K0 | Baseline verified + scaffolding + engine spine | ✅ done |
 | K1 | Ledger blitz — 12 ledgers built, gated, detector-clean; report written | ✅ done (awaiting review) |
-| K2 | Entity blitz (suppliers, users, products, warehouse; fold detail views) | ⏳ |
+| K2 | Entity blitz — Suppliers/Users/widen-Customers/Inventory DONE; Pricing+Cust360→K4 | ✅ done (awaiting review) |
+| K3 | Hub archetype + dashboards | ⏳ next |
 | K3 | Hub archetype + dashboards | ⏳ |
 | K4 | Bespoke screens on primitives | ⏳ |
 | K5 | App shell + INTEG completion + harness | ⏳ |
@@ -102,6 +103,34 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
   Backward-compat (existing 0-arg forms still valid). Green (check 0/0, test 26). This
   unblocks batch-2 reason-on-row actions (PO Cancel, Cheque Cancel/Stale, Expenses
   Reject, Payments Reverse). RFQ's 4-button stage workaround can later fold to 1 form.
+
+## K2 COMPLETE (2026-07-14)
+Built+gated: Suppliers (EntityMaster), Users (read-only EntityMaster, RBAC-safe),
+Customers widened to CustomerFullProfile, Inventory Fulfillment (read-only ledger).
+Engine adds: summary on EntityMaster, ProfileKpiSpec.tone (credit-blocked balance red),
+LedgerSummary legend-truncation fix (benefits all summary strips). Fix-don't-preserve:
+Suppliers+Users phantom-status → honest 2-state from is_active; Users search widened.
+Deferred to K4: PricingScreen (bespoke simulator, mock data) + Customer360 (graph SLOT).
+Gate green (check 0/0 230 files, test 26, build). Detector CLEAN on all 18 product
+screens @1440+420 WITH profile panels open. FABLE_WAVE_K2_REPORT.md written.
+
+## K2 rulings (orchestrator, from recon-K2.md)
+- **Classifications:** Suppliers→EntityMaster (fold SupplierDetailView); Users→EntityMaster
+  (thin profile, RBAC hot-zone, read-only in K2); Customers pilot→WIDEN to CustomerFullProfile
+  (trn/industry/credit-blocked/AR-aging/RFQ-winrate — pilot was incomplete); Inventory
+  Fulfillment→read-only DocumentLedger (K1-shaped). **DEFER to K4:** PricingScreen (bespoke
+  margin simulator, hardcoded mock data — not an entity) + Customer360 (graph SLOT +
+  regime-prediction DEFER; stays a separate bespoke screen, NOT folded).
+- **Fix-don't-preserve:** Suppliers & Users both fake a `status` field via `|| 'Active'`
+  (real field is `is_active` bool) → derive honest 2-state, drop the phantom Pending.
+  Widen Users searchText (was name+username only).
+- **Deferred ENGINE (later mini-wave):** `profile.tabs`, `profile.slots` nested CRUD
+  sub-ledgers (contacts/notes/issues — shared by Suppliers+Customers), entity-graph slot,
+  create-vs-edit field requiredness, app-shell nav router (every K2 screen drills cross-screen).
+- **Engine added:** summary strip now renders on EntityMaster too (was DocumentLedger-only).
+- **Profile-detail fetch (GetXFullProfile) NOT wired in K2:** mock rows carry full profile
+  data; real maps list-fetch fields + INTEG-blanks profile-only KPIs. Ledgered, no engine
+  profile-fetch added (matches the Customers-pilot approach).
 
 ## K1 ruling: scope = the ledger spine
 K1 delivers list+paging+status+filters+search+summary+simple actions to parity, and

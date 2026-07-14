@@ -23,6 +23,9 @@ import { supplierInvoicesDescriptor } from './supplier-invoices.descriptor'
 import { supplierPaymentsDescriptor } from './supplier-payments.descriptor'
 import { chequeRegisterDescriptor } from './cheque-register.descriptor'
 import { expensesDescriptor } from './expenses.descriptor'
+import { suppliersDescriptor } from './suppliers.descriptor'
+import { usersDescriptor } from './users.descriptor'
+import { inventoryFulfillmentDescriptor } from './inventory-fulfillment.descriptor'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -58,6 +61,10 @@ export const screens: ScreenEntry[] = [
   { key: 'supplier-payments', label: 'Supplier Payments', group: 'Finance', archetype: 'ledger', descriptor: supplierPaymentsDescriptor },
   { key: 'cheque-register', label: 'Cheque Register', group: 'Finance', archetype: 'ledger', descriptor: chequeRegisterDescriptor },
   { key: 'expenses', label: 'Expenses', group: 'Finance', archetype: 'ledger', descriptor: expensesDescriptor },
+  // K2 — Entity blitz
+  { key: 'suppliers', label: 'Suppliers', group: 'Operations', archetype: 'entity', descriptor: suppliersDescriptor },
+  { key: 'inventory-fulfillment', label: 'Inventory Fulfillment', group: 'Operations', archetype: 'ledger', descriptor: inventoryFulfillmentDescriptor },
+  { key: 'users', label: 'Users', group: 'System', archetype: 'entity', descriptor: usersDescriptor },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]
