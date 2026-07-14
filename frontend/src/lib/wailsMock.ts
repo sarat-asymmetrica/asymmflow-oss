@@ -95,6 +95,22 @@ if (DESIGN_MODE) {
         EmailNotifications: true,
     };
 
+    // Mirrors overlay.BuiltinDefaults()'s division vocabulary (see
+    // frontend/src/lib/divisions.svelte.ts's BUILTIN_DIVISION_REGISTRY) so
+    // DESIGN_MODE exercises the same shape GetDivisionRegistry returns for real.
+    const mockDivisionRegistry = {
+        divisions: [
+            { key: 'Acme Instrumentation', legalName: 'ACME INSTRUMENTATION W.L.L', aliases: [] },
+            {
+                key: 'Beacon Controls',
+                legalName: 'BEACON CONTROLS W.L.L.',
+                aliases: ['beacon controls wll', 'beacon controls w.l.l', 'beacon controls w.l.l.'],
+            },
+        ],
+        defaultKey: 'Acme Instrumentation',
+        companyDisplayName: 'Acme Instrumentation WLL',
+    };
+
     const mockDashboardEvents = [
         { Type: 'order_created', Description: 'New order from ADNOC', Timestamp: new Date().toISOString() },
         { Type: 'payment_received', Description: 'Payment received: AED 45,000', Timestamp: new Date(Date.now() - 3600000).toISOString() },
@@ -148,6 +164,7 @@ if (DESIGN_MODE) {
 
         // Settings
         GetSettings: asyncMock(mockSettings),
+        GetDivisionRegistry: asyncMock(mockDivisionRegistry),
         UpdateSettings: voidMock,
         GetConfig: asyncMock(mockSettings),
         GetFolderPaths: asyncMock({ Documents: 'C:\\Documents', Inbox: 'C:\\Inbox' }),

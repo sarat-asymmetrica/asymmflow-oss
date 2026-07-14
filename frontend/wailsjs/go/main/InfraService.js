@@ -310,6 +310,10 @@ export function GetDiscrepanciesByType(arg1, arg2, arg3) {
   return window['go']['main']['InfraService']['GetDiscrepanciesByType'](arg1, arg2, arg3);
 }
 
+export function GetDivisionRegistry() {
+  return window['go']['main']['InfraService']['GetDivisionRegistry']();
+}
+
 export function GetFinancialDashboard() {
   return window['go']['main']['InfraService']['GetFinancialDashboard']();
 }
