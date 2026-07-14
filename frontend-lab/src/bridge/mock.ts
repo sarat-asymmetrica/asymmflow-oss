@@ -94,3 +94,67 @@ export async function markInvoicePaid(id: string): Promise<void> {
   if (inv) inv.status = 'Paid'
   await new Promise((r) => setTimeout(r, 120))
 }
+
+/* ---- Customers (EntityMaster pilot) ---- */
+
+export interface CustomerRow {
+  id: string
+  code: string
+  name: string
+  city: string
+  status: string
+  phone: string
+  email: string
+  paymentTerms: string
+  creditLimit: number
+  balance: number
+  openOrders: number
+  lastOrderDate: string
+}
+
+const CITIES = ['Manama', 'Sitra', 'Riffa', 'Muharraq', 'Hamad Town', '']
+const TERMS = ['Net 30', 'Net 60', 'Advance', 'LC 90 days']
+const CUSTOMER_STATUSES = ['Active', 'Dormant', 'On Hold', 'Blacklisted']
+
+let customers: CustomerRow[] | null = null
+
+function generateCustomers(): CustomerRow[] {
+  const rand = lcg(19770707)
+  const rows: CustomerRow[] = []
+  for (let i = 1; i <= 120; i++) {
+    const name = CUSTOMERS[i % CUSTOMERS.length]!
+    const monthIdx = Math.floor(rand() * 18)
+    const year = 2025 + Math.floor(monthIdx / 12)
+    rows.push({
+      id: `cus-${i}`,
+      code: `C-${pad(i, 4)}`,
+      name,
+      city: CITIES[i % CITIES.length]!,
+      status: i % 83 === 0 ? 'MIGRATED_LEGACY' : CUSTOMER_STATUSES[Math.floor(rand() * CUSTOMER_STATUSES.length)]!,
+      phone: i % 13 === 0 ? '' : `+973 ${pad(Math.floor(rand() * 99999999), 8)}`,
+      email:
+        i % 17 === 0
+          ? 'accounts.receivable.department.regional.office@extremely-long-corporate-domain-name.example.com.bh'
+          : `finance${i}@example.bh`,
+      paymentTerms: TERMS[i % TERMS.length]!,
+      creditLimit: i % 89 === 0 ? 999999999.999 : Math.round(rand() * 5_000_000) / 100,
+      balance: i % 53 === 0 ? -12345.678 : Math.round(rand() * 3_000_000) / 100,
+      openOrders: i % 29 === 0 ? 0 : Math.floor(rand() * 14),
+      lastOrderDate: i % 29 === 0 ? '' : `${year}-${pad((monthIdx % 12) + 1, 2)}-${pad(1 + Math.floor(rand() * 27), 2)}`,
+    })
+  }
+  return rows
+}
+
+export async function fetchCustomers(): Promise<CustomerRow[]> {
+  customers ??= generateCustomers()
+  await new Promise((r) => setTimeout(r, 250))
+  return [...customers]
+}
+
+export async function setCustomerStatus(id: string, status: string): Promise<void> {
+  customers ??= generateCustomers()
+  const c = customers.find((x) => x.id === id)
+  if (c) c.status = status
+  await new Promise((r) => setTimeout(r, 120))
+}

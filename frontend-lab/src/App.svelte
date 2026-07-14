@@ -1,9 +1,11 @@
 <script lang="ts">
   import Showcase from './screens/Showcase.svelte'
   import DocumentLedger from '$kernel/archetypes/DocumentLedger.svelte'
+  import EntityMaster from '$kernel/archetypes/EntityMaster.svelte'
   import { invoicesDescriptor } from './screens/invoices.descriptor'
+  import { customersDescriptor } from './screens/customers.descriptor'
 
-  const views = ['Invoices', 'Showcase'] as const
+  const views = ['Invoices', 'Customers', 'Showcase'] as const
   type View = (typeof views)[number]
   let view = $state<View>('Invoices')
 </script>
@@ -18,6 +20,8 @@
   <main class="lab-main">
     {#if view === 'Invoices'}
       <DocumentLedger descriptor={invoicesDescriptor} />
+    {:else if view === 'Customers'}
+      <EntityMaster descriptor={customersDescriptor} />
     {:else}
       <Showcase />
     {/if}

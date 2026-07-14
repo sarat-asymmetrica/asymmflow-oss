@@ -89,3 +89,38 @@ export interface LedgerDescriptor<Row> {
   }
   emptyMessage?: string
 }
+
+/* ---- EntityMaster: the second archetype ---- */
+
+export interface ProfileFieldSpec<Row> {
+  label: string
+  content: ContentClass
+  value: (row: Row) => unknown
+  currency?: (row: Row) => string
+}
+
+export interface ProfileSectionSpec<Row> {
+  title: string
+  fields: ProfileFieldSpec<Row>[]
+}
+
+export interface ProfileKpiSpec<Row> {
+  label: string
+  content: ContentClass
+  value: (row: Row) => unknown
+  currency?: (row: Row) => string
+}
+
+/** The EntityMaster archetype's contract: master list + rich profile.
+ * Pattern hand-written in the old frontend for Customers, Suppliers, Users,
+ * plus the CRM detail views. Structurally a LedgerDescriptor with a profile,
+ * so the same LedgerViewModel drives both archetypes (one path, L2). */
+export interface EntityDescriptor<Row> extends LedgerDescriptor<Row> {
+  profile: {
+    heading: (row: Row) => string
+    subheading?: (row: Row) => string
+    badge?: StatusSpec<Row>
+    kpis?: ProfileKpiSpec<Row>[]
+    sections: ProfileSectionSpec<Row>[]
+  }
+}
