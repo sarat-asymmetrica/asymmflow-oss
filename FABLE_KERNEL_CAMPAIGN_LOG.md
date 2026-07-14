@@ -1,5 +1,12 @@
 # Frontend Kernel Campaign — Orchestrator Log
 
+> **SPRINT 1 CLOSED at commit f4cf526 (2026-07-14).** 36 product screens migrated across
+> K1–K4-partial; 4 archetypes + full primitive/widget library; every wave green +
+> detector-clean + parity-ledgered. Continuation brief for a fresh Opus 4.8:
+> **`FABLE_CAMPAIGN_SPRINT2_HANDOFF.md`** (remaining K4 L-monsters + deferred, then K5
+> app-shell/INTEG, then K6 flip). This log is the durable running record; the handoff is
+> the entry point for Sprint 2.
+
 Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
@@ -37,7 +44,7 @@ layout-detector zero-violation at 1440/900/420 · per-screen parity docs honest.
 | K1 | Ledger blitz — 12 ledgers built, gated, detector-clean; report written | ✅ done (awaiting review) |
 | K2 | Entity blitz — Suppliers/Users/widen-Customers/Inventory DONE; Pricing+Cust360→K4 | ✅ done (awaiting review) |
 | K3 | Hub archetype + 4 dashboards DONE (donut/comparison/ranked/stat-grid/etc) | ✅ done (awaiting review) |
-| K4 | Bespoke — tranche 1 ✅ (6) + tranche 2 ✅ (4); tranche 3 (L-monsters) pending | 🔨 |
+| K4 | Bespoke — 15 built (t1:6 + t2:4 + t3:5) + 6 retired; L-monsters + deferred remain | 🔨 ~65% |
 | K3 | Hub archetype + dashboards | ⏳ |
 | K4 | Bespoke screens on primitives | ⏳ |
 | K5 | App shell + INTEG completion + harness | ⏳ |
