@@ -43,6 +43,28 @@ known-violation fixes, OneDriveImport), then INTEG (owner-gated) + K6 flip.
   @1440+420 incl. the 200-char + RTL rows). check 0/0 (348), test 148.
 - **★ K5 MOCK-SAFE TAIL COMPLETE.** Remaining: 2c i18n shell chrome (LOW/optional), 2e
   deferred hub polish (nice-to-have), **2d INTEG (OWNER-GATED — pause for PG env)**, then K6.
+- **K5 polish — owner chose "polish first" (commit 59ae4ef):** wired **hub tab deep-linking**,
+  finishing the nav store's `Route.tab` contract (defined in Sprint 2, previously unwired).
+  New `routeTabOr(validKeys, fallback)` store helper + all 4 tab-navigator hubs init their
+  active tab from `currentRoute().tab` and switch via `$effect` on in-place navigate. So
+  `navigate('finance-hub', { tab: 'payroll' })` deep-links to a hub tab (fresh-mount + in-place,
+  both PROVEN with a throwaway Playwright probe driving the app's own nav singleton). Drill-downs
+  deliberately UNCHANGED (they route to standalone filtered screens — the hub-embedded tabs don't
+  thread `initialQuery`, so staying in-hub would drop the drill filter → P2 "in-hub drill" was
+  analyzed and REJECTED as counterproductive).
+- **K5 polish DEFERRED (honest rationale — none are safe mock-only "polish"):**
+  - *FinanceHub division selector* — needs a division-filter prop contract the embedded child
+    screens don't expose; threading it touches many screens → INTEG-adjacent, not polish.
+  - *Hub per-tab badge counts* (Operations/Finance) — TabShell's `badge` prop is ready, but real
+    counts want "open PO / pending fulfillment" FILTERED semantics, not raw row counts → INTEG.
+  - *SalesHub conditional admin tab* — `SalesAdminTools` has NO kernel equivalent (net-new screen)
+    and `CanResolveOpportunityConflicts` is unwired anywhere in the lab → net-new build, not polish.
+  - *Nav curation* (sidebar shows hubs AND their child screens) — a genuine UX/design decision the
+    handoff reserves for "K6/polish"; owner-reserved, better decided holistically at the flip.
+  - *Butler fill-page-height chain* — a real visible defect but a multi-primitive kernel change
+    (PageShell scroll region → Grid rows → Card heights) with regression risk across 48 screens
+    right before the flip; catalogued as a KERNEL GAP (§5), not a 2e polish item → deferred.
+  - *i18n shell chrome* — LOW value for an English pilot; screen-level i18n is a separate wave. Skipped.
 
 ## SPRINT 2 (fresh Opus 4.8 orchestrator, from 9011bdd)
 
