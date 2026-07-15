@@ -40,8 +40,22 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
   IntelligenceHub. Kernel refinements from its gaps (all 41 screens re-gated clean): .k-grow utility;
   Button min-width:0; Row shrink={false} prop. Deferred to K5: fill-page-height chain + bespoke navigate hook.
 - **ALL 5 K4 L-MONSTERS COMPLETE** (Accounting/CostingSheet/BankRecon/Payroll/Butler). Full-app gate 41/41
-  clean @1440+420. Next: K4-deferred (PeopleHub/WorkHub/DeploymentHub/OneDriveImport + operational-hub
-  tabbed-console primitive + Stepper-for-wizards), then K5 app shell + INTEG, then K6 flip.
+  clean @1440+420.
+- **K4-deferred spine (commit 449006f):** TabShell primitive (lazy-mount keep-mounted, permission-gated,
+  header slot; also serves K5 tab-navigators) + embedding convention (PageShell/DocumentLedger/Payroll
+  `embedded`; Payroll `presetEmployeeID`) + ConfirmDialog reason variant (reasonLabel/requireReason).
+- **K4-deferred hubs DONE (commit 12961c0):** PeopleHub + WorkHub + DeploymentHub on TabShell (3 parallel
+  agents). Full-app gate 44/44 clean. PeopleHub (gov-ID masking, archive confirm+reason, manager-cycle guard,
+  embeds real Payroll), WorkHub (allocation precheck preserved, task-delete unified, project delete/archive/
+  shelve with reason, embeds real Approvals), DeploymentHub (**Activity/surveillance monitor RETIRED per owner**;
+  bulk-retry confirm added). OneDriveImport + the Wizard primitive it needs → DEFERRED to K5.
+- **★ K4 COMPLETE — every one of the ~60 old screens is now REBUILT or owner-RETIRED.** ~46 screens on the
+  kernel + 7 retired. Next: K5 (app shell + auth chrome on a new Wizard primitive + OneDriveImport + close all
+  INTEG gaps via quarantine env + L1/L2 tripwire harness), then K6 (the flip).
+- **Kernel gap for K5 (non-blocking):** DataTable has no declarative lightweight per-row action (needs a `cell`
+  override today) — candidate `ColumnSpec.rowAction` (label + predicate + onClick). Recurs (DeploymentHub queue,
+  OneDriveImport per-deal). Also: no session/currentUser store yet (BankRecon/DeploymentHub); no fill-page-height
+  chain (Butler chat); no multi-select control (WorkHub add-members).
 - **Owner questions parked for review** (all non-blocking — mutations INTEG-gapped): payroll
   field-mask policy / post-before-pay / approve-reason-required; costing freight-margin +
   profit/cost asymmetries + save-as-offer overwrite-guard; bankrecon K5 session primitive +
