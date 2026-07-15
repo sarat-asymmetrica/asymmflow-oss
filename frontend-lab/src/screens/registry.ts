@@ -45,6 +45,10 @@ import BookBankRecon from './BookBankRecon.svelte'
 import { bankAccountsDescriptor } from './bank-accounts.descriptor'
 import { currencyRatesDescriptor } from './currency-rates.descriptor'
 import BusinessSettings from './BusinessSettings.svelte'
+import Payroll from './Payroll.svelte'
+import Accounting from './Accounting.svelte'
+import CostingSheet from './CostingSheet.svelte'
+import BankReconciliation from './BankReconciliation.svelte'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -109,6 +113,11 @@ export const screens: ScreenEntry[] = [
   { key: 'bank-accounts', label: 'Bank Accounts', group: 'System', archetype: 'ledger', descriptor: bankAccountsDescriptor },
   { key: 'currency-rates', label: 'Currency Rates', group: 'System', archetype: 'ledger', descriptor: currencyRatesDescriptor },
   { key: 'business-settings', label: 'Business Settings', group: 'System', archetype: 'bespoke', component: BusinessSettings },
+  // K4 — L-monsters
+  { key: 'payroll', label: 'Payroll', group: 'People', archetype: 'bespoke', component: Payroll },
+  { key: 'accounting', label: 'Accounting', group: 'Finance', archetype: 'bespoke', component: Accounting },
+  { key: 'costing-sheet', label: 'Costing Sheet', group: 'Sales', archetype: 'bespoke', component: CostingSheet },
+  { key: 'bank-reconciliation', label: 'Bank Reconciliation', group: 'Finance', archetype: 'bespoke', component: BankReconciliation },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]

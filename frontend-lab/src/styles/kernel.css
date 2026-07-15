@@ -73,6 +73,55 @@ p {
   margin: 0;
 }
 
+/* Kernel form controls (L2 — ONE definition). Bespoke screens compose native
+ * <input>/<select>/<textarea> for forms the FormModal archetype doesn't cover
+ * (multi-section console forms: Payroll, Business Settings, Accounting voucher
+ * headers, Costing headers). Rather than each screen re-styling controls (the
+ * old .bs-input/.pr-input duplication), they apply these kernel-owned classes —
+ * layout/spacing lives here, in the kernel layer, not in screen <style> (L1),
+ * exactly like k-table-wrap. FormModal keeps its own scoped copies (they win
+ * locally via Svelte scoping); this is the shared surface for everything else. */
+.k-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-space-xs);
+  min-width: 0;
+}
+.k-field-row {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--k-space-sm);
+}
+.k-field-label {
+  font-size: var(--modal-label-size);
+  font-weight: var(--modal-label-weight);
+  color: var(--text-secondary);
+}
+.k-input {
+  font-family: var(--font-ui);
+  font-size: var(--modal-body-size);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--border-radius-sm);
+  padding: 8px 10px;
+  max-width: 100%;
+  min-width: 0;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+.k-input:focus {
+  border-color: var(--onyx);
+}
+.k-input-area {
+  min-height: 72px;
+  resize: vertical;
+}
+/* Full-width field inside a FormGrid (span all columns). */
+.k-field-wide {
+  grid-column: 1 / -1;
+}
+
 /* Reduced-motion law (L7): fully static. One global gate — kernel CSS
  * transitions all use motion tokens, and this zeroes every one of them. */
 @media (prefers-reduced-motion: reduce) {
