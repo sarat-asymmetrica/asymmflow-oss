@@ -79,8 +79,8 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 |---|---|---|---|---|---|---|---|
 | Finance Overview · `finance-overview` | FinancialDashboard | Hub | ✅ | **real** | read-only | ✅ `GetFinancialDashboardForYear` (I2); `GetCashPosition` already wired (bank-recon), no separate overlay consumer; CCC formula box (SLOT) | ☑ |
 | Invoices · `invoices` | InvoicesScreen (2930 L) | Ledger | ✅ | real | mock (INTEG) — create-Draft form shipped | `SendCustomerInvoice`, `GenerateInvoicePDF`, `GetAvailableDeliveryNotesForOrder`; edit/proforma/credit-override slots 🔥 | ☐ |
-| Payments · `payments` | PaymentsScreen | Ledger | ✅ | real | mock (INTEG) | `ReverseCustomerReceipt` 🔥; `GetAllPayments` (History panel deferred) | ☐ |
-| Credit Notes · `credit-notes` | CreditNotes (in Invoices) | Ledger | ✅ | real | mock (INTEG) | `ApplyCreditNote` 🔥; `GenerateCreditNotePDF`; Issue form (SLOT) | ☐ |
+| Payments · `payments` | PaymentsScreen | Ledger | ✅ | real | **wired** | ✅ `ReverseCustomerReceipt` 🔥 (I3; server-gated + audit, receipt_reversal_test.go); `GetAllPayments` History panel deferred (ENGINE) | ☑ |
+| Credit Notes · `credit-notes` | CreditNotes (in Invoices) | Ledger | ✅ | real | **wired** (apply) | ✅ `ApplyCreditNote` 🔥 (I3; reduces AR + auto-Paid + guards, integ_ar_hotzone_test.go); still gapped: `GenerateCreditNotePDF`, Issue form (SLOT) | ☐ |
 | Supplier Invoices · `supplier-invoices` | SupplierInvoicesScreen | Ledger | ✅ | real | read-only | `PerformThreeWayMatch`, Approve (SoD), Mark Paid, New — all ledgered 🔥 | ☐ |
 | Supplier Payments · `supplier-payments` | SupplierPaymentsScreen | Ledger | ✅ | real | mock (INTEG) | `DeleteSupplierPayment` 🔥; Expenses-settlement merge wrapper; Record/Edit ledgered | ☐ |
 | Cheque Register · `cheque-register` | ChequeRegisterScreen | Ledger | ✅ | real | mock (INTEG) | `MarkChequeStale`, `CancelCheque`; `GetChequeRegisters`/`GetStaleCheques` sub-views (ENGINE) | ☐ |
