@@ -65,6 +65,22 @@ known-violation fixes, OneDriveImport), then INTEG (owner-gated) + K6 flip.
     (PageShell scroll region → Grid rows → Card heights) with regression risk across 48 screens
     right before the flip; catalogued as a KERNEL GAP (§5), not a 2e polish item → deferred.
   - *i18n shell chrome* — LOW value for an English pilot; screen-level i18n is a separate wave. Skipped.
+- **K6 flip-prep — owner chose "parity table" (commit 6240340):** consolidated the ~42
+  per-screen parity ledgers (`src/screens/parity/*.md` + `PARITY_INVOICES.md`) + K3/K5
+  composition notes into ONE sign-off doc **`FABLE_WAVE_K6_PARITY.md`** (repo root). Per-screen
+  table for all 49 product screens (grouped by nav group): archetype, old→new, read-data status
+  (`real`/`real*`/`mock-INTEG`), mutation status, INTEG-pending real bindings, owner ☐. Plus:
+  deliberately-retired ledger (IntelligenceHub, Settings Deployment tab, activity monitor, VAT
+  card, phantom Pending, EcosystemDashboard); a **consolidated INTEG roster grouped by risk**
+  (feeds owner-gated Task #4, incl. cross-cutting prereqs = session store / divisions registry /
+  date→time.Time bridge); open kernel gaps; an **owner smoke checklist** for a real Wails build;
+  and the flip procedure DOCUMENTED-NOT-RUN (no `frontend/` delete, no `wails build`, no push —
+  owner go required). Two roll-up corrections caught vs the mocks during authoring: main-dashboard
+  fetch = `GetDashboardStats`+pipeline+AR-aging (not a single binding), and finance-overview read
+  is `mock (INTEG)` (`GetFinancialDashboardForYear`), not real. Docs only, reversible.
+- **★ MOCK-SAFE CAMPAIGN COMPLETE.** All that remains is owner-gated: **2d INTEG** (needs PG env
+  confirmation) and **K6 flip execution** (repoint build → wails smoke → delete `frontend/` →
+  full gates → owner graduation). Both PAUSE for the owner.
 
 ## SPRINT 2 (fresh Opus 4.8 orchestrator, from 9011bdd)
 
