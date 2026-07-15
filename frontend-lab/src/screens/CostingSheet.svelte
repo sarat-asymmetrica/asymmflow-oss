@@ -501,7 +501,7 @@
             <Stack gap="sm">
               <span class="cs-section-title">Terms &amp; Conditions</span>
               <span class="cs-hint">Printed on a separate page in PDF exports.</span>
-              <textarea class="cs-input cs-textarea" rows="8" bind:value={vm.termsAndConditions} placeholder="Enter terms and conditions…"></textarea>
+              <textarea class="k-input k-input-area" rows="8" bind:value={vm.termsAndConditions} placeholder="Enter terms and conditions…"></textarea>
             </Stack>
           </Card>
         </Stack>
@@ -525,10 +525,6 @@
   /* Typography only (L1) — native form controls use the kernel-owned
    * k-field/k-field-label/k-input classes (single-source in styles/kernel.css);
    * spacing/grouping is FormGrid/Stack/Row's job. */
-  .cs-textarea {
-    min-height: 160px;
-    resize: vertical;
-  }
   .cs-hint {
     font-size: var(--meta-size);
     color: var(--text-secondary);

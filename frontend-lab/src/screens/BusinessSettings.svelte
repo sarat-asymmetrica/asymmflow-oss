@@ -8,6 +8,7 @@
   import PageShell from '$kernel/primitives/PageShell.svelte'
   import Card from '$kernel/primitives/Card.svelte'
   import FormGrid from '$kernel/primitives/FormGrid.svelte'
+  import Stack from '$kernel/primitives/Stack.svelte'
   import Row from '$kernel/primitives/Row.svelte'
   import Button from '$kernel/controls/Button.svelte'
   import EmptyState from '$kernel/controls/EmptyState.svelte'
@@ -34,100 +35,71 @@
     </EmptyState>
   {:else}
     <Card padding="lg">
-      <FormGrid columns={2}>
-        <label class="bs-field">
-          <span class="bs-label">Company Name</span>
-          <input class="bs-input" type="text" bind:value={vm.draft.companyName} />
-        </label>
+      <Stack gap="md">
+        <FormGrid columns={2}>
+          <label class="k-field">
+            <span class="k-field-label">Company Name</span>
+            <input class="k-input" type="text" bind:value={vm.draft.companyName} />
+          </label>
 
-        <label class="bs-field">
-          <span class="bs-label">Base Currency</span>
-          <select class="bs-input" bind:value={vm.draft.baseCurrency}>
-            {#each currencyOptions() as opt (opt.value)}
-              <option value={opt.value}>{opt.label}</option>
-            {/each}
-          </select>
-        </label>
+          <label class="k-field">
+            <span class="k-field-label">Base Currency</span>
+            <select class="k-input" bind:value={vm.draft.baseCurrency}>
+              {#each currencyOptions() as opt (opt.value)}
+                <option value={opt.value}>{opt.label}</option>
+              {/each}
+            </select>
+          </label>
 
-        <label class="bs-field">
-          <span class="bs-label">Default Margin %</span>
-          <input class="bs-input" type="number" step="0.1" min="0" bind:value={vm.draft.defaultMarginPercent} />
-        </label>
+          <label class="k-field">
+            <span class="k-field-label">Default Margin %</span>
+            <input class="k-input" type="number" step="0.1" min="0" bind:value={vm.draft.defaultMarginPercent} />
+          </label>
 
-        <label class="bs-field">
-          <span class="bs-label">VAT Rate %</span>
-          <input class="bs-input" type="number" step="0.1" min="0" bind:value={vm.draft.vatRatePercent} />
-        </label>
+          <label class="k-field">
+            <span class="k-field-label">VAT Rate %</span>
+            <input class="k-input" type="number" step="0.1" min="0" bind:value={vm.draft.vatRatePercent} />
+          </label>
 
-        <label class="bs-field">
-          <span class="bs-label">Fiscal Year Start</span>
-          <select class="bs-input" bind:value={vm.draft.fiscalYearStartMonth}>
-            {#each MONTHS as month, i (month)}
-              <option value={i + 1}>{month}</option>
-            {/each}
-          </select>
-        </label>
-      </FormGrid>
+          <label class="k-field">
+            <span class="k-field-label">Fiscal Year Start</span>
+            <select class="k-input" bind:value={vm.draft.fiscalYearStartMonth}>
+              {#each MONTHS as month, i (month)}
+                <option value={i + 1}>{month}</option>
+              {/each}
+            </select>
+          </label>
+        </FormGrid>
 
-      {#if vm.saveError}
-        <p class="bs-error">Could not save: {vm.saveError}</p>
-      {:else if vm.saved}
-        <p class="bs-saved">Saved.</p>
-      {/if}
+        {#if vm.saveError}
+          <span class="bs-message bs-error">Could not save: {vm.saveError}</span>
+        {:else if vm.saved}
+          <span class="bs-message bs-saved">Saved.</span>
+        {/if}
 
-      <div class="bs-footer">
         <Row justify="end">
           <Button variant="primary" onclick={() => vm.save()} disabled={vm.saving}>
             {vm.saving ? 'Saving…' : 'Save Changes'}
           </Button>
         </Row>
-      </div>
+      </Stack>
     </Card>
   {/if}
 </PageShell>
 
 <style>
-  /* Typography/control skin only (L1) — mirrors FormModal's k-field/k-input
-   * look; scoped locally since FormModal's classes aren't :global. */
-  .bs-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-  .bs-label {
-    font-size: var(--modal-label-size);
-    font-weight: var(--modal-label-weight);
-    color: var(--text-secondary);
-  }
-  .bs-input {
-    font-family: var(--font-ui);
+  /* Form controls now use the kernel k-field/k-field-label/k-input classes
+   * (styles/kernel.css, L2 single-source); spacing is owned by the Stack
+   * primitive. Only save-status message typography/color remains here (L1:
+   * font + color via tokens only). */
+  .bs-message {
     font-size: var(--modal-body-size);
-    color: var(--text-primary);
-    background: var(--surface);
-    border: var(--border-width) solid var(--border);
-    border-radius: var(--border-radius-sm);
-    padding: 8px 10px;
-    max-width: 100%;
-    min-width: 0;
-    outline: none;
-    transition: border-color var(--motion-fast) var(--ease-standard);
-  }
-  .bs-input:focus {
-    border-color: var(--onyx);
-  }
-  .bs-error {
-    margin-top: var(--k-space-sm);
-    font-size: var(--modal-body-size);
-    color: #b3261e;
     overflow-wrap: break-word;
   }
-  .bs-saved {
-    margin-top: var(--k-space-sm);
-    font-size: var(--modal-body-size);
-    color: var(--k-tone-success-fg);
+  .bs-error {
+    color: var(--k-tone-danger-fg);
   }
-  .bs-footer {
-    margin-top: var(--k-space-md);
+  .bs-saved {
+    color: var(--k-tone-success-fg);
   }
 </style>
