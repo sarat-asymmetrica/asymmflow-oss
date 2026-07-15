@@ -10,8 +10,14 @@
   import { purchaseOrdersDescriptor } from './purchase-orders.descriptor'
   import { deliveryNotesDescriptor } from './delivery-notes.descriptor'
   import { inventoryFulfillmentDescriptor } from './inventory-fulfillment.descriptor'
+  import { currentRoute, routeTabOr } from '../stores/navigation.svelte'
 
-  let active = $state('purchase-orders')
+  const TAB_KEYS = ['purchase-orders', 'delivery-notes', 'fulfillment', 'serials'] as const
+  let active = $state(routeTabOr(TAB_KEYS, 'purchase-orders'))
+  $effect(() => {
+    const t = currentRoute().tab
+    if (t && TAB_KEYS.includes(t as (typeof TAB_KEYS)[number])) active = t
+  })
 </script>
 
 {#snippet t_pos()}<DocumentLedger descriptor={purchaseOrdersDescriptor} embedded />{/snippet}

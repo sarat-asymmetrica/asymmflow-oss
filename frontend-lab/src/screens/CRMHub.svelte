@@ -12,10 +12,15 @@
   import { crmCustomerHubDescriptor } from './dashboards/crm-customer.hub'
   import { crmSupplierHubDescriptor } from './dashboards/crm-supplier.hub'
   import { dataQualityDescriptor } from './data-quality.descriptor'
-  import { navigate } from '../stores/navigation.svelte'
+  import { navigate, currentRoute, routeTabOr } from '../stores/navigation.svelte'
   import type { NavIntent } from '$kernel/hub'
 
-  let active = $state('customers')
+  const TAB_KEYS = ['customers', 'suppliers', 'data-quality'] as const
+  let active = $state(routeTabOr(TAB_KEYS, 'customers'))
+  $effect(() => {
+    const t = currentRoute().tab
+    if (t && TAB_KEYS.includes(t as (typeof TAB_KEYS)[number])) active = t
+  })
   const nav = (intent: NavIntent) => navigate(intent.key, intent.query ? { query: intent.query } : undefined)
 </script>
 

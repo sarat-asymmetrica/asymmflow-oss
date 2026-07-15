@@ -33,6 +33,16 @@ export function setInitialRoute(key: string): void {
   if (!route.key) route = { key }
 }
 
+/** Resolve a tab-navigator hub's active tab from the current route: returns
+ * `route.tab` when it names one of the hub's known tabs, else `fallback`. Lets
+ * `navigate(hubKey, { tab })` deep-link straight to a hub tab (the Route.tab
+ * contract, previously defined but unwired). Read inside a hub's init AND an
+ * `$effect(() => …)` so an in-place re-navigation switches tabs too. */
+export function routeTabOr(validKeys: readonly string[], fallback: string): string {
+  const t = route.tab
+  return t && validKeys.includes(t) ? t : fallback
+}
+
 /* ---- cross-screen handoffs: a source screen stashes a payload under a key;
  * the target screen consumes it once on mount (self-clearing, one-shot). ---- */
 const handoffs = $state<Record<string, unknown>>({})

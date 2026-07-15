@@ -11,8 +11,14 @@
   import { opportunitiesDescriptor } from './opportunities.descriptor'
   import { offersDescriptor } from './offers.descriptor'
   import { ordersDescriptor } from './orders.descriptor'
+  import { currentRoute, routeTabOr } from '../stores/navigation.svelte'
 
-  let active = $state('opportunities')
+  const TAB_KEYS = ['opportunities', 'costing', 'offers', 'orders'] as const
+  let active = $state(routeTabOr(TAB_KEYS, 'opportunities'))
+  $effect(() => {
+    const t = currentRoute().tab
+    if (t && TAB_KEYS.includes(t as (typeof TAB_KEYS)[number])) active = t
+  })
 </script>
 
 {#snippet t_opportunities()}<DocumentLedger descriptor={opportunitiesDescriptor} embedded />{/snippet}

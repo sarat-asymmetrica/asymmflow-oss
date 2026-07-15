@@ -23,10 +23,18 @@
   import { fxRevaluationDescriptor } from './fx-revaluation.descriptor'
   import { auditTrailDescriptor } from './audit-trail.descriptor'
   import { financeOverviewDescriptor } from './dashboards/finance-overview.hub'
-  import { navigate } from '../stores/navigation.svelte'
+  import { navigate, currentRoute, routeTabOr } from '../stores/navigation.svelte'
   import type { NavIntent } from '$kernel/hub'
 
-  let active = $state('overview')
+  const TAB_KEYS = [
+    'overview', 'invoices', 'payments', 'supplier-invoices', 'supplier-payments',
+    'expenses', 'payroll', 'bank-recon', 'cheques', 'book-bank', 'fx', 'audit',
+  ] as const
+  let active = $state(routeTabOr(TAB_KEYS, 'overview'))
+  $effect(() => {
+    const t = currentRoute().tab
+    if (t && TAB_KEYS.includes(t as (typeof TAB_KEYS)[number])) active = t
+  })
   const nav = (intent: NavIntent) => navigate(intent.key, intent.query ? { query: intent.query } : undefined)
 </script>
 
