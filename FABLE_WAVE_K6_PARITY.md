@@ -123,7 +123,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Data Quality · `data-quality` | DataQualityScreen | Ledger | ✅ | real (preview real) | mock (INTEG) | `ReviewDataQualityIssue`; review-history panel (ENGINE) | ☐ |
 | Notifications · `notifications` | NotificationsScreen | Bespoke | ✅ | mock (INTEG) | mock (INTEG) | whole backend via `bridge/notifications.ts` (collaboration wrapper); live-push DEFER | ☐ |
 | Bank Accounts · `bank-accounts` | SettingsScreen (split) | Ledger | ✅ | real | mock (INTEG) | Create/Update/Delete bank account (division-scoped + encrypted IBAN/SWIFT) 🔥 | ☐ |
-| Currency Rates · `currency-rates` | SettingsScreen (split) | Ledger | ✅ | real | mock (INTEG) | `SetExchangeRate` (needs date→`time.Time` bridge) | ☐ |
+| Currency Rates · `currency-rates` | SettingsScreen (split) | Ledger | ✅ | real | **wired** | ~~`SetExchangeRate`~~ ✅ wired via kernel `map.goTime` date→time.Time bridge (I1.3); Go round-trip + persistence test green | ☑ |
 | Business Settings · `business-settings` | SettingsScreen (split) | Bespoke | ✅ | real | mock (INTEG) | `UpdateSettings` (unverified key vocabulary — confirm against Go handler first) | ☐ |
 | Butler · `butler` | ButlerScreen (2960 L) | Bespoke | ✅ | real (chat) | mock (INTEG) | `executeButlerAction` seam over 23 write actions; `ChatWithButlerPersistent`, `DeleteConversation`, `PurgeAllConversations` | ☐ |
 | Deployment · `deployment` | DeploymentHub (1093 L) | Bespoke (TabShell) | ✅ | real (7 fetches) | mock (INTEG) | `UpdatePilotDeploymentChecklistItem`, `TriggerCollaborativeSyncNow`, `RetryCollaborativePendingOperations` 🔥, export bundle/signoff, +2 | ☐ |

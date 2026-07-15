@@ -136,10 +136,6 @@ export async function customerOptions(): Promise<{ value: string; label: string 
   return CUSTOMERS.filter((c) => c).map((c) => ({ value: c, label: c }))
 }
 
-export function divisionOptions(): { value: string; label: string }[] {
-  return DIVISIONS.map((d) => ({ value: d, label: d }))
-}
-
 export async function markInvoicePaid(id: string): Promise<void> {
   invoices ??= generate()
   const inv = invoices.find((i) => i.id === id)

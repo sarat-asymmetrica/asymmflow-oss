@@ -29,7 +29,9 @@ const newInvoiceForm: FormSpec<NewInvoiceDraft> = {
   }),
   fields: [
     { key: 'customer', label: 'Customer', kind: 'select', required: true, options: customerOptions },
-    { key: 'division', label: 'Division', kind: 'select', required: true, options: divisionOptions() },
+    // Lazy (async fn), NOT a captured array: read at form-open so the real
+    // GetDivisionRegistry (loaded during boot) wins over the synthetic fallback.
+    { key: 'division', label: 'Division', kind: 'select', required: true, options: async () => divisionOptions() },
     { key: 'issueDate', label: 'Issue date', kind: 'date', required: true },
     {
       key: 'dueDate',

@@ -16,6 +16,7 @@
 
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
+import { getDivisionOptions, getDefaultDivisionKey } from '../stores/divisions.svelte'
 import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions } from '$wails/go/main/App'
 import { GetCostingSheets, GetCostingsByRFQ } from '$wails/go/main/CRMService'
 import { GetSettings } from '$wails/go/main/DocumentsService'
@@ -31,16 +32,20 @@ export const CURRENCY_RATES: Record<string, number> = {
 export const CURRENCY_OPTIONS: string[] = Object.keys(CURRENCY_RATES)
 export const FALLBACK_EXCHANGE_RATE = 0.45
 
-/* ---- Division vocabulary (L7): mirrors bridge/mock.ts's divisionOptions()
- * exactly — a static mock list until the real divisions store lands at K5.
- * Never a bare literal in the screen/VM; always sourced through this fn. */
-const DIVISIONS = ['Acme Instrumentation', 'Beacon Controls']
+/* ---- Division vocabulary (L7): sourced from the divisions store — the real
+ * GetDivisionRegistry under Wails, the BUILTIN synthetic fallback under mock
+ * (I1). ONE source; never a bare literal in the screen/VM. The costing VM reads
+ * these at construction (post-boot, so the registry is loaded). */
 export function costingDivisionOptions(): { value: string; label: string }[] {
-  return DIVISIONS.map((d) => ({ value: d, label: d }))
+  return getDivisionOptions()
 }
 export function defaultCostingDivision(): string {
-  return DIVISIONS[0]!
+  return getDefaultDivisionKey()
 }
+
+// Synthetic division literals for MOCK opportunity seeding only (like every
+// other bridge mock generator) — NOT the form vocabulary, which is the store's.
+const MOCK_DIVISIONS = ['Acme Instrumentation', 'Beacon Controls']
 
 /* ---- Types ---- */
 
@@ -302,7 +307,7 @@ function generateOpportunities(): CostingOpportunityRow[] {
       project,
       value,
       status,
-      division: source === 'pipeline' ? DIVISIONS[i % DIVISIONS.length]! : '',
+      division: source === 'pipeline' ? MOCK_DIVISIONS[i % MOCK_DIVISIONS.length]! : '',
       year: parseYear(yearRaw),
       createdAt,
       productDetails,

@@ -27,5 +27,7 @@ export const fetchCustomers = (): ReturnType<typeof mock.fetchCustomers> =>
 export const setCustomerStatus = (id: string, s: string): Promise<void> =>
   pick(real.setCustomerStatus, mock.setCustomerStatus)(id, s)
 
-/** Divisions stay static-mock until the divisions store lands (L7 INTEG). */
-export const divisionOptions = mock.divisionOptions
+/** Division vocabulary now comes from the divisions store (L7): the real
+ * `GetDivisionRegistry` under Wails, the BUILTIN synthetic fallback under mock.
+ * ONE source for every division dropdown (I1). Read lazily — see the store. */
+export { getDivisionOptions as divisionOptions } from '../stores/divisions.svelte'

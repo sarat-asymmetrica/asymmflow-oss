@@ -11,6 +11,33 @@ Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
+## INTEG EXECUTION (fresh Opus 4.8 orchestrator, from c29e17a-minus-repoint) — `FABLE_CAMPAIGN_INTEG.md`
+
+- **Tooling:** installed the SQLite CLI (winget `SQLite.SQLite` 3.53.3) for scratch-DB
+  verification per §3/§4 (Go query snippets remain the primary check).
+- **★ Wave I1 — cross-cutting prerequisites DONE (green: check 0/0 348, test 148, build clean, go build ./... clean).**
+  - **I1.1 session actor:** the last `actor='lab-user'` placeholder (bank-reconciliation-vm.svelte.ts)
+    now reads `actingUserId()` from the session store (a getter, so it reflects the live license
+    identity at mutation time). Grep for `lab-user` in `src/` = zero screen hits. Session is already
+    populated for real by the shell (App.svelte `setSession` from the license-activation result).
+  - **I1.2 divisions registry as the ONE division-vocabulary source:** added `getDivisionOptions()` to
+    `stores/divisions.svelte.ts`; routed `bridge/index.ts divisionOptions` (invoice/payment forms) and
+    `bridge/costing-sheet.ts costingDivisionOptions`/`defaultCostingDivision` through it; deleted the
+    dead static-mock `mock.divisionOptions`. Under real Wails these now reflect `GetDivisionRegistry`
+    (loaded during boot, `await initDivisions()` before render); under mock they keep the BUILTIN
+    synthetic fallback. Invoice division options made LAZY (`options: async () => divisionOptions()`)
+    so they read the post-boot registry rather than the module-eval fallback. Mock DATA seeding keeps
+    private synthetic literals (L7 audit-exempt, like every generator).
+  - **I1.3 date→time.Time form bridge:** built ONE kernel-level helper `map.goTime(dateStr)` — emits the
+    UTC-midnight RFC3339 string Wails marshals into a Go `time.Time` (the generated `time.Time` TS class
+    is an empty codegen stub, so we pass the wire string + cast). Wired `SetExchangeRate` as the proof
+    consumer (currency-rates mutation row flipped mock→**wired**). VALIDATED end-to-end by
+    `integ_date_bridge_test.go` against a scratch SQLite: the exact wire string round-trips into the
+    correct `time.Time`, the rate persists, a re-set closes the prior active rate (effective_to), and the
+    empty-date guard maps to Go zero time (refused at the seam, never a silent "today").
+  - **I1.4 AI-provider-key secrets storage:** parked owner decision — surfaced, NOT improvised (see
+    INTEG checkpoint). Only affects the Settings/Butler AI-key path (a DEFER); does not block I2/I3.
+
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
 - **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
