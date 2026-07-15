@@ -28,6 +28,15 @@ export class LedgerViewModel<Row> {
   /* Column visibility (parity #15) — hidden column keys, per VM instance. */
   hiddenColumns = new SvelteSet<string>()
 
+  /* Profile secondary-fetch (INTEG): when an EntityMaster descriptor declares
+   * `profile.enrich`, selecting a row triggers a second fetch (GetXFullProfile)
+   * whose result is merged into the row. `enriching` gates a spinner; a failure
+   * is NON-FATAL (the profile stays at list-depth with honest blanks). Enriched
+   * ids are remembered so re-selecting doesn't refetch; cleared on reload. */
+  enriching = $state(false)
+  enrichError = $state<string | null>(null)
+  private enrichedIds = new SvelteSet<string>()
+
   constructor(
     readonly descriptor: LedgerDescriptor<Row>,
     /** Initial-query seeding (parity #4): dashboard drills pre-filter here. */
@@ -82,6 +91,7 @@ export class LedgerViewModel<Row> {
         this.rows = await this.descriptor.fetch()
         this.hasMore = false
       }
+      this.enrichedIds.clear() // fresh rows are at list-depth again
     } catch (e) {
       this.error = e instanceof Error ? e.message : String(e)
     } finally {
@@ -105,5 +115,27 @@ export class LedgerViewModel<Row> {
 
   select(row: Row | null): void {
     this.selectedId = row == null ? null : this.descriptor.id(row)
+  }
+
+  /** Secondary-fetch the selected row's profile depth and merge it in. Idempotent
+   * per id; safe to call on every selection change. Non-fatal on failure. */
+  async enrichSelected(enrich: (row: Row) => Promise<Partial<Row>>): Promise<void> {
+    const id = this.selectedId
+    if (id == null || this.enrichedIds.has(id)) return
+    const row = this.rows.find((r) => this.descriptor.id(r) === id)
+    if (!row) return
+    this.enriching = true
+    this.enrichError = null
+    try {
+      const patch = await enrich(row)
+      // Reassign the row (not mutate) so the `selected` derived recomputes.
+      this.rows = this.rows.map((r) => (this.descriptor.id(r) === id ? { ...r, ...patch } : r))
+      this.enrichedIds.add(id)
+    } catch (e) {
+      // Profile stays at list-depth (honest blanks) — never a page-level failure.
+      this.enrichError = e instanceof Error ? e.message : String(e)
+    } finally {
+      this.enriching = false
+    }
   }
 }

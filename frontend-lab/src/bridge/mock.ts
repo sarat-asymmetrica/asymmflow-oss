@@ -256,3 +256,21 @@ export async function setCustomerStatus(id: string, status: string): Promise<voi
   if (c) c.status = status
   await new Promise((r) => setTimeout(r, 120))
 }
+
+/** The CustomerFullProfile depth ListCustomers omits — supplied by a second
+ * fetch (real: GetCustomerFullProfile) when a customer row is selected. */
+export type CustomerProfilePatch = Pick<
+  CustomerRow,
+  'trn' | 'industry' | 'relationYears' | 'paymentTermsDays' | 'isCreditBlocked' | 'arCurrent' | 'ar30' | 'ar60' | 'ar90' | 'rfqsFloated' | 'rfqsWon' | 'winRate'
+>
+
+/** Under mock the list row already carries full profile data; re-supply it from
+ * cache so the enrich path is exercised identically to the real GetXFullProfile. */
+export async function fetchCustomerProfile(id: string): Promise<CustomerProfilePatch> {
+  customers ??= generateCustomers()
+  await new Promise((r) => setTimeout(r, 150))
+  const c = customers.find((x) => x.id === id)
+  if (!c) return {} as CustomerProfilePatch
+  const { trn, industry, relationYears, paymentTermsDays, isCreditBlocked, arCurrent, ar30, ar60, ar90, rfqsFloated, rfqsWon, winRate } = c
+  return { trn, industry, relationYears, paymentTermsDays, isCreditBlocked, arCurrent, ar30, ar60, ar90, rfqsFloated, rfqsWon, winRate }
+}

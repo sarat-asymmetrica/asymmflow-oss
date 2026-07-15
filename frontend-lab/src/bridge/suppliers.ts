@@ -10,6 +10,14 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { ListSuppliers } from '$wails/go/main/CRMService'
+import { GetSupplierFullProfile } from '$wails/go/main/App'
+
+/** The profile-depth fields ListSuppliers' narrow SELECT omits — filled by a
+ * SECOND fetch (GetSupplierFullProfile) when a supplier row is selected. */
+export type SupplierProfilePatch = Pick<
+  SupplierRow,
+  'taxId' | 'address' | 'bankName' | 'accountNumber' | 'iban' | 'swiftCode' | 'rating' | 'totalPurchases' | 'totalPOs' | 'avgPOValue' | 'openIssues'
+>
 
 export interface SupplierRow {
   id: string
@@ -168,7 +176,38 @@ async function realDeleteSupplier(_id: string): Promise<void> {
   )
 }
 
+/* ---- secondary profile fetch (INTEG): GetSupplierFullProfile ---- */
+async function realSupplierProfile(id: string): Promise<SupplierProfilePatch> {
+  const p = (await GetSupplierFullProfile(id)) as unknown as Record<string, unknown>
+  return {
+    taxId: str(p.tax_id),
+    address: str(p.address),
+    bankName: str(p.bank_name),
+    accountNumber: str(p.account_number),
+    iban: str(p.iban),
+    swiftCode: str(p.swift_code),
+    rating: num(p.rating),
+    totalPurchases: num(p.total_purchases),
+    totalPOs: num(p.total_pos),
+    avgPOValue: num(p.avg_po_value),
+    openIssues: num(p.open_issues),
+  }
+}
+
+/** Under mock the list row already carries full profile data; the enrich merge
+ * re-supplies the same fields from cache so the path is exercised identically. */
+async function mockSupplierProfile(id: string): Promise<SupplierProfilePatch> {
+  cache ??= generate()
+  await sleep(150)
+  const row = cache.find((s) => s.id === id)
+  if (!row) return {} as SupplierProfilePatch
+  const { taxId, address, bankName, accountNumber, iban, swiftCode, rating, totalPurchases, totalPOs, avgPOValue, openIssues } = row
+  return { taxId, address, bankName, accountNumber, iban, swiftCode, rating, totalPurchases, totalPOs, avgPOValue, openIssues }
+}
+
 /* ---- public switched API (descriptor imports THESE) ---- */
 export const fetchSuppliers = (): Promise<SupplierRow[]> => pick(realFetchAll, mockFetchAll)()
 export const deleteSupplier = (id: string): Promise<void> =>
   pick(realDeleteSupplier, mockDeleteSupplier)(id)
+export const fetchSupplierProfile = (id: string): Promise<SupplierProfilePatch> =>
+  pick(realSupplierProfile, mockSupplierProfile)(id)

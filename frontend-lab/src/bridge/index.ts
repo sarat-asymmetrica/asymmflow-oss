@@ -26,6 +26,8 @@ export const fetchCustomers = (): ReturnType<typeof mock.fetchCustomers> =>
   pick(real.fetchCustomers, mock.fetchCustomers)()
 export const setCustomerStatus = (id: string, s: string): Promise<void> =>
   pick(real.setCustomerStatus, mock.setCustomerStatus)(id, s)
+export const fetchCustomerProfile = (id: string): ReturnType<typeof mock.fetchCustomerProfile> =>
+  pick(real.fetchCustomerProfile, mock.fetchCustomerProfile)(id)
 
 /** Division vocabulary now comes from the divisions store (L7): the real
  * `GetDivisionRegistry` under Wails, the BUILTIN synthetic fallback under mock.
