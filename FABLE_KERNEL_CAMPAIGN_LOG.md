@@ -101,6 +101,25 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
     fns added but the screen's actions don't call them yet), `CreateJournalEntry` UI already wired; deferred Go
     tests for FinalizeBookBankReconciliation + DeleteRFQWithCascade + the two Review* bindings (Review* have
     existing app_test/employee_archive_service_test coverage). See the INTEG handoff.
+  - **operational + inventory + reviews + OneDrive (28b3af2, 6ddda89):** 2 more parallel agents.
+    Wired: orders QuickMarkDelivered; rfqs UpdateRFQStatus+DeleteRFQ; cheque MarkStale+Cancel;
+    expenses Submit/Approve/Reject/Delete; data-quality ReviewDataQualityIssue; bank-accounts Delete;
+    PO UpdatePOStatus; delivery DeleteDeliveryNote; approvals reviews (both kinds, server-derived
+    reviewer); OneDrive Detect/Validate/Scan/**ImportOneDriveDeals** 🔥 (server skips deals without a
+    confirmed customer → a mapping slip degrades to skip/error, never a wrong offer).
+    **Structural findings (honestly ledgered, NOT silently wired):** PO Receive-Items + GRN
+    Receive/QC/Complete are SLOT — the bindings exist (CompleteGRN/UpdateGRNQCStatus/ReceiveAgainstPO)
+    but there is NO frontend adapter/action (net-new capture UI); delivery Dispatch/Confirm need
+    driver/vehicle/POD-signature capture forms (InTransit has no binding); expenses Post posts a real GL
+    journal entry (owner decision if it belongs on the ledger screen); bank-accounts Create/Update carry
+    encrypted IBAN/SWIFT (need an encryption-safe adapter, never pre-encrypt client-side); notifications
+    reviews need a source_id→request-id mapper (the SAME reviews are fully wired via Approvals Queue).
+  - **★ I3 CLOSE-OUT GATES GREEN:** check 0/0 (348), vitest 148/148, `npm run build` clean, FULL layout
+    sweep **49/49**, and the FULL `go test .` main-package suite **green (exit 0, no regressions)** with the
+    5 new INTEG persistence tests. ~34 parity rows now `wired`/`real`; the residue is the ledgered TODO
+    list in `FABLE_CAMPAIGN_INTEG_HANDOFF.md` (SaveCostingAsOffer, SLOT capture forms, encrypted bank-acct
+    write, expenses-Post, notifications-review mapper, the non-financial people/work/deployment/butler
+    mutations, AI-key encrypted settings, and the deferred Go tests). K6 flip remains owner-gated (Task #5).
 
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
