@@ -1,101 +1,161 @@
 <script lang="ts">
+  /* The real app shell (K5). Replaces the K0–K4 dev harness: a license gate
+   * (the ONE live auth path — owner ruling: license-only), session + divisions
+   * store init at boot, a permission-filtered sidebar built from the screen
+   * registry, and navigation-store routing. Under mock (the lab) the license
+   * validates to a synthetic admin so the app boots straight in; under the real
+   * Wails runtime it validates the device license or shows the activation
+   * screen. Screen rendering dispatches by archetype, exactly as before. */
   import { usingWails } from './bridge'
+  import { validateLicense, type AuthResult } from './bridge/auth'
+  import { initDivisions } from './stores/divisions.svelte'
+  import { setSession, hasPermission, getCurrentUser } from './stores/session.svelte'
+  import { currentRoute, navigate, setInitialRoute } from './stores/navigation.svelte'
+  import LicenseActivation from './app/LicenseActivation.svelte'
   import DocumentLedger from '$kernel/archetypes/DocumentLedger.svelte'
   import EntityMaster from '$kernel/archetypes/EntityMaster.svelte'
   import Hub from '$kernel/archetypes/Hub.svelte'
   import type { NavIntent } from '$kernel/hub'
-  import type { LedgerQuery } from '$kernel/ledger-core'
   import { screens, screensByGroup, type ScreenEntry } from './screens/registry'
 
-  let activeKey = $state(screens[0]?.key ?? '')
-  // Harness nav collapses to an overlay at narrow widths so product screens get
-  // the full viewport (the real K5 app shell will do the same). Closed by
-  // default at narrow — content is never squeezed by dev chrome.
+  type AuthState = 'checking' | 'license_needed' | 'approved'
+  let authState = $state<AuthState>('checking')
   let navOpen = $state(false)
-  // Drill-down seed for the screen we navigated TO (parity #4). Cleared on a
-  // manual tab click so a hand-picked screen never inherits a stale filter.
-  let pendingQuery = $state<Partial<LedgerQuery> | undefined>(undefined)
-  const active = $derived(screens.find((s) => s.key === activeKey) ?? screens[0])
-  const groups = screensByGroup()
+
+  const groups = $derived(
+    screensByGroup()
+      .map((g) => ({ group: g.group, items: g.items.filter((s) => hasPermission(s.permission ?? '')) }))
+      .filter((g) => g.items.length > 0),
+  )
+  const visibleKeys = $derived(new Set(groups.flatMap((g) => g.items.map((s) => s.key))))
+  const active = $derived(
+    screens.find((s) => s.key === currentRoute().key) ?? groups[0]?.items[0] ?? screens[0],
+  )
+  const route = $derived(currentRoute())
+
+  function applyAuth(result: AuthResult) {
+    setSession(
+      { id: result.deviceHash || 'user', fullName: result.displayName || 'User', roleName: result.role },
+      result.permissions,
+    )
+    authState = 'approved'
+    // Land on the first permitted screen.
+    const first = screensByGroup()
+      .flatMap((g) => g.items)
+      .find((s) => hasPermission(s.permission ?? ''))
+    if (first) setInitialRoute(first.key)
+  }
+
+  async function boot() {
+    await initDivisions()
+    try {
+      const result = await validateLicense()
+      if (result.ok) applyAuth(result)
+      else authState = 'license_needed'
+    } catch {
+      authState = 'license_needed'
+    }
+  }
+  void boot()
 
   function pick(key: string) {
-    pendingQuery = undefined
-    activeKey = key
+    navigate(key)
     navOpen = false
   }
-  function navigate(intent: NavIntent) {
-    if (!screens.some((s) => s.key === intent.key)) return
-    pendingQuery = intent.query
-    activeKey = intent.key
+  function onNavIntent(intent: NavIntent) {
+    if (!visibleKeys.has(intent.key)) return
+    navigate(intent.key, intent.query ? { query: intent.query } : undefined)
   }
 
-  function isLedger(s: ScreenEntry) {
-    return s.archetype === 'ledger'
-  }
-  function isEntity(s: ScreenEntry) {
-    return s.archetype === 'entity'
-  }
-  function isHub(s: ScreenEntry) {
-    return s.archetype === 'hub'
-  }
+  const isLedger = (s: ScreenEntry) => s.archetype === 'ledger'
+  const isEntity = (s: ScreenEntry) => s.archetype === 'entity'
+  const isHub = (s: ScreenEntry) => s.archetype === 'hub'
+  const user = $derived(getCurrentUser())
 </script>
 
-<div class="lab-shell" class:nav-open={navOpen}>
-  <button class="lab-navtoggle" aria-label="Toggle navigation" onclick={() => (navOpen = !navOpen)}>☰</button>
-  <aside class="lab-side" class:open={navOpen}>
-    <div class="lab-brand">Kernel Lab</div>
-    <nav class="lab-nav">
-      {#each groups as g (g.group)}
-        <div class="lab-group">
-          <span class="lab-group-label">{g.group}</span>
-          {#each g.items as s (s.key)}
-            <button class="lab-tab" class:active={activeKey === s.key} onclick={() => pick(s.key)}>
-              {s.label}
-            </button>
-          {/each}
-        </div>
-      {/each}
-    </nav>
-    <span class="lab-bridge" class:real={usingWails()}>
-      bridge: {usingWails() ? 'REAL (Wails)' : 'mock'}
-    </span>
-  </aside>
-
-  <main class="lab-main">
-    {#if active}
-      {#if isLedger(active)}
-        {#key active.key}
-          <DocumentLedger descriptor={active.descriptor} initialQuery={pendingQuery} />
-        {/key}
-      {:else if isEntity(active)}
-        {#key active.key}
-          <EntityMaster descriptor={active.descriptor} initialQuery={pendingQuery} />
-        {/key}
-      {:else if isHub(active)}
-        {#key active.key}
-          <Hub descriptor={active.descriptor} {navigate} />
-        {/key}
-      {:else if active.component}
-        {@const Bespoke = active.component}
-        {#key active.key}
-          <Bespoke />
-        {/key}
+{#if authState === 'checking'}
+  <div class="k-app-splash">
+    <span class="k-app-splash-brand">AsymmFlow</span>
+    <span class="k-app-splash-note">Starting…</span>
+  </div>
+{:else if authState === 'license_needed'}
+  <LicenseActivation onActivated={applyAuth} />
+{:else}
+  <div class="k-app" class:nav-open={navOpen}>
+    <button class="k-app-navtoggle" aria-label="Toggle navigation" onclick={() => (navOpen = !navOpen)}>☰</button>
+    <aside class="k-app-side" class:open={navOpen}>
+      <div class="k-app-brand">AsymmFlow</div>
+      <nav class="k-app-nav">
+        {#each groups as g (g.group)}
+          <div class="k-app-group">
+            <span class="k-app-group-label">{g.group}</span>
+            {#each g.items as s (s.key)}
+              <button class="lab-tab" class:active={active?.key === s.key} onclick={() => pick(s.key)}>
+                {s.label}
+              </button>
+            {/each}
+          </div>
+        {/each}
+      </nav>
+      {#if user}
+        <span class="k-app-user">{user.fullName} · {user.roleName || 'User'}</span>
       {/if}
-    {/if}
-  </main>
-</div>
+      <span class="k-app-bridge" class:real={usingWails()}>
+        {usingWails() ? 'REAL (Wails)' : 'mock'}
+      </span>
+    </aside>
+
+    <main class="lab-main k-app-main">
+      {#if active}
+        {#if isLedger(active)}
+          {#key active.key}
+            <DocumentLedger descriptor={active.descriptor} initialQuery={route.query} />
+          {/key}
+        {:else if isEntity(active)}
+          {#key active.key}
+            <EntityMaster descriptor={active.descriptor} initialQuery={route.query} />
+          {/key}
+        {:else if isHub(active)}
+          {#key active.key}
+            <Hub descriptor={active.descriptor} navigate={onNavIntent} />
+          {/key}
+        {:else if active.component}
+          {@const Bespoke = active.component}
+          {#key active.key}
+            <Bespoke />
+          {/key}
+        {/if}
+      {/if}
+    </main>
+  </div>
+{/if}
 
 <style>
-  /* Lab shell chrome — dev harness territory, not a product screen.
-   * The real app shell (sidebar nav, routing, auth) is built at K5. */
-  .lab-shell {
+  .k-app-splash {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--k-space-xs);
+    height: 100%;
+  }
+  .k-app-splash-brand {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: calc(18px * var(--ui-font-scale));
+  }
+  .k-app-splash-note {
+    font-size: var(--meta-size);
+    color: var(--text-secondary);
+  }
+  .k-app {
     display: flex;
     height: 100%;
     min-height: 0;
     min-width: 0;
     position: relative;
   }
-  .lab-navtoggle {
+  .k-app-navtoggle {
     display: none;
     position: fixed;
     top: 8px;
@@ -110,36 +170,36 @@
     font-size: 16px;
     cursor: pointer;
   }
-  .lab-side {
+  .k-app-side {
     display: flex;
     flex-direction: column;
     gap: var(--k-space-md);
-    width: 200px;
+    width: 210px;
     flex-shrink: 0;
     padding: var(--k-space-md);
     border-right: var(--border-width) solid var(--border);
     background: var(--surface);
     overflow-y: auto;
   }
-  .lab-brand {
+  .k-app-brand {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: calc(14px * var(--ui-font-scale));
+    font-size: calc(15px * var(--ui-font-scale));
     flex-shrink: 0;
   }
-  .lab-nav {
+  .k-app-nav {
     display: flex;
     flex-direction: column;
     gap: var(--k-space-md);
     flex: 1;
     min-height: 0;
   }
-  .lab-group {
+  .k-app-group {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
-  .lab-group-label {
+  .k-app-group-label {
     font-size: var(--label-size);
     font-weight: var(--label-weight);
     text-transform: uppercase;
@@ -158,18 +218,30 @@
     background: transparent;
     color: var(--text-secondary);
     cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .lab-tab.active {
     background: var(--onyx-tint);
     color: var(--text-primary);
     font-weight: 600;
   }
-  .lab-main {
+  .k-app-user {
+    flex-shrink: 0;
+    font-size: calc(11px * var(--ui-font-scale));
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .k-app-main {
     flex: 1;
     min-height: 0;
     min-width: 0;
   }
-  .lab-bridge {
+  .k-app-bridge {
     flex-shrink: 0;
     font-size: calc(11px * var(--ui-font-scale));
     font-weight: 600;
@@ -180,21 +252,18 @@
     white-space: nowrap;
     text-align: center;
   }
-  .lab-bridge.real {
+  .k-app-bridge.real {
     background: rgba(30, 130, 76, 0.12);
     color: #1e824c;
   }
 
-  /* Narrow viewports: nav is an off-canvas overlay so product screens get the
-   * full width (dev chrome never squeezes content). The layout-detector runs
-   * with the nav closed → it measures true screen width, not width-minus-nav. */
   @media (max-width: 720px) {
-    .lab-navtoggle {
+    .k-app-navtoggle {
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .lab-side {
+    .k-app-side {
       position: fixed;
       top: 0;
       left: 0;
@@ -203,15 +272,14 @@
       transform: translateX(-100%);
       transition: transform var(--motion-medium, 200ms) var(--ease-standard, ease);
     }
-    .lab-side.open {
+    .k-app-side.open {
       transform: none;
       box-shadow: 0 0 24px rgba(0, 0, 0, 0.18);
     }
-    .lab-main {
+    .k-app-main {
       width: 100%;
     }
-    /* Give the page header room for the fixed toggle button. */
-    .lab-main :global(.k-page-header) {
+    .k-app-main :global(.k-page-header) {
       padding-left: 40px;
     }
   }

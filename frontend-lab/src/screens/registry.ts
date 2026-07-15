@@ -68,6 +68,9 @@ export interface ScreenEntry {
   descriptor?: any
   /** For bespoke/hub screens rendered by a hand-written component. */
   component?: Component
+  /** RBAC gate for the sidebar (K5) — hidden unless the session has it.
+   * Undefined = always visible (checked via session.hasPermission). */
+  permission?: string
 }
 
 export const screens: ScreenEntry[] = [
