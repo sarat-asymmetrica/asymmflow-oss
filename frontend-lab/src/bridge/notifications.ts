@@ -206,15 +206,37 @@ async function realMarkRead(id: string): Promise<void> {
   await MarkNotificationAsRead(id)
 }
 
+// GAP (kept honest — a wrong wire is worse than an honest gap): the real
+// bindings ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest take the
+// underlying *request* id (requestID), but NotificationRow.id is the
+// notification record's OWN id. The request id lives on the notification's
+// `source_id` — verified: delete_approval / employee_archive_approval
+// notifications set SourceID = request.ID (delete_approval_service.go:187,
+// employee_archive_service.go:344). That field is NOT carried on NotificationRow,
+// and this task's brief scopes the fetch mapper as already-wired ("leave it"),
+// so enriching mapNotification with source_id is out of scope here. Calling
+// Review*(row.id, …) would target the wrong record. The SAME review actions ARE
+// fully wired from the Approvals Queue (bridge/approvals.ts), where the row id
+// IS the request id — so no review capability is lost, only this shortcut.
 async function realApprove(_row: NotificationRow): Promise<void> {
   void _row
-  throw new Error('INTEG gap: reviewDeleteApprovalRequest / reviewEmployeeArchiveRequest (decision="approve") — wires at K5')
+  throw new Error(
+    'INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="approve") — ' +
+      'NotificationRow carries the notification id, not the underlying request id (source_id); ' +
+      'correct wiring needs source_id enrichment in the fetch mapper (out of scope for this pass). ' +
+      'Review from the Approvals Queue, which is wired.',
+  )
 }
 
 async function realReject(_row: NotificationRow, _reason: string): Promise<void> {
   void _row
   void _reason
-  throw new Error('INTEG gap: reviewDeleteApprovalRequest / reviewEmployeeArchiveRequest (decision="reject") — wires at K5')
+  throw new Error(
+    'INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="reject") — ' +
+      'NotificationRow carries the notification id, not the underlying request id (source_id); ' +
+      'correct wiring needs source_id enrichment in the fetch mapper (out of scope for this pass). ' +
+      'Review from the Approvals Queue, which is wired.',
+  )
 }
 
 /* ---- public switched API (screen/viewmodel imports THESE) ---- */

@@ -14,7 +14,12 @@
 
 import { pick } from './runtime'
 import { goDate, str } from './map'
-import { ListDeleteApprovalRequests, ListEmployeeArchiveRequests } from '$wails/go/main/App'
+import {
+  ListDeleteApprovalRequests,
+  ListEmployeeArchiveRequests,
+  ReviewDeleteApprovalRequest,
+  ReviewEmployeeArchiveRequest,
+} from '$wails/go/main/App'
 
 export interface ApprovalRow {
   id: string
@@ -146,15 +151,28 @@ async function realFetch(): Promise<ApprovalRow[]> {
   return [...deleteRows, ...archiveRows].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
 }
 
-async function realApprove(_row: ApprovalRow): Promise<void> {
-  void _row
-  throw new Error('INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="approve") — wires at K5')
+// Review* bindings take (requestID, decision, notes) — all strings, NO actor
+// arg: the reviewer identity is derived from the server session
+// (currentApprovalActor / GetCurrentEmployeeContext). Verified App.d.ts:1601/1603
+// and delete_approval_service.go:85 / employee_archive_service.go:138. `row.id`
+// IS the underlying request id here — realFetch maps it straight off the
+// DeleteApprovalRequest / EmployeeArchiveRequest struct. Decision vocabulary is
+// verbatim "approve"/"reject" (employee_archive_service.go:154). Approve carries
+// no reviewer note ('').
+async function realApprove(row: ApprovalRow): Promise<void> {
+  if (row.kind === 'delete') {
+    await ReviewDeleteApprovalRequest(row.id, 'approve', '')
+  } else {
+    await ReviewEmployeeArchiveRequest(row.id, 'approve', '')
+  }
 }
 
-async function realReject(_row: ApprovalRow, _notes: string): Promise<void> {
-  void _row
-  void _notes
-  throw new Error('INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="reject") — wires at K5')
+async function realReject(row: ApprovalRow, notes: string): Promise<void> {
+  if (row.kind === 'delete') {
+    await ReviewDeleteApprovalRequest(row.id, 'reject', notes)
+  } else {
+    await ReviewEmployeeArchiveRequest(row.id, 'reject', notes)
+  }
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

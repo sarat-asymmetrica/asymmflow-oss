@@ -33,6 +33,14 @@
  * ConfirmOneDriveDeal is dead per the brief — not modeled here.
  */
 import { pick } from './runtime'
+import { num, str } from './map'
+import {
+  DetectOneDrivePath,
+  ImportOneDriveDeals,
+  ScanOneDrivePaths,
+  ValidateOneDrivePath,
+} from '$wails/go/main/App'
+import type { main } from '$wails/go/models'
 
 export interface CustomerMatch {
   customerId: string
@@ -448,20 +456,157 @@ async function mockImportOneDriveDeals(deals: ReviewDeal[]): Promise<OneDriveImp
   })
 }
 
-/* ---- real: all four bindings are INTEG-gapped per the K5 brief. This
- * screen runs entirely on the mock; wiring is a straight `pick()` swap plus
- * the field mapping documented at the top of this file. ---- */
+/* ---- real: all four bindings WIRED to `$wails/go/main/App`, using the
+ * snake_case↔camelCase field mapping documented at the top of this file. The
+ * Go json field names are verified against the model classes in
+ * wailsjs/go/models.ts (CustomerMatchResult, DiscoveredFile, DiscoveredDeal,
+ * OneDriveScanResult, OneDriveImportResult). ---- */
+
+// DiscoveredDeal[] element (server → ReviewDeal), reused by realScan.
+function mapCustomerMatch(raw: unknown): CustomerMatch {
+  const r = raw as Record<string, unknown>
+  return {
+    customerId: str(r.customer_id),
+    businessName: str(r.business_name),
+    shortCode: str(r.short_code),
+    score: num(r.score),
+    matchReason: str(r.match_reason),
+  }
+}
+
+function mapDiscoveredFile(raw: unknown): DiscoveredFile {
+  const r = raw as Record<string, unknown>
+  return {
+    fileName: str(r.file_name),
+    filePath: str(r.file_path),
+    fileType: str(r.file_type),
+    extension: str(r.extension),
+    sizeBytes: num(r.size_bytes),
+    // mod_time is a Go time.Time — keep the raw RFC3339 string (no date-only
+    // truncation; the file list may show the time component).
+    modTime: str(r.mod_time),
+  }
+}
+
+/** Server DiscoveredDeal → ReviewDeal, adding the UI-owned selection state with
+ * the SAME defaults the mock's generateDeals uses: included iff ≥1 match,
+ * defaulting the confirmed customer to the top-scored candidate. */
+function mapScannedDeal(raw: unknown): ReviewDeal {
+  const r = raw as Record<string, unknown>
+  const matches = ((r.customer_matches as unknown[]) ?? [])
+    .map(mapCustomerMatch)
+    .sort((a, b) => b.score - a.score)
+  return {
+    localId: str(r.local_id),
+    folderPath: str(r.folder_path),
+    folderName: str(r.folder_name),
+    finalPath: str(r.final_path),
+    rootPath: str(r.root_path),
+    customerMatches: matches,
+    files: ((r.files as unknown[]) ?? []).map(mapDiscoveredFile),
+    instrumentType: str(r.instrument_type),
+    yearHint: str(r.year_hint),
+    status: str(r.status) || 'pending',
+    errorMsg: str(r.error_msg),
+    importedOfferId: str(r.imported_offer_id),
+    selected: matches.length > 0,
+    confirmedCustomerId: str(r.confirmed_customer_id) || matches[0]?.customerId || '',
+  }
+}
+
+/** ReviewDeal → Go DiscoveredDeal (camelCase → snake_case json). The importer
+ * (onedrive_import_service.go:1454) reads confirmed_customer_id (gates creation:
+ * an empty value makes the server SKIP the deal — never a wrong offer — and an
+ * unresolvable id returns a "customer lookup failed" result, still no bad
+ * document), plus local_id, folder_name, folder_path, root_path and
+ * files[].file_type/file_path/extension; the remaining fields are sent
+ * faithfully. mod_time defaults to Go zero-time when blank so time.Time
+ * unmarshaling can't fail on an empty string. */
+function toDiscoveredDeal(deal: ReviewDeal): main.DiscoveredDeal {
+  return {
+    local_id: deal.localId,
+    folder_path: deal.folderPath,
+    folder_name: deal.folderName,
+    final_path: deal.finalPath,
+    root_path: deal.rootPath,
+    customer_matches: deal.customerMatches.map((m) => ({
+      customer_id: m.customerId,
+      business_name: m.businessName,
+      short_code: m.shortCode,
+      score: m.score,
+      match_reason: m.matchReason,
+    })),
+    files: deal.files.map((f) => ({
+      file_name: f.fileName,
+      file_path: f.filePath,
+      file_type: f.fileType,
+      extension: f.extension,
+      size_bytes: f.sizeBytes,
+      mod_time: f.modTime || '0001-01-01T00:00:00Z',
+    })),
+    instrument_type: deal.instrumentType,
+    year_hint: deal.yearHint,
+    status: deal.status,
+    error_msg: deal.errorMsg ?? '',
+    confirmed_customer_id: deal.confirmedCustomerId,
+    imported_offer_id: deal.importedOfferId ?? '',
+  } as unknown as main.DiscoveredDeal
+}
+
+function mapImportResult(raw: unknown): OneDriveImportResult {
+  const r = raw as Record<string, unknown>
+  // Optional keys added conditionally (exactOptionalPropertyTypes: true — never
+  // assign `undefined` to an optional prop).
+  const result: OneDriveImportResult = {
+    dealLocalId: str(r.deal_local_id),
+    success: !!r.success,
+    message: str(r.message),
+    costingSheetsImported: num(r.costing_sheets_imported),
+    pdfsQueued: num(r.pdfs_queued),
+  }
+  if (r.offer_id != null) result.offerId = str(r.offer_id)
+  return result
+}
+
 async function realDetectOneDrivePath(): Promise<string> {
-  throw new Error('INTEG gap: DetectOneDrivePath — wires at INTEG')
+  // DetectOneDrivePath() → string (App.d.ts:433). Advisory prefill; the VM
+  // swallows any error, so a bare await is fine.
+  return (await DetectOneDrivePath()) ?? ''
 }
-async function realValidateOneDrivePath(_path: string): Promise<ValidatePathResult> {
-  throw new Error('INTEG gap: ValidateOneDrivePath — wires at INTEG')
+
+async function realValidateOneDrivePath(path: string): Promise<ValidatePathResult> {
+  // ValidateOneDrivePath(path) → map[string]any {valid, estimated_deals, path,
+  // error} (App.d.ts:1875).
+  const raw = (await ValidateOneDrivePath(path)) as Record<string, unknown>
+  // Optional keys added conditionally (exactOptionalPropertyTypes: true).
+  const result: ValidatePathResult = { valid: !!raw.valid }
+  if (raw.estimated_deals != null) result.estimatedDeals = num(raw.estimated_deals)
+  if (raw.path != null) result.path = str(raw.path)
+  if (raw.error != null) result.error = str(raw.error)
+  return result
 }
-async function realScanOneDrivePaths(_paths: string[]): Promise<OneDriveScanResult> {
-  throw new Error('INTEG gap: ScanOneDrivePaths — wires at INTEG')
+
+async function realScanOneDrivePaths(paths: string[]): Promise<OneDriveScanResult> {
+  // ScanOneDrivePaths(paths) → OneDriveScanResult (App.d.ts:1637). Read-only walk.
+  const raw = (await ScanOneDrivePaths(paths)) as unknown as Record<string, unknown>
+  return {
+    deals: ((raw.deals as unknown[]) ?? []).map(mapScannedDeal),
+    totalFolders: num(raw.total_folders),
+    totalFiles: num(raw.total_files),
+    scanPaths: ((raw.scan_paths as unknown[]) ?? []).map(str),
+    scannedAt: str(raw.scanned_at),
+    errors: ((raw.errors as unknown[]) ?? []).map(str),
+  }
 }
-async function realImportOneDriveDeals(_deals: ReviewDeal[]): Promise<OneDriveImportResult[]> {
-  throw new Error('INTEG gap: ImportOneDriveDeals — wires at INTEG')
+
+async function realImportOneDriveDeals(deals: ReviewDeal[]): Promise<OneDriveImportResult[]> {
+  // ImportOneDriveDeals([]DiscoveredDeal) → []OneDriveImportResult (App.d.ts:1205).
+  // Creates offers server-side, but only for deals whose confirmed_customer_id
+  // resolves to a live customer (finance:create gated); everything else is
+  // skipped/errored with a result row, never a wrong document.
+  const payload = deals.map(toDiscoveredDeal)
+  const results = await ImportOneDriveDeals(payload)
+  return (results ?? []).map((r) => mapImportResult(r as unknown))
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

@@ -7,7 +7,13 @@
  * screens/parity/Expenses.parity.md. */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { ListExpenseEntries } from '$wails/go/main/FinanceService'
+import {
+  ApproveExpenseEntry,
+  DeleteExpenseEntry,
+  ListExpenseEntries,
+  RejectExpenseEntry,
+  SubmitExpenseEntry,
+} from '$wails/go/main/FinanceService'
 
 export interface ExpenseEntryRow {
   id: string
@@ -238,24 +244,38 @@ async function realFetchAll(): Promise<ExpenseEntryRow[]> {
   return (rows ?? []).map((x) => mapExpenseEntry(x as unknown as Record<string, unknown>))
 }
 
-async function realSubmit(_id: string): Promise<void> {
-  throw new Error('INTEG gap: SubmitExpenseEntry — wires at K5')
+async function realSubmit(id: string): Promise<void> {
+  // SubmitExpenseEntry(entryID) — draft → submitted. Returns the entry; ignored
+  // (the screen re-fetches). Server enforces the lifecycle guard.
+  await SubmitExpenseEntry(id)
 }
 
-async function realApprove(_id: string): Promise<void> {
-  throw new Error('INTEG gap: ApproveExpenseEntry — wires at K5')
+async function realApprove(id: string): Promise<void> {
+  // ApproveExpenseEntry(entryID, notes) — arg2 is an optional approval note (the
+  // approver identity is derived server-side from the session, NOT this arg).
+  // The ledger screen carries no note field, so '' is passed honestly.
+  await ApproveExpenseEntry(id, '')
 }
 
-async function realReject(_id: string, _reason: string): Promise<void> {
-  throw new Error('INTEG gap: RejectExpenseEntry — wires at K5')
+async function realReject(id: string, reason: string): Promise<void> {
+  // RejectExpenseEntry(entryID, reason) — arg2 is the rejection reason.
+  await RejectExpenseEntry(id, reason)
 }
 
 async function realPost(_id: string): Promise<void> {
-  throw new Error('INTEG gap: PostExpenseEntry — wires at K5')
+  // GL hot-zone: PostExpenseEntry posts a real general-ledger JOURNAL ENTRY
+  // (postExpenseJournal), not just a status flip. Held honestly gapped per the
+  // build discipline (GL-affecting mutation from the ledger screen), even though
+  // the arg itself is an unambiguous bare id.
+  throw new Error(
+    'INTEG gap: PostExpenseEntry — posts a general-ledger journal entry (postExpenseJournal); ' +
+      'GL-affecting mutation intentionally held from the operational-ledger screen.',
+  )
 }
 
-async function realDelete(_id: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteExpenseEntry — wires at K5')
+async function realDelete(id: string): Promise<void> {
+  // DeleteExpenseEntry(entryID) — server guards (soft/hard delete + permission).
+  await DeleteExpenseEntry(id)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

@@ -3,7 +3,7 @@
  * wailsjs/go/main/App.d.ts (no params, no pagination — flat load). */
 import { pick } from './runtime'
 import { goDate, str } from './map'
-import { GetDeliveryNotes } from '$wails/go/main/App'
+import { DeleteDeliveryNote, GetDeliveryNotes } from '$wails/go/main/App'
 
 export interface DeliveryNoteRow {
   id: string
@@ -143,10 +143,25 @@ async function realFetchAll(): Promise<DeliveryNoteRow[]> {
 }
 
 async function realAdvanceStatus(_id: string): Promise<void> {
-  throw new Error('INTEG gap: DispatchDeliveryNote / ConfirmDeliveryNote — wires at K5')
+  // GAP (kept honest): the real advance is NOT a single id-only flip.
+  //   Prepared→Dispatched  = DispatchDeliveryNote(id, driverName, vehicleNumber) — driver/vehicle capture
+  //   InTransit→Delivered  = ConfirmDeliveryNote(id, signedBy)                    — POD signature capture
+  //   Dispatched→InTransit = (no backend binding exists at all)
+  // This adapter only receives `id`, so it can neither supply the required
+  // capture args nor pick the right binding — wiring it would be a lossy/guessed
+  // call. Stays ledgered as the richer Dispatch/Confirm forms (parity #4/#5).
+  throw new Error(
+    'INTEG gap: DispatchDeliveryNote(id, driver, vehicle) / ConfirmDeliveryNote(id, signedBy) — ' +
+      'this id-only advance carries neither the driver/vehicle nor the POD-signature args the real ' +
+      'bindings require (and Dispatched→InTransit has no binding); needs the richer capture forms.',
+  )
 }
-async function realDelete(_id: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteDeliveryNote — wires at K5')
+async function realDelete(id: string): Promise<void> {
+  // DeleteDeliveryNote(id) — App binding (verified App.d.ts:381). The Go service
+  // runs guardDeleteOrRequest("delivery_notes:delete") server-side, which may
+  // route through the delete-approval queue rather than a hard delete; the
+  // descriptor already restricts this action to Prepared (pre-dispatch) rows.
+  await DeleteDeliveryNote(id)
 }
 
 /* ---- public switched API (descriptors import THESE) ---- */

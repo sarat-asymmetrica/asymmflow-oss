@@ -63,7 +63,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 |---|---|---|---|---|---|---|---|
 | CRM Customer Overview · `crm-customer` | CRMCustomerDashboard | Hub | ✅ | **real** | read-only | ✅ `GetCRMCustomerDashboard`/`…ByYear` (I2); top-customer share pct derived | ☑ |
 | Customers · `customers` | CustomerDetailView | Entity | ✅ | **real** | wired (hold/reactivate) | ✅ `GetCustomerFullProfile` profile depth via new `profile.enrich` engine (I2) | ☑ |
-| Orders · `orders` | OrdersScreen | Ledger | ✅ | real | mock (INTEG) | `QuickMarkOrderDelivered`; delivery-% batch join (ENGINE) | ☐ |
+| Orders · `orders` | OrdersScreen | Ledger | ✅ | real | **wired** | ✅ `QuickMarkOrderDelivered` (I3); delivery-% batch join (ENGINE); Create Invoice/PO/cascade separately ledgered | ☑ |
 | RFQs · `rfqs` | RFQScreen | Ledger | ✅ | real | mock (INTEG) | `UpdateRFQStage`, `UpdateRFQStatus` | ☐ |
 | Offers · `offers` | OffersScreen | Ledger | ✅ | real | read-only | `GenerateOfferPDF`/`OpenExportedFile` (PDF); Won/Lost + create ledgered | ☐ |
 | Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | **real** | **wired** | ✅ read merge (I2) + `CreateRFQWithReference`+`DeleteRFQ`/`DeleteOpportunity`(by source)+`DeleteRFQWithCascade` 🔥 (I3; cascade Go test deferred) | ☑ |

@@ -13,7 +13,7 @@
 
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetAllBankAccounts } from '$wails/go/main/FinanceService'
+import { DeleteBankAccount, GetAllBankAccounts } from '$wails/go/main/FinanceService'
 
 export interface BankAccountRow {
   id: string
@@ -168,13 +168,18 @@ async function realCreate(_draft: BankAccountDraft): Promise<void> {
 }
 
 async function realUpdate(_id: string, _draft: BankAccountDraft): Promise<void> {
-  throw new Error('INTEG gap: UpdateBankAccount — same division/encryption caveat as create; wires at K5.')
+  throw new Error(
+    'INTEG gap: UpdateBankAccount(id, patch) — the patch map would carry plaintext IBAN/SWIFT that must ' +
+      'be re-encrypted via FieldCrypto server-side; this lab cannot reproduce/verify that path, so the ' +
+      'mutation stays gapped rather than risk writing plaintext into a FINANCIAL record.',
+  )
 }
 
-async function realDelete(_id: string): Promise<void> {
-  throw new Error(
-    'INTEG gap: DeleteBankAccount — wires at K5. (Server likely refuses if the account has statement/reconciliation history; the descriptor must surface that honestly.)',
-  )
+async function realDelete(id: string): Promise<void> {
+  // DeleteBankAccount(id) — plain id delete (no draft/encryption surface). The
+  // server refuses if the account carries statement/reconciliation history; the
+  // descriptor surfaces that thrown error honestly.
+  await DeleteBankAccount(id)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */
