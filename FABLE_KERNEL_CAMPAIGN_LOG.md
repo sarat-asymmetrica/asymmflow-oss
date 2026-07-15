@@ -13,6 +13,13 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
 ## SPRINT 2 (fresh Opus 4.8 orchestrator, from 9011bdd)
 
+> **SPRINT 2 CLOSED at commit d335716 (2026-07-15).** K4 COMPLETE (all ~60 screens rebuilt-or-retired);
+> K5 ~70% (real app shell + auth gate + session/divisions/navigation stores + 4 tab-navigator hubs). 48
+> product screens on the kernel through the REAL shell; full-app layout-detector 48/48 clean; check 0/0
+> (340 files), test 80, build clean. 13 commits (8363172→d335716). **Continuation brief for a fresh Opus
+> 4.8: `FABLE_CAMPAIGN_SPRINT3_HANDOFF.md`** — remaining = K5 tail (L1/L2 tripwire tests + BusinessSettings
+> L1 migration + OneDriveImport on Wizard + INTEG toward sovereign-mesh/local-Postgres, owner-gated), then K6 flip.
+
 - **K4-L engine spine (commit 8363172):** 5 tech-lead primitives, all tested (55 tests):
   LineItemsEditor(+line-items.ts) · ViewSwitcher · AllocationMatchPanel(+allocation.ts) ·
   Stepper · ChatTranscript(+markdown.ts, escape-first XSS-safe). ViewSwitcher was a real
