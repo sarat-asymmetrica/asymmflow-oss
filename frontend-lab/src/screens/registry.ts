@@ -49,6 +49,7 @@ import Payroll from './Payroll.svelte'
 import Accounting from './Accounting.svelte'
 import CostingSheet from './CostingSheet.svelte'
 import BankReconciliation from './BankReconciliation.svelte'
+import Butler from './Butler.svelte'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -118,6 +119,8 @@ export const screens: ScreenEntry[] = [
   { key: 'accounting', label: 'Accounting', group: 'Finance', archetype: 'bespoke', component: Accounting },
   { key: 'costing-sheet', label: 'Costing Sheet', group: 'Sales', archetype: 'bespoke', component: CostingSheet },
   { key: 'bank-reconciliation', label: 'Bank Reconciliation', group: 'Finance', archetype: 'bespoke', component: BankReconciliation },
+  // K4 — Butler (AI chat); retires IntelligenceHub (nav 'intelligence' -> here at K5)
+  { key: 'butler', label: 'Butler', group: 'System', archetype: 'bespoke', component: Butler },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]

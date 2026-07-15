@@ -110,6 +110,15 @@ p {
   outline: none;
   transition: border-color var(--motion-fast) var(--ease-standard);
 }
+/* Flex-grow utility for a control that should absorb a flex row's free space
+ * beside a fixed sibling (e.g. a chat input next to a Send button). Kernel-owned
+ * so screens engage it by class, not by writing flex CSS themselves (L1). In a
+ * k-field (flex column, align:stretch) inputs already fill width; this is only
+ * for the row-with-trailing-button shape. */
+.k-grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .k-input:focus {
   border-color: var(--onyx);
 }

@@ -33,6 +33,10 @@
       background var(--motion-fast) var(--ease-standard),
       transform var(--motion-fast) var(--ease-standard);
     max-width: 100%;
+    /* min-width:0 (the kernel overflow doctrine) lets a button shrink + ellipsis
+     * inside a tight flex Row instead of forcing its parent to overflow — e.g. a
+     * long conversation-title button beside a fixed badge + delete button. */
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

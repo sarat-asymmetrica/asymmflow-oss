@@ -10,12 +10,18 @@
     align = 'center',
     justify = 'start',
     wrap = false,
+    shrink = true,
     children,
   }: {
     gap?: Gap
     align?: Align
     justify?: Justify
     wrap?: boolean
+    /** When false, this Row keeps its content width and refuses to shrink as a
+     * flex child of a parent Row — so a fixed trailing control cluster (badge +
+     * delete button) can't be squeezed below its content and forced to overflow;
+     * the flexible sibling (a truncating label) absorbs the shrink instead. */
+    shrink?: boolean
     children: Snippet
   } = $props()
 
@@ -40,6 +46,7 @@
   style:align-items={alignCss[align]}
   style:justify-content={justifyCss[justify]}
   style:flex-wrap={wrap ? 'wrap' : 'nowrap'}
+  style:flex-shrink={shrink ? undefined : '0'}
 >
   {@render children()}
 </div>
