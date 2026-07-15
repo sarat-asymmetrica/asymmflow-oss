@@ -37,6 +37,34 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
     empty-date guard maps to Go zero time (refused at the seam, never a silent "today").
   - **I1.4 AI-provider-key secrets storage:** parked owner decision — surfaced, NOT improvised (see
     INTEG checkpoint). Only affects the Settings/Butler AI-key path (a DEFER); does not block I2/I3.
+- **★ Wave I2 — read swaps (mock→real) DONE (green: check 0/0 348, test 148, build clean, FULL layout sweep 49/49).**
+  Committed in 3 batches (`9dd1660` dashboards, `fc970f1` sales+system reads, `7097633` profile-enrich engine).
+  - **Batch A — 5 dashboards:** main (3-binding composition GetDashboardStats+pipeline+AR-aging via
+    Promise.all; focus/alerts/tasks honest-blank — no roster binding), finance-overview
+    (GetFinancialDashboardForYear, ~35 fields 1:1), ahs-finance (GetFinancialDashboardByDivision with
+    division resolved from the registry `dashboardVariant==='ahs'` — consumes the I1.2 store, no literal),
+    crm-customer/crm-supplier (GetCRM*Dashboard[ByYear]; metric-card share pct DERIVED since the cards
+    carry none).
+  - **Batch B — sales+system reads:** serial-trace (SearchSerials/GetRecentlyDeliveredSerials);
+    opportunities READ (RFQ+pipeline merge mirroring costing-sheet's proven mapping + folder dedup, +
+    ListCustomers options — mutations stay I3); audit-trail 3-level chain
+    (accounts→statements→GetAuditTrail flattened, amount honest-blank — the log has none); approvals
+    fetch (ListDeleteApprovalRequests+ListEmployeeArchiveRequests, status=''=all — reviews stay I3);
+    notifications (ListNotificationFeed+MarkNotificationAsRead — the recon's transport uncertainty
+    RESOLVED, direct bindings exist; reviewStatus/requester/reason honest-blank as they live on the
+    request, not the notification; approve/reject reviews stay I3; live-push DEFER).
+  - **Batch C — EntityMaster `profile.enrich` ENGINE (fix-at-the-kernel):** new
+    `EntityDescriptor.profile.enrich?(row)` + `LedgerViewModel.enrichSelected()` (idempotent per id,
+    reset on reload, non-fatal) + an EntityMaster `$effect` on selection. Wires the secondary-fetch
+    depth: GetCustomerFullProfile (customers) + GetSupplierFullProfile (suppliers). GetCashPosition was
+    already wired (bank-recon); finance-overview has no separate overlay consumer.
+  - **⚠️ customer-360 STOP-AND-SURFACED (not wired):** real `Customer360Data` is NARROWER than the
+    view (no contact/TRN/credit-limit/regime; adds aging/history/orders) and `Customer360Graph` is a
+    node/edge graph, not the flat connections summary — a genuine SHAPE-DIVERGENCE, not a swap. Kept
+    honestly gapped with precise notes; needs an OWNER shape decision (reshape the view to the backend,
+    or compose a supplementary customer-detail fetch). Read-only, no persistence risk.
+  - **INTEG discipline held:** every mutation on these screens still throws its honest `INTEG gap:` —
+    only reads (+ the benign MarkNotificationAsRead) flipped. No silent mock persistence anywhere.
 
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 

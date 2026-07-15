@@ -55,20 +55,20 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
-| Dashboard · `dashboard` | DashboardScreen | Hub | ✅ | mock (INTEG) | read-only | `GetDashboardStats` + `GetDashboardPipelineByStageYTD` + `GetDashboardARAgingReportYTD` (composed); drill-down nav wired (parity #4) — K3 log | ☐ |
+| Dashboard · `dashboard` | DashboardScreen | Hub | ✅ | **real** | read-only | ✅ `GetDashboardStats`+`GetDashboardPipelineByStageYTD`+`GetDashboardARAgingReportYTD` composed (I2); focus/alerts/tasks honest-blank (no backing binding) | ☑ |
 
 ### Sales
 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
-| CRM Customer Overview · `crm-customer` | CRMCustomerDashboard | Hub | ✅ | mock (INTEG) | read-only | `GetCRMCustomerDashboard`, `GetCRMCustomerDashboardByYear` | ☐ |
-| Customers · `customers` | CustomerDetailView | Entity | ✅ | real* | wired (hold/reactivate) | `GetCustomerFullProfile` (profile depth: TRN/aging/RFQ-winrate) | ☐ |
+| CRM Customer Overview · `crm-customer` | CRMCustomerDashboard | Hub | ✅ | **real** | read-only | ✅ `GetCRMCustomerDashboard`/`…ByYear` (I2); top-customer share pct derived | ☑ |
+| Customers · `customers` | CustomerDetailView | Entity | ✅ | **real** | wired (hold/reactivate) | ✅ `GetCustomerFullProfile` profile depth via new `profile.enrich` engine (I2) | ☑ |
 | Orders · `orders` | OrdersScreen | Ledger | ✅ | real | mock (INTEG) | `QuickMarkOrderDelivered`; delivery-% batch join (ENGINE) | ☐ |
 | RFQs · `rfqs` | RFQScreen | Ledger | ✅ | real | mock (INTEG) | `UpdateRFQStage`, `UpdateRFQStatus` | ☐ |
 | Offers · `offers` | OffersScreen | Ledger | ✅ | real | read-only | `GenerateOfferPDF`/`OpenExportedFile` (PDF); Won/Lost + create ledgered | ☐ |
-| Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | mock (INTEG) | mock (INTEG) | `GetRFQs`+`GetPipelineOpportunities` (2-source fetch), `CreateRFQWithReference`, `DeleteRFQ`, `DeleteRFQWithCascade` 🔥 | ☐ |
+| Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | **real** | mock (INTEG) | ✅ `GetRFQs`+`GetPipelineOpportunities` merge + `ListCustomers` (I2); still I3: `CreateRFQWithReference`, `DeleteRFQ`, `DeleteRFQWithCascade` 🔥 | ☐ |
 | Pricing · `pricing` | PricingScreen | Bespoke | ✅ | real* | `SimulateMargin` wired | `fetchPricingCustomers` (no real customer/win-rate endpoint yet) | ☐ |
-| Customer 360 · `customer-360` | Customer360 | Bespoke | ✅ | mock (INTEG) | read-only | `GetCustomer360`, `GetCustomer360Graph` (held synthetic — sensitivity) | ☐ |
+| Customer 360 · `customer-360` | Customer360 | Bespoke | ✅ | mock (INTEG) | read-only | ⚠️ `GetCustomer360`/`GetCustomer360Graph` — SHAPE-DIVERGENCE (real structs narrower/graph-shaped than this view); **owner shape decision** before wiring (I2 report) | ☐ |
 | Costing Sheet · `costing-sheet` | CostingSheet (3026 L) | Bespoke | ✅ | real | mock (INTEG) | `CreateCostingSheet`, `UpdateCostingSheet`, `SaveCostingAsOffer` 🔥, `Clone…`, `SetActiveCostingRevision`, PDF/Excel export | ☐ |
 | Sales Hub · `sales-hub` | SalesHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes Opportunities/Costing/Offers/Orders (see those rows). `SalesAdminTools` tab DEFER | ☐ |
 | Relationships Hub · `crm-hub` | CRMHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes crm-customer/crm-supplier/data-quality | ☐ |
@@ -77,7 +77,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
-| Finance Overview · `finance-overview` | FinancialDashboard | Hub | ✅ | mock (INTEG) | read-only | `GetFinancialDashboardForYear` (FY snapshot), `GetCashPosition` (live-cash overlay); CCC formula box (SLOT) | ☐ |
+| Finance Overview · `finance-overview` | FinancialDashboard | Hub | ✅ | **real** | read-only | ✅ `GetFinancialDashboardForYear` (I2); `GetCashPosition` already wired (bank-recon), no separate overlay consumer; CCC formula box (SLOT) | ☑ |
 | Invoices · `invoices` | InvoicesScreen (2930 L) | Ledger | ✅ | real | mock (INTEG) — create-Draft form shipped | `SendCustomerInvoice`, `GenerateInvoicePDF`, `GetAvailableDeliveryNotesForOrder`; edit/proforma/credit-override slots 🔥 | ☐ |
 | Payments · `payments` | PaymentsScreen | Ledger | ✅ | real | mock (INTEG) | `ReverseCustomerReceipt` 🔥; `GetAllPayments` (History panel deferred) | ☐ |
 | Credit Notes · `credit-notes` | CreditNotes (in Invoices) | Ledger | ✅ | real | mock (INTEG) | `ApplyCreditNote` 🔥; `GenerateCreditNotePDF`; Issue form (SLOT) | ☐ |
@@ -85,7 +85,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Supplier Payments · `supplier-payments` | SupplierPaymentsScreen | Ledger | ✅ | real | mock (INTEG) | `DeleteSupplierPayment` 🔥; Expenses-settlement merge wrapper; Record/Edit ledgered | ☐ |
 | Cheque Register · `cheque-register` | ChequeRegisterScreen | Ledger | ✅ | real | mock (INTEG) | `MarkChequeStale`, `CancelCheque`; `GetChequeRegisters`/`GetStaleCheques` sub-views (ENGINE) | ☐ |
 | Expenses · `expenses` | ExpensesScreen | Ledger | ✅ | real | mock (INTEG) | `SubmitExpenseEntry`, `Approve`, `Reject`, `Post`, `DeleteExpenseEntry` 🔥; `getExpenseDashboardSummary` | ☐ |
-| AHS Division Finance · `ahs-finance` | AHSDashboard | Hub | ✅ | mock (INTEG) | read-only | `GetFinancialDashboardByDivision` (division key from `GetDivisionRegistry`) | ☐ |
+| AHS Division Finance · `ahs-finance` | AHSDashboard | Hub | ✅ | **real** | read-only | ✅ `GetFinancialDashboardByDivision` with division resolved from registry (`dashboardVariant==='ahs'`, I1.2/I2) | ☑ |
 | FX Revaluation · `fx-revaluation` | FXRevaluationScreen | Ledger | ✅ | real | mock (INTEG) | `PostFXRevaluation` 🔥, `ReverseRevaluation` 🔥; Exposure/Rates tabs (ENGINE) | ☐ |
 | Book vs Bank Recon · `book-bank-recon` | BookBankReconciliationScreen | Bespoke | ✅ | real (3-call agg) | mock (INTEG) | `FinalizeBookBankReconciliation` 🔥; Create/Update recon forms | ☐ |
 | Accounting · `accounting` | AccountingScreen (2098 L) | Bespoke | ✅ | real (8 fetches) | mock (INTEG) | `CreateAccount`, `UpdateAccount`, `CreateJournalEntry` 🔥, `ReviewCashflowEvidenceProposal`, 5× CSV/VAT export | ☐ |
@@ -96,13 +96,13 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
-| CRM Supplier Overview · `crm-supplier` | CRMSupplierDashboard | Hub | ✅ | mock (INTEG) | read-only | `GetCRMSupplierDashboard`, `GetCRMSupplierDashboardByYear` | ☐ |
+| CRM Supplier Overview · `crm-supplier` | CRMSupplierDashboard | Hub | ✅ | **real** | read-only | ✅ `GetCRMSupplierDashboard`/`…ByYear` (I2); top-supplier share pct derived | ☑ |
 | Purchase Orders · `purchase-orders` | PurchaseOrdersScreen | Ledger | ✅ | real | mock (INTEG) | `UpdatePOStatus`; Approve (SoD), Receive Items 🔥, multi-currency create ledgered | ☐ |
 | Delivery Notes · `delivery-notes` | DeliveryNotesScreen | Ledger | ✅ | real | mock (INTEG) | `DispatchDeliveryNote`, `ConfirmDeliveryNote`, `DeleteDeliveryNote`; order/customer enrichment join | ☐ |
 | Goods Received · `grns` | GRNScreen | Ledger | ✅ | real | read-only | Receive / QC Review / Complete — all ledgered SLOT 🔥 | ☐ |
-| Suppliers · `suppliers` | SuppliersScreen | Entity | ✅ | real* | mock (INTEG) delete | `DeleteSupplier`; `GetSupplierFullProfile` (KPIs/VAT/brands); create + contacts/issues/notes ledgered | ☐ |
+| Suppliers · `suppliers` | SuppliersScreen | Entity | ✅ | **real** | mock (INTEG) delete | ✅ `GetSupplierFullProfile` via `profile.enrich` (I2); still I3: `DeleteSupplier`; create + contacts/issues/notes ledgered | ☐ |
 | Inventory Fulfillment · `inventory-fulfillment` | InventoryFulfillmentScreen | Ledger | ✅ | real | read-only | none on data; row-click "Open Order" nav (INTEG, app-shell router) | ☐ |
-| Serial Trace · `serial-trace` | SerialTraceScreen | Bespoke | ✅ | mock (INTEG) | read-only | `SearchSerials`, `GetRecentlyDeliveredSerials` (both reads, straight swap) | ☐ |
+| Serial Trace · `serial-trace` | SerialTraceScreen | Bespoke | ✅ | **real** | read-only | ✅ `SearchSerials`, `GetRecentlyDeliveredSerials` (I2) | ☑ |
 | Work · `work` | WorkHub (1445 L) | Bespoke (TabShell) | ✅ | real (6 fetches) | mock (INTEG) | 14 task/project mutations incl. `Delete/Archive/ShelveCollaborativeProject` 🔥, `CreateCollaborativeTask`, `UpdateCollaborativeTaskStatus`, … | ☐ |
 | Operations Hub · `operations-hub` | OperationsHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes PO/DN/Fulfillment/Serial-Trace. Per-tab badge counts DEFER | ☐ |
 
@@ -118,10 +118,10 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
 | Users · `users` | UserManagementScreen | Entity | ✅ | real | read-only (RBAC) | Create/Update/role-assign deliberately **not built** (RBAC hot-zone) — wire at INTEG via server-gated call | ☐ |
-| Approvals Queue · `approvals` | ApprovalsQueueScreen | Ledger | ✅ | mock (INTEG) | mock (INTEG) | `ListDeleteApprovalRequests`+`ListEmployeeArchiveRequests` (fetch), `ReviewDeleteApprovalRequest`, `ReviewEmployeeArchiveRequest` 🔥 | ☐ |
-| Audit Trail · `audit-trail` | AuditTrailViewer | Ledger | ✅ | mock (INTEG) | mock (INTEG) | `GetActiveBankAccounts`→`GetBankStatements`→`GetAuditTrail` chain, `ReverseAction` 🔥 | ☐ |
+| Approvals Queue · `approvals` | ApprovalsQueueScreen | Ledger | ✅ | **real** | mock (INTEG) | ✅ `ListDeleteApprovalRequests`+`ListEmployeeArchiveRequests` fetch (I2); still I3: `ReviewDeleteApprovalRequest`, `ReviewEmployeeArchiveRequest` 🔥 | ☐ |
+| Audit Trail · `audit-trail` | AuditTrailViewer | Ledger | ✅ | **real** | mock (INTEG) | ✅ `GetActiveBankAccounts`→`GetBankStatements`→`GetAuditTrail` chain (I2); still I3: `ReverseAction` 🔥 | ☐ |
 | Data Quality · `data-quality` | DataQualityScreen | Ledger | ✅ | real (preview real) | mock (INTEG) | `ReviewDataQualityIssue`; review-history panel (ENGINE) | ☐ |
-| Notifications · `notifications` | NotificationsScreen | Bespoke | ✅ | mock (INTEG) | mock (INTEG) | whole backend via `bridge/notifications.ts` (collaboration wrapper); live-push DEFER | ☐ |
+| Notifications · `notifications` | NotificationsScreen | Bespoke | ✅ | **real** | mock (INTEG) | ✅ `ListNotificationFeed` fetch + `MarkNotificationAsRead` (I2); reviewStatus/requester honest-blank (not on record); still I3: approve/reject reviews; live-push DEFER | ☐ |
 | Bank Accounts · `bank-accounts` | SettingsScreen (split) | Ledger | ✅ | real | mock (INTEG) | Create/Update/Delete bank account (division-scoped + encrypted IBAN/SWIFT) 🔥 | ☐ |
 | Currency Rates · `currency-rates` | SettingsScreen (split) | Ledger | ✅ | real | **wired** | ~~`SetExchangeRate`~~ ✅ wired via kernel `map.goTime` date→time.Time bridge (I1.3); Go round-trip + persistence test green | ☑ |
 | Business Settings · `business-settings` | SettingsScreen (split) | Bespoke | ✅ | real | mock (INTEG) | `UpdateSettings` (unverified key vocabulary — confirm against Go handler first) | ☐ |
