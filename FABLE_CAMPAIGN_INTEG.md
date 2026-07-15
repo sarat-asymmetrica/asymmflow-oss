@@ -24,53 +24,30 @@ correctly points at `frontend-lab` for dev.
 
 ---
 
-## 0. The owner ruling that shapes this campaign (Sprint 2, commit `1779b3c`)
+## 0. The owner ruling that shapes this campaign — **AMENDED 2026-07-15**
 
-Close INTEG toward the **sovereign mesh** (Era-3): validate the real adapters against the
-**owner's local PostgreSQL** — NOT the legacy DuckDNS remote-Postgres sync (Era-1, retired; never
-enable it), NOT the live PH SQLite at `%APPDATA%\Roaming\AsymmFlow` (remote sync is ENABLED there —
-never touch it). The sync layer becomes a Holesail P2P sidecar — a separate campaign running in
-parallel (worktree `asymmflow-mesh`, `mesh/` dir — **hands off `mesh/`**).
+**Superseding ruling (owner, 2026-07-15; supersedes the runtime clause of `1779b3c`):**
+**SQLite-primary is PERMANENT. Postgres is RETIRED from the target architecture entirely.** The
+sync layer is the **sovereign mesh** (Autobase op-log + deterministic kernel reducer over
+Holepunch/Holesail — a separate parallel campaign in worktree `asymmflow-mesh`, `mesh/` dir —
+**hands off `mesh/`**). The always-on office machine becomes an **always-on mesh peer** (durability
+anchor + backup custodian), NOT a database server. Rationale: DB-level row sync can't express
+business-invariant conflict semantics; the mesh reducer can, and mesh peers run SQLite — so a
+primary-on-PG port would validate a runtime that will never ship.
 
-**Verified 2026-07-15:** PostgreSQL 16.14 running (Windows service `postgresql-x64-16`), psql at
-`C:\Program Files\PostgreSQL\16\bin\psql.exe`, throwaway DB **`asymmflow_integ`** created and
-connectable. Credentials live in **`.env.integ.local`** (repo root of this worktree, gitignored).
-**NEVER commit, log, echo, or paste the DSN/password into any committed file, report, or campaign log.**
+What survives from `1779b3c` unchanged: do NOT wire or enable the legacy DuckDNS remote-Postgres
+sync (Era-1, retired); NEVER touch the live PH SQLite at `%APPDATA%\Roaming\AsymmFlow` (remote sync
+is ENABLED there).
+
+**Validation runtime for this campaign: a quarantined SCRATCH SQLite DB** (fresh file under a
+scratch dir via `PH_DB_PATH` + `APPDATA` overrides — see §4). The frontend seam talks to Go
+bindings, never SQL, so this exercises the identical INTEG surface. There is **no Wave I0 and no
+backend dialect work in this campaign** — your only backend touch, if any, is trivial dev tooling
+(e.g. `cmd/devkey` already reads a scratch DB path).
 
 ---
 
-## 1. Wave I0 — PG runtime spike (TIMEBOXED, decision-gated)
-
-The app's primary DB is hard-wired SQLite: single open site
-`pkg/runtime/composition/composition.go:59` (`OpenSQLite`, gormlite/ncruces). The
-`gorm.io/driver/postgres` dep already exists (used by the retired remote-sync layer in
-`db_manager.go`). But the boot path is SQLite-shaped: DSN PRAGMAs + manual PRAGMAs
-(`app.go:480–539`), `sqlite_master` table counts (`app.go:592,744`), and — the big one — the
-CHECK-constraint migration machinery that does `PRAGMA writable_schema` surgery on `sqlite_master`
-(`app.go:1984–2046`). ~52 sqlite-isms repo-wide, though many are in tooling/backup, not boot.
-
-**The spike:** add a dev-only escape hatch — if env `INTEG_PG_DSN` is set (read it from
-`.env.integ.local`), the composition seam opens `postgres.Open(dsn)` instead of gormlite, and every
-SQLite-specific boot step is gated behind a dialect check (`db.Dialector.Name() == "sqlite"`):
-PRAGMAs skipped, `sqlite_master` queries get an `information_schema` equivalent or are skipped with a
-log line, the writable-schema CHECK-constraint migrations are **skipped on PG** (AutoMigrate creates
-fresh-correct tables on an empty DB — the surgery only exists to mutate *existing* SQLite schemas).
-Target: **app boots green on `asymmflow_integ`, AutoMigrate lands the full model set, license keys
-seed, `cmd/devkey` (add a PG mode) prints an admin key, you activate and see the Dashboard.**
-
-**Decision gate (report to owner before proceeding past it):**
-- **Outcome A** — boot green with modest gating (roughly: composition seam + app.go boot path only):
-  PG is the validation runtime for I1–I3. Proceed.
-- **Outcome B** — it's a rat's nest (migration machinery, dialect-incompatible raw SQL in binding
-  paths, >~a day of yak-shaving): **STOP. Default ruling (owner pre-ratified):** fall back to a
-  quarantined **scratch SQLite** as the validation runtime for I1–I3 — the frontend seam talks to Go
-  bindings, never SQL, so the wiring work is identical — and "primary-on-Postgres" graduates to its
-  own backend campaign aligned with the mesh. Record findings in the campaign log either way.
-
-Backend edits in this wave stay **minimal and additive** (composition seam + boot gating + devkey).
-`go build ./...` + `go test ./...` stay green with the env var UNSET (pure SQLite path untouched).
-
-## 2. Wave I1 — Cross-cutting prerequisites (build once, unblocks many)
+## 1. Wave I1 — Cross-cutting prerequisites (build once, unblocks many)
 
 From the K6 parity roster:
 1. **Session/currentUser real wiring** — the store exists (`src/stores/session.svelte.ts`); replace
@@ -83,7 +60,7 @@ From the K6 parity roster:
 4. **Secrets storage for AI provider keys** — still a parked owner decision (Settings DEFER).
    Surface it in your wave report; do not improvise a storage scheme.
 
-## 3. Wave I2 — Read swaps (mock → real; low risk, straight `pick()` swaps)
+## 2. Wave I2 — Read swaps (mock → real; low risk, straight `pick()` swaps)
 
 The roster, verbatim from `FABLE_WAVE_K6_PARITY.md` — accuracy notes included (they were verified
 against the actual bridges, trust them over older roll-ups):
@@ -99,7 +76,7 @@ Seed the runtime DB with **synthetic canon data only** (adversarial: RTL, long s
 amounts) — repo law #2, no real client data, ever. Per screen: swap → exercise in `wails dev` →
 tick the parity table row → gate (`node tests/gate.mjs "<labels>"`).
 
-## 4. Wave I3 — 🔥 Financial hot-zones (wire LAST, each with tests)
+## 3. Wave I3 — 🔥 Financial hot-zones (wire LAST, each with tests)
 
 Irreversible/money-moving mutations, from the roster: invoice send/PDF + edit/proforma/credit-override;
 `ReverseCustomerReceipt`; `ApplyCreditNote`; supplier-invoice 3-way-match/approve/pay;
@@ -109,17 +86,17 @@ Receive/Complete; payroll generate/approve/post; `SaveCostingAsOffer`; `DeleteRF
 `ImportOneDriveDeals`; delete-approval reviews.
 
 Per flow, the bar is higher than I2: wire → drive the flow end-to-end in the running app → **verify
-persisted state AND the audit trail in the DB directly** (psql or sqlite3 per the I0 outcome) →
+persisted state AND the audit trail in the DB directly** (sqlite3 CLI or a Go query snippet against the scratch DB) →
 verify the reversal path where one exists (reverse-receipt, un-finalize, credit-note chain) → tick
 the parity row. Batch by domain (AR, AP, recon/FX, inventory-docs, payroll, costing/CRM) — one wave
 report each.
 
-## 5. Gates, safety rails, and coordination
+## 4. Gates, safety rails, and coordination
 
 - **Per-wave gates:** `npm run check` 0/0 · `npm run test` all green · `npm run build` clean ·
   `node tests/gate.mjs` (subset per touched screens; full sweep at campaign end) · `go build ./...` +
-  `go test ./...` (I0 and any backend touch).
-- **Quarantine, ALWAYS (even with PG primary):** `export PH_DB_PATH=<scratch>` +
+  `go test ./...` (if any backend touch).
+- **Quarantine, ALWAYS:** `export PH_DB_PATH=<scratch>` +
   `export APPDATA=<scratch>` before any `wails dev`. ⚠️ The "PowerShell" tool executes via bash —
   `$env:` assignments silently no-op; use `export`. The live `%APPDATA%\Roaming\AsymmFlow` has
   remote sync ENABLED — touching it is the one unrecoverable mistake available to you.
@@ -128,11 +105,11 @@ report each.
   `real`, mutation ☐ → status) and gets a line in `FABLE_KERNEL_CAMPAIGN_LOG.md`.
 - **Parallel campaign:** sovereign-mesh Wave 1 runs concurrently in the `asymmflow-mesh` worktree.
   Disjoint by design — you never touch `mesh/`; it never touches `frontend-lab/`. Your only backend
-  surface is the I0 seam; keep it that way.
+  surface is trivial dev tooling; keep it that way.
 - **Out of scope:** the K6 flip (repoint/embed/delete `frontend/`) — owner-gated Task #5; the
   Holesail sync sidecar; pushing anything.
 
-## 6. The prize
+## 5. The prize
 
 Every row of the K6 parity table honestly `real`, every hot-zone mutation proven against a throwaway
 DB with its audit trail intact — so the only thing left between the kernel and production is the

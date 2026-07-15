@@ -11,6 +11,26 @@ Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
+## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
+
+- **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
+  `wails.json` repoint** (held back as flip step 2; the repoint lives only on this branch —
+  do NOT naively `git merge main` here or it reverts). Gates at merge: check 0/0 (348),
+  vitest 148/148, go build+test clean, mesh smoke green.
+- **★ OWNER RULING (2026-07-15, supersedes the runtime clause of `1779b3c`): SQLite-primary
+  is PERMANENT; Postgres RETIRED from the target architecture.** Rationale ratified after
+  architectural review: the boot path is deeply SQLite-shaped (PRAGMA/writable-schema
+  CHECK-constraint surgery, app.go:1984–2046), mesh peers run SQLite, and DB-row-level sync
+  can't express business-invariant conflict semantics — the mesh reducer can. The always-on
+  office machine's job changes: **always-on mesh peer** (durability anchor + backup
+  custodian), not a database server. Owner also validated the Holepunch stack first-hand
+  (keet.io). Consequence: INTEG's Wave I0 (PG-runtime spike) was cut from the spec before
+  launch; validation runtime = quarantined scratch SQLite. Verified-then-retired PG artifacts
+  (throwaway `asymmflow_integ` DB, `.env.integ.local`) were dropped/deleted.
+- **`FABLE_CAMPAIGN_INTEG.md`** = the Task #4 execution spec (I1 prereqs → I2 read swaps →
+  I3 financial hot-zones). Runs parallel to sovereign-mesh Wave 1 (`asymmflow-mesh`
+  worktree, Fable-driven) — disjoint surfaces by design.
+
 ## SPRINT 3 (fresh Opus 4.8 orchestrator, from 5fe30bc)
 
 Continuation of `FABLE_CAMPAIGN_SPRINT3_HANDOFF.md`: finish the K5 tail (tripwires,
