@@ -4,7 +4,9 @@
  * period selector visibly changes the payload. Real wiring (year-scoped fetch
  * + the live-cash overlay from GetCashPosition) lands at K5. */
 import { pick } from '../runtime'
+import { num, str } from '../map'
 import type { Tone } from '../../kernel/tones'
+import { GetFinancialDashboardForYear } from '$wails/go/main/App'
 
 export interface FinanceOverviewData {
   year: number
@@ -188,7 +190,48 @@ async function mockFetch(period?: string): Promise<FinanceOverviewData> {
 }
 
 async function realFetch(period?: string): Promise<FinanceOverviewData> {
-  throw new Error(`INTEG gap: GetFinancialDashboardForYear(${period ?? 'current'}) — wires at K5`)
+  const year = period ? Number(period) : new Date().getFullYear()
+  const d = (await GetFinancialDashboardForYear(year)) as unknown as Record<string, unknown>
+  // FinancialDashboard maps field-for-field onto FinanceOverviewData (the mock
+  // was authored against this struct). `notices` has no backing binding — honest
+  // blank (K3 hides empty widgets), never fabricated.
+  return {
+    year: num(d.year) || year,
+    as_of_date: str(d.as_of_date),
+    revenue: num(d.revenue),
+    revenue_yoy: num(d.revenue_yoy),
+    gross_profit: num(d.gross_profit),
+    gross_margin: num(d.gross_margin),
+    net_profit: num(d.net_profit),
+    net_margin: num(d.net_margin),
+    cash_and_equiv: num(d.cash_and_equiv),
+    trade_receivables: num(d.trade_receivables),
+    total_assets: num(d.total_assets),
+    current_assets: num(d.current_assets),
+    non_current_assets: num(d.non_current_assets),
+    total_liabilities: num(d.total_liabilities),
+    current_liabilities: num(d.current_liabilities),
+    total_equity: num(d.total_equity),
+    current_ratio: num(d.current_ratio),
+    quick_ratio: num(d.quick_ratio),
+    cash_ratio: num(d.cash_ratio),
+    debt_to_equity: num(d.debt_to_equity),
+    equity_ratio: num(d.equity_ratio),
+    dso: num(d.dso),
+    dio: num(d.dio),
+    dpo: num(d.dpo),
+    cash_conv_cycle: num(d.cash_conv_cycle),
+    roe: num(d.roe),
+    asset_turnover: num(d.asset_turnover),
+    ar_current: num(d.ar_current),
+    ar_30_60: num(d.ar_30_60),
+    ar_60_90: num(d.ar_60_90),
+    ar_over_90: num(d.ar_over_90),
+    py_revenue: num(d.py_revenue),
+    py_gross_profit: num(d.py_gross_profit),
+    py_net_profit: num(d.py_net_profit),
+    notices: [],
+  }
 }
 
 export const fetchFinanceOverview = (period?: string): Promise<FinanceOverviewData> =>

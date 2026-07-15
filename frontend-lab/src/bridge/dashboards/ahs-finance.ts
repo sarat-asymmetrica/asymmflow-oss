@@ -11,8 +11,19 @@
  * Controls" division (see bridge/mock.ts's DIVISIONS) until that registry
  * is wired — see AhsFinance.parity.md. */
 import { pick } from '../runtime'
+import { num, str } from '../map'
+import { GetFinancialDashboardByDivision } from '$wails/go/main/App'
+import { getDivisions, getDashboardVariant, getDefaultDivisionKey } from '../../stores/divisions.svelte'
 
 const DIVISION_KEY = 'Beacon Controls'
+
+/** The division scoped to this dashboard, resolved from the registry (I1.2):
+ * the division whose overlay `dashboardVariant === 'ahs'`, never a hardcoded
+ * literal (L7). Falls back to the registry default if no ahs-variant exists. */
+function ahsDivisionKey(): string {
+  const match = getDivisions().find((d) => getDashboardVariant(d.key) === 'ahs')
+  return match?.key ?? getDefaultDivisionKey()
+}
 
 export interface AhsFinanceData {
   division: string
@@ -102,12 +113,28 @@ async function mockFetch(period?: string): Promise<AhsFinanceData> {
 }
 
 async function realFetch(period?: string): Promise<AhsFinanceData> {
-  // GetFinancialDashboardByDivision(year, divisionKey) is a real, working
-  // binding — but divisionKey must come from the division registry
-  // (GetDivisionRegistry + dashboardVariant === 'ahs' lookup, Wave 12
-  // division registry), never a hardcoded literal (L7). Not wired here —
-  // see AhsFinance.parity.md.
-  throw new Error(`INTEG gap: GetFinancialDashboardByDivision(${period ?? 'current'}, <registry-resolved division>) — wires at K5`)
+  // GetFinancialDashboardByDivision(year, divisionKey); divisionKey resolved
+  // from the registry (dashboardVariant === 'ahs'), never a bare literal (L7).
+  const year = period ? Number(period) : new Date().getFullYear()
+  const d = (await GetFinancialDashboardByDivision(year, ahsDivisionKey())) as unknown as Record<string, unknown>
+  return {
+    division: str(d.division),
+    year: num(d.year) || year,
+    invoiceCount: num(d.invoice_count),
+    revenue: num(d.revenue),
+    costOfSales: num(d.cost_of_sales),
+    grossProfit: num(d.gross_profit),
+    staffCosts: num(d.staff_costs),
+    adminExpenses: num(d.admin_expenses),
+    netProfit: num(d.net_profit),
+    cashEquivalents: num(d.cash_equivalents),
+    tradeReceivables: num(d.trade_receivables),
+    totalAssets: num(d.total_assets),
+    totalLiabilities: num(d.total_liabilities),
+    totalEquity: num(d.total_equity),
+    isAudited: !!d.is_audited,
+    source: str(d.source),
+  }
 }
 
 export const fetchAhsFinance = (period?: string): Promise<AhsFinanceData> => pick(realFetch, mockFetch)(period)
