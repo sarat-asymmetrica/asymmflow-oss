@@ -38,6 +38,8 @@
     lineAmount,
   } from './bank-reconciliation-vm.svelte'
 
+  let { embedded = false }: { embedded?: boolean } = $props()
+
   const vm = new BankReconciliationViewModel()
   onMount(() => void vm.load())
 
@@ -102,6 +104,7 @@
 </script>
 
 <PageShell
+  {embedded}
   title="Bank Reconciliation"
   subtitle="Import bank statements and match each transaction line to an invoice, payment, expense, or payroll payout."
 >

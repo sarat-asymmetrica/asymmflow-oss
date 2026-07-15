@@ -36,6 +36,8 @@
   } from '../bridge/costing-sheet'
   import { CostingSheetViewModel, MAX_COSTING_LINE_ITEMS } from './costing-sheet-vm.svelte'
 
+  let { embedded = false }: { embedded?: boolean } = $props()
+
   const vm = new CostingSheetViewModel()
   onMount(() => void vm.load())
 
@@ -198,7 +200,7 @@
   const DOC_TYPE_OPTIONS = ['Quotation', 'Budgetary Quote', 'Budgetary Estimate', 'Technical Offer', 'Commercial Offer']
 </script>
 
-<PageShell title="Costing Sheet" subtitle="Build a cost/quote sheet from an opportunity, or start blank.">
+<PageShell {embedded} title="Costing Sheet" subtitle="Build a cost/quote sheet from an opportunity, or start blank.">
   {#snippet toolbar()}
     <Toolbar>
       <Button onclick={() => vm.load()}>Refresh</Button>

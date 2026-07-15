@@ -29,6 +29,8 @@
     varianceTone,
   } from './book-bank-recon.svelte'
 
+  let { embedded = false }: { embedded?: boolean } = $props()
+
   const vm = new BookBankReconViewModel()
   onMount(() => void vm.load())
 
@@ -68,6 +70,7 @@
 </script>
 
 <PageShell
+  {embedded}
   title="Book vs Bank Reconciliation"
   subtitle="Month-end statement reconciliation — bank side vs book side, then finalize."
 >

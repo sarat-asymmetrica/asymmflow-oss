@@ -17,6 +17,8 @@
   import { SerialTraceViewModel, warrantyLabel } from './serial-trace.svelte'
   import SerialWarrantyBadge from './SerialWarrantyBadge.svelte'
 
+  let { embedded = false }: { embedded?: boolean } = $props()
+
   const vm = new SerialTraceViewModel()
   $effect(() => {
     void vm.loadRecent()
@@ -64,7 +66,7 @@
   )
 </script>
 
-<PageShell title="Serial Trace" {subtitle}>
+<PageShell {embedded} title="Serial Trace" {subtitle}>
   {#snippet toolbar()}
     <Toolbar>
       <SearchInput

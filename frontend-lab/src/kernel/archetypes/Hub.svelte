@@ -25,10 +25,14 @@
   let {
     descriptor,
     navigate,
+    embedded = false,
   }: {
     descriptor: HubDescriptor<Data>
     /** Drill-down handler — KPIs/widgets seed a ledger's initialQuery. */
     navigate?: Navigate
+    /** Hosted inside a hub tab (a dashboard tab of a tab-navigator): drop the
+     * page header + own scroll region. */
+    embedded?: boolean
   } = $props()
 
   const vm = $derived(new HubViewModel(descriptor))
@@ -61,6 +65,7 @@
 </script>
 
 <PageShell
+  {embedded}
   title={descriptor.title}
   subtitle={vm.loading ? 'Loading…' : vm.data && descriptor.subtitle ? descriptor.subtitle(vm.data) : ''}
 >

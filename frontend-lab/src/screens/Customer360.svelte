@@ -28,6 +28,8 @@
   import { Customer360ViewModel, type Customer360Tab } from './customer-360.svelte'
   import type { GradePrediction } from '../bridge/customer-360'
 
+  let { embedded = false }: { embedded?: boolean } = $props()
+
   const vm = new Customer360ViewModel()
   onMount(() => void vm.loadDirectory())
   // Re-loads whenever the picker changes (including back to '' via the
@@ -78,7 +80,7 @@
   )
 </script>
 
-<PageShell title="Customer 360" {subtitle}>
+<PageShell {embedded} title="Customer 360" {subtitle}>
   {#snippet toolbar()}
     <Toolbar>
       <FilterChips
