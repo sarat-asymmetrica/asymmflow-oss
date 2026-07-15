@@ -77,6 +77,30 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
      derive connections from the `Customer360Graph` node/edge data. (Bespoke-screen rework.)
   3. **AI-provider keys = encrypted in-app settings** via the existing FieldCrypto/DPAPI keystore (matches
      the no-secrets-in-source posture); a Settings key field. Resolves the I1.4 parked decision.
+- **★ Wave I3 — financial hot-zones (in progress).** VALIDATION DOCTRINE (owner-ratified): each hot-zone =
+  type-gate (adapter↔binding contract via generated d.ts) + a Go persistence/audit/reversal test on scratch
+  SQLite (I cannot headlessly drive the WebView2 GUI; the owner's smoke checklist is the human pass). The
+  repo's existing hundreds of Go tests already cover many bindings — where present, wire-and-verify; else
+  wire-and-write-test. Operating model: 3 parallel Sonnet agents wired the mechanical adapters (each honoring
+  a **gap-if-uncertain** rule on sacred posting paths), orchestrator wrote/ran the Go tests + gated + committed.
+  - **AR (5dc6f7b):** ReverseCustomerReceipt (receipt_reversal_test.go) + ApplyCreditNote (NEW
+    integ_ar_hotzone_test.go: partial/full apply, auto-Paid, guards).
+  - **recon/FX/AP/payroll/costing/CRM (2a084a4):** FX Post/Reverse (golden test); recon Finalize/Delete/
+    AutoMatch/ManualMatch/Split/Unmatch/two-phase-import/line-delete (split+unmatch in service test); book-bank
+    Finalize; accounting CreateAccount/**CreateJournalEntry**(NEW integ_accounting_hotzone_test.go — balanced
+    legs enforced)/ReviewProposal; payroll Generate/Approve/Post/MarkPaid/CreatePeriod (golden test); AP
+    **DeleteSupplierPayment**(NEW integ_ap_hotzone_test.go — removes + re-derives invoice status) + supplier-
+    invoice Approve/MarkPaid/3-way bridge fns (supplier_ap_gate_test); costing Create/Clone/SetActive;
+    opportunities Create/Delete(by source)/DeleteRFQWithCascade.
+  - **recon test + scoreboard (6b0a69d):** NEW integ_recon_hotzone_test.go (FinalizeReconciliation +
+    DeleteBankStatement); 11 parity rows flipped to wired.
+  - **Go-test tally:** 5 NEW persistence tests (ApplyCreditNote, CreateJournalEntry, DeleteSupplierPayment,
+    FinalizeReconciliation, DeleteBankStatement) + verified existing golden/gate/service tests for the rest.
+  - **Orchestrator TODOs (honestly gapped, NOT silently wired):** `SaveCostingAsOffer` 🔥 (CostingExportData
+    payload assembly — declined by the agent per discipline), supplier-invoice DESCRIPTOR consumption (bridge
+    fns added but the screen's actions don't call them yet), `CreateJournalEntry` UI already wired; deferred Go
+    tests for FinalizeBookBankReconciliation + DeleteRFQWithCascade + the two Review* bindings (Review* have
+    existing app_test/employee_archive_service_test coverage). See the INTEG handoff.
 
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
