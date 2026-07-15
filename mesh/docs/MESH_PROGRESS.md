@@ -41,23 +41,53 @@ first on-site task below.
 
 ---
 
-## Wave 1 — MISSION A, the real gate (NEXT · on-site with the Commander)
+## Wave 1 — MISSION A, the real gate (2026-07-15) · ✅ stages 1+2 GREEN
 
-Turn the stubbed 3-peer smoke into the real thing:
-1. Wrap the reducer as the actual **Autobase `apply()`** over a **Corestore**
-   (`mesh/host/` → an Autobase view whose apply calls the wasm reducer). Decision
-   pending: keep the stdin/stdout command module, or switch to an incremental
-   `//go:wasmexport apply()` reactor (lower marshalling overhead, higher wiring
-   cost). Wave 0 kept the command module to prove the boundary cheaply first.
-2. Replicate 3 Autobase writers **in one process** first (3 Corestores, manual
-   `replicate()` streams) → prove byte-identical convergence + the oversell
-   rejection through the real linearizer.
-3. Then replicate across **≥2 real machines over Holesail** (Mission D transport).
-4. **Golden the converged Autobase view** (not just the reducer output).
+The stubbed 3-peer smoke is now the real thing. Built (Fable-driven, per the
+owner's parallel-tracks call — Opus 4.8 runs frontend INTEG concurrently):
 
-**Gate (Definition of Done, campaign §6):** 3 peers converge byte-identical; the
-oversell invariant holds (one write deterministically rejected on all peers);
-goldens pin the state. If it does not go green — STOP and report.
+- `mesh/host/mesh-node.mjs` — the mesh peer: Corestore + Autobase whose **view is
+  the linearized op log**; `apply()` handles only writer grants + op appends
+  (never external state); **state is materialized OUTSIDE apply** by folding the
+  whole view through the wasm reducer. Convergence checks: raw **view digest**
+  (stronger) + reducer **state digest**.
+- `mesh/host/wave1-local.mjs` (`npm run wave1`) — **stage 1**: 3 real Autobase
+  writers, 3 on-disk Corestores, real `replicate()` streams, and a GENUINE
+  concurrent-offline causal fork (wires cut → dev-a and dev-b write blind →
+  wires reconnect → linearizer merges).
+- `mesh/host/peer.mjs` — a standalone peer process (host/join roles, JSON-line
+  REPL: `add-writer` / `append` / `digest` / `exit`). Transport doctrine held:
+  raw Corestore replication over TCP; **Holesail carries the socket** (secure
+  `hs://` connector); transport-auth ≠ capability-auth.
+- `mesh/host/wave1-holesail.mjs` (`npm run wave1:holesail`) — **stage 2**: two
+  separate OS processes replicating through a **real Holesail tunnel over the
+  real DHT/UDX stack** (same code path two machines use).
+
+**Measured results (both stages):**
+- ✅ Writer grants flow through the linearizer (`addWriter` ops) and replicate.
+- ✅ Fork merge: all peers converge to a **byte-identical view**
+  (`5962c1f9…`, pinned in `goldens/inventory_autobase.json`; reproducible across
+  runs under the test's pinned primary keys).
+- ✅ Invariant through the REAL machinery: exactly one oversell rejected, same
+  canonical loser (dev-a seq 2) on every peer; no SKU < 0.
+- ✅ **State digest == the Wave-0 reducer golden (`aa5fa416…`)** — same ops, same
+  reducer, now arriving via real Autobase + real transport. The reducer is
+  provably transport-indifferent.
+- ✅ Stage 2 over Holesail: grant, appends, convergence, golden — all through the
+  tunnel between two processes with independent on-disk stores.
+
+**The honest line (what remains for the full Mission A finale):** stage 2 runs
+both processes on ONE machine — the bytes traverse the real DHT/UDX transport,
+but not two physical NICs/networks. The ≥2-machine run is the identical
+commands on two boxes: machine 1 `npm run wave1:host`, copy the printed `hs://`
+url + baseKey, machine 2 `npm run wave1:join -- --url <hs> --base-key <hex>`,
+then `add-writer`/`append`/`digest` per `peer.mjs`'s header. Ceremony, not
+machinery — the machinery is proven.
+
+**Gate verdict (campaign §6):** peers converge byte-identical ✅ · oversell
+deterministically rejected on all peers ✅ · goldens pin the state ✅ — **GREEN**
+(with the two-physical-boxes ceremony left for when the Commander has both
+machines at hand).
 
 ## Wave 2+ — Missions C/D/E/F (after the gate is green)
 

@@ -3,3 +3,5 @@
 *-store/
 corestore/
 # wasm build output is covered by the root .gitignore (dist/), regenerated via `npm run build`
+.peer-host/
+.peer-join/

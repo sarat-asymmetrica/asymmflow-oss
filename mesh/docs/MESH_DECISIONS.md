@@ -7,6 +7,33 @@ auto-decided.
 
 ---
 
+### MESH-D8 — Wave 1 transport = raw Corestore replication over TCP, Holesail carries the socket
+`peer.mjs` speaks the Hypercore replication protocol over a plain TCP socket bound to
+127.0.0.1; Holesail (secure connector) tunnels that socket over the DHT.
+**[Mirror]** Mission D doctrine demands transport-auth ≠ capability-auth. Piping the
+replication stream through a Holesail-tunneled TCP socket keeps the layers physically
+separate: knowing the `hs://` connector gets you a byte pipe; ONLY an `addWriter` grant
+through the linearizer gets you write access. Hyperswarm-direct (join the discoveryKey)
+would work too, but Holesail is the ratified Era-3 sidecar and this proves the actual
+target topology. Confirmed working over the real DHT/UDX stack between processes.
+
+### MESH-D7 — Autobase view = the linearized OP LOG; state materialized OUTSIDE apply()
+`apply()` only handles writer grants and appends op values to the view core. The
+inventory state is computed by folding the whole view through the wasm reducer on read.
+**[Mirror]** Autobase may undo/reapply the view during reordering, so apply must touch
+nothing external (README's IMPORTANT note). Keeping apply minimal makes it trivially
+deterministic; the reducer re-sorts canonically anyway, so state is stable through
+interim linearization churn while the CONVERGED view still gates byte-identity (the
+stronger property). Cost: O(n) refold per read — fine at spike scale; the incremental
+`//go:wasmexport` reactor (MESH-D4's endpoint) is the optimization, deferred to
+Mission C when the real kernel packages arrive.
+
+### MESH-D6 — Wave 1 keeps the WASI command module (reactor still deferred)
+**[Mirror]** MESH-D4's pending decision, resolved for Wave 1: the command module
+survived contact with the real machinery (refold-per-read over Autobase views) without
+wiring cost, so the reactor's extra complexity still isn't paid for. Re-evaluate at
+Mission C where per-op marshalling volume actually grows.
+
 ### MESH-D5 — Location: a dedicated `exp/sovereign-mesh` worktree off `main`, not the frontend-flip branch
 The mesh work lives in its own worktree/branch off `main` (`asymmflow-mesh`), under a
 top-level `mesh/` dir.
