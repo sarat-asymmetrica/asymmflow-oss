@@ -1,0 +1,18 @@
+{
+  "stock": {
+    "PH-200": 7,
+    "TX-100": 4
+  },
+  "rejected": [
+    {
+      "seq": 2,
+      "actor": "dev-a",
+      "sku": "TX-100",
+      "delta": -6,
+      "reason": "floor invariant: stock would fall below 0 (have 4, delta -6)"
+    }
+  ],
+  "applied": 4,
+  "digest": "aa5fa4161212afedd5293c065eb5af17a3804fc2ccee65f600c2c5637caa2924",
+  "opsHashed": 5
+}
