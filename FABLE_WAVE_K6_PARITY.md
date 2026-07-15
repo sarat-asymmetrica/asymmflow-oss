@@ -66,10 +66,10 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Orders · `orders` | OrdersScreen | Ledger | ✅ | real | mock (INTEG) | `QuickMarkOrderDelivered`; delivery-% batch join (ENGINE) | ☐ |
 | RFQs · `rfqs` | RFQScreen | Ledger | ✅ | real | mock (INTEG) | `UpdateRFQStage`, `UpdateRFQStatus` | ☐ |
 | Offers · `offers` | OffersScreen | Ledger | ✅ | real | read-only | `GenerateOfferPDF`/`OpenExportedFile` (PDF); Won/Lost + create ledgered | ☐ |
-| Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | **real** | mock (INTEG) | ✅ `GetRFQs`+`GetPipelineOpportunities` merge + `ListCustomers` (I2); still I3: `CreateRFQWithReference`, `DeleteRFQ`, `DeleteRFQWithCascade` 🔥 | ☐ |
+| Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | **real** | **wired** | ✅ read merge (I2) + `CreateRFQWithReference`+`DeleteRFQ`/`DeleteOpportunity`(by source)+`DeleteRFQWithCascade` 🔥 (I3; cascade Go test deferred) | ☑ |
 | Pricing · `pricing` | PricingScreen | Bespoke | ✅ | real* | `SimulateMargin` wired | `fetchPricingCustomers` (no real customer/win-rate endpoint yet) | ☐ |
 | Customer 360 · `customer-360` | Customer360 | Bespoke | ✅ | **real** | read-only | ✅ `GetCustomer360`+`GetCustomer360Graph` — view RESHAPED to backend (owner ruling): dropped mock-invented contact/TRN/credit/regime; connections derived from the graph | ☑ |
-| Costing Sheet · `costing-sheet` | CostingSheet (3026 L) | Bespoke | ✅ | real | mock (INTEG) | `CreateCostingSheet`, `UpdateCostingSheet`, `SaveCostingAsOffer` 🔥, `Clone…`, `SetActiveCostingRevision`, PDF/Excel export | ☐ |
+| Costing Sheet · `costing-sheet` | CostingSheet (3026 L) | Bespoke | ✅ | real | **wired** (partial) | ✅ `CreateCostingSheet`+`Clone…`+`SetActiveCostingRevision` (I3); ⚠️ still gapped 🔥 `SaveCostingAsOffer` (CostingExportData payload — orchestrator TODO), `UpdateCostingSheet` (struct-arg), PDF/Excel export (side-effecting) | ☐ |
 | Sales Hub · `sales-hub` | SalesHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes Opportunities/Costing/Offers/Orders (see those rows). `SalesAdminTools` tab DEFER | ☐ |
 | Relationships Hub · `crm-hub` | CRMHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes crm-customer/crm-supplier/data-quality | ☐ |
 
@@ -81,15 +81,15 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Invoices · `invoices` | InvoicesScreen (2930 L) | Ledger | ✅ | real | mock (INTEG) — create-Draft form shipped | `SendCustomerInvoice`, `GenerateInvoicePDF`, `GetAvailableDeliveryNotesForOrder`; edit/proforma/credit-override slots 🔥 | ☐ |
 | Payments · `payments` | PaymentsScreen | Ledger | ✅ | real | **wired** | ✅ `ReverseCustomerReceipt` 🔥 (I3; server-gated + audit, receipt_reversal_test.go); `GetAllPayments` History panel deferred (ENGINE) | ☑ |
 | Credit Notes · `credit-notes` | CreditNotes (in Invoices) | Ledger | ✅ | real | **wired** (apply) | ✅ `ApplyCreditNote` 🔥 (I3; reduces AR + auto-Paid + guards, integ_ar_hotzone_test.go); still gapped: `GenerateCreditNotePDF`, Issue form (SLOT) | ☐ |
-| Supplier Invoices · `supplier-invoices` | SupplierInvoicesScreen | Ledger | ✅ | real | read-only | `PerformThreeWayMatch`, Approve (SoD), Mark Paid, New — all ledgered 🔥 | ☐ |
-| Supplier Payments · `supplier-payments` | SupplierPaymentsScreen | Ledger | ✅ | real | mock (INTEG) | `DeleteSupplierPayment` 🔥; Expenses-settlement merge wrapper; Record/Edit ledgered | ☐ |
+| Supplier Invoices · `supplier-invoices` | SupplierInvoicesScreen | Ledger | ✅ | real | **wired** (bridge) | ✅ `PerformThreeWayMatch`+`ApproveSupplierInvoice`(SoD)+`MarkSupplierInvoicePaid` 🔥 (I3; supplier_ap_gate_test.go) — ⚠️ descriptor actions not yet consuming (orchestrator TODO); `CreateSupplierInvoice` gapped (struct-arg) | ☐ |
+| Supplier Payments · `supplier-payments` | SupplierPaymentsScreen | Ledger | ✅ | real | **wired** (delete) | ✅ `DeleteSupplierPayment` 🔥 (I3; removes + re-derives invoice payment_status, integ_ap_hotzone_test.go); Record/Edit form-SLOTs deferred | ☐ |
 | Cheque Register · `cheque-register` | ChequeRegisterScreen | Ledger | ✅ | real | mock (INTEG) | `MarkChequeStale`, `CancelCheque`; `GetChequeRegisters`/`GetStaleCheques` sub-views (ENGINE) | ☐ |
 | Expenses · `expenses` | ExpensesScreen | Ledger | ✅ | real | mock (INTEG) | `SubmitExpenseEntry`, `Approve`, `Reject`, `Post`, `DeleteExpenseEntry` 🔥; `getExpenseDashboardSummary` | ☐ |
 | AHS Division Finance · `ahs-finance` | AHSDashboard | Hub | ✅ | **real** | read-only | ✅ `GetFinancialDashboardByDivision` with division resolved from registry (`dashboardVariant==='ahs'`, I1.2/I2) | ☑ |
-| FX Revaluation · `fx-revaluation` | FXRevaluationScreen | Ledger | ✅ | real | mock (INTEG) | `PostFXRevaluation` 🔥, `ReverseRevaluation` 🔥; Exposure/Rates tabs (ENGINE) | ☐ |
-| Book vs Bank Recon · `book-bank-recon` | BookBankReconciliationScreen | Bespoke | ✅ | real (3-call agg) | mock (INTEG) | `FinalizeBookBankReconciliation` 🔥; Create/Update recon forms | ☐ |
-| Accounting · `accounting` | AccountingScreen (2098 L) | Bespoke | ✅ | real (8 fetches) | mock (INTEG) | `CreateAccount`, `UpdateAccount`, `CreateJournalEntry` 🔥, `ReviewCashflowEvidenceProposal`, 5× CSV/VAT export | ☐ |
-| Bank Reconciliation · `bank-reconciliation` | BankReconciliationScreen (2140 L) | Bespoke | ✅ | real (10 fetches) | mock (INTEG) | `FinalizeReconciliation` 🔥, `DeleteBankStatement` 🔥, `AutoMatchBankLines`, `ManualMatchLine`, import preview/confirm, +7 line ops | ☐ |
+| FX Revaluation · `fx-revaluation` | FXRevaluationScreen | Ledger | ✅ | real | **wired** | ✅ `PostFXRevaluation`+`ReverseRevaluation` 🔥 (I3; actor from session; fx_revaluation_golden_test.go); Exposure/Rates tabs (ENGINE) | ☑ |
+| Book vs Bank Recon · `book-bank-recon` | BookBankReconciliationScreen | Bespoke | ✅ | real (3-call agg) | **wired** (finalize) | ✅ `FinalizeBookBankReconciliation` 🔥 (I3; actor from session; Go persistence test deferred — adjacent to FinalizeReconciliation which IS tested); Create/Update forms deferred | ☐ |
+| Accounting · `accounting` | AccountingScreen (2098 L) | Bespoke | ✅ | real (8 fetches) | **wired** (post) | ✅ `CreateAccount`+`CreateJournalEntry` 🔥 (I3; balanced-legs enforced, integ_accounting_hotzone_test.go)+`ReviewCashflowEvidenceProposal`; gapped: `UpdateAccount` (untyped patch), 5× CSV/VAT export (side-effecting) | ☐ |
+| Bank Reconciliation · `bank-reconciliation` | BankReconciliationScreen (2140 L) | Bespoke | ✅ | real (10 fetches) | **wired** | ✅ `FinalizeReconciliation`+`DeleteBankStatement` 🔥 (I3; integ_recon_hotzone_test.go)+`AutoMatch`+`ManualMatch`+`SplitAlloc`+`Unmatch`+two-phase import+line delete (split/unmatch also in bank_reconciliation_service_test.go); gapped: 3 untyped-Record statement/line edits | ☐ |
 | Finance Hub · `finance-hub` | FinanceHub (13 tabs) | Bespoke (TabShell) | ✅ | composition | composition | none new — composes overview + 11 finance screens (see those rows). Division selector DEFER | ☐ |
 
 ### Operations
@@ -110,7 +110,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
-| Payroll · `payroll` | PayrollScreen (1167 L) | Bespoke | ✅ | real (6 fetches) | mock (INTEG) | `GeneratePayrollRun`, `ApprovePayrollRun`, `PostPayrollRun` 🔥, `MarkPayrollRunPaid`, `UpsertEmployeeCompensationProfile`, `CreatePayrollPeriod`, employee picker | ☐ |
+| Payroll · `payroll` | PayrollScreen (1167 L) | Bespoke | ✅ | real (6 fetches) | **wired** | ✅ `GeneratePayrollRun`+`Approve`+`Post` 🔥+`MarkPaid`+`CreatePayrollPeriod` (I3; payroll_golden_test.go); still gapped: `UpsertEmployeeCompensationProfile` (PII), employee picker (cross-domain) | ☐ |
 | People · `people` | PeopleHub (1879 L, PII) | Bespoke (TabShell) | ✅ | real (10 fetches) | mock (INTEG) | 13 PII/credential mutations incl. `Create/UpdateEmployeeProfile`, `RequestEmployeeArchive`, `GenerateLicenseKey`, `Create/DeleteEmployeeDocument` 🔥 | ☐ |
 
 ### System
@@ -119,7 +119,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 |---|---|---|---|---|---|---|---|
 | Users · `users` | UserManagementScreen | Entity | ✅ | real | read-only (RBAC) | Create/Update/role-assign deliberately **not built** (RBAC hot-zone) — wire at INTEG via server-gated call | ☐ |
 | Approvals Queue · `approvals` | ApprovalsQueueScreen | Ledger | ✅ | **real** | mock (INTEG) | ✅ `ListDeleteApprovalRequests`+`ListEmployeeArchiveRequests` fetch (I2); still I3: `ReviewDeleteApprovalRequest`, `ReviewEmployeeArchiveRequest` 🔥 | ☐ |
-| Audit Trail · `audit-trail` | AuditTrailViewer | Ledger | ✅ | **real** | mock (INTEG) | ✅ `GetActiveBankAccounts`→`GetBankStatements`→`GetAuditTrail` chain (I2); still I3: `ReverseAction` 🔥 | ☐ |
+| Audit Trail · `audit-trail` | AuditTrailViewer | Ledger | ✅ | **real** | **wired** | ✅ read chain (I2) + `ReverseAction` 🔥 (I3; actor from session, never trusted from row) | ☑ |
 | Data Quality · `data-quality` | DataQualityScreen | Ledger | ✅ | real (preview real) | mock (INTEG) | `ReviewDataQualityIssue`; review-history panel (ENGINE) | ☐ |
 | Notifications · `notifications` | NotificationsScreen | Bespoke | ✅ | **real** | mock (INTEG) | ✅ `ListNotificationFeed` fetch + `MarkNotificationAsRead` (I2); reviewStatus/requester honest-blank (not on record); still I3: approve/reject reviews; live-push DEFER | ☐ |
 | Bank Accounts · `bank-accounts` | SettingsScreen (split) | Ledger | ✅ | real | mock (INTEG) | Create/Update/Delete bank account (division-scoped + encrypted IBAN/SWIFT) 🔥 | ☐ |
