@@ -52,6 +52,20 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 - **★ K4 COMPLETE — every one of the ~60 old screens is now REBUILT or owner-RETIRED.** ~46 screens on the
   kernel + 7 retired. Next: K5 (app shell + auth chrome on a new Wizard primitive + OneDriveImport + close all
   INTEG gaps + L1/L2 tripwire harness), then K6 (the flip).
+- **★ K5 AUTH — OWNER RULING (2026-07-15): LICENSE-ONLY, NO CEREMONY.** Build only the live license gate
+  (`checking → license_needed → LicenseActivation(PH-XXX-YYYYYY) → approved`). SKIP ArrivalCeremony. PARK
+  (documented backlog, not built) the orphaned device-registration flow: Login / PendingApproval / SetupAdmin /
+  SetupWizard. Consequence: no PasswordField control needed for K5 (license key input, not a password field).
+  SetupWizard's Wizard-primitive consumer is parked too → the `Wizard` primitive's live K5 consumer is
+  OneDriveImportScreen only.
+- **K5 app-shell recon done:** old App.svelte = currentScreen string + screenLoaders lazy map + persistentScreenIDs
+  (keep-mounted) + hash deep-link + permission gate; nav = EnterpriseSidebar (NAV_ITEMS filtered by hasPermission).
+  Tab-navigator hubs (FinanceHub 13 tabs / SalesHub / CRMHub drill-in / OperationsHub badge-counts) = thin TabShell
+  wrappers over ALREADY-BUILT kernel screens. Infra to port: session.svelte.ts (currentUser/permissions/hasPermission
+  — NEW, unblocks BankRecon/Deployment/People acting-user), divisions.svelte.ts (near-zero-risk straight port,
+  GetDivisionRegistry), i18n (shell chrome only, defer screen-level), navigate(intent)+pending-handoff stores,
+  $wails repoint → ./wailsjs (frontend-lab/wailsjs ALREADY EXISTS with all bindings). Net-new screens: SupplierDetailView,
+  Expenses-approvals-mode tab. SalesHub opportunities-tab collision → orchestrator resolves (maps to registry `opportunities`).
 - **★ K5 INTEG DIRECTION — OWNER RULING (Sprint 2, supersedes the handoff's quarantine-SQLite plan):** close the
   INTEG gaps toward the **SOVEREIGN MESH** vision, NOT the old remote-Postgres sync. Concretely: (1) do NOT wire
   or enable the legacy DuckDNS-exposed-Postgres remote sync (Era-1, retired); (2) wire the frontend `real*`

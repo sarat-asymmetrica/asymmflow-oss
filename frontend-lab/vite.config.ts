@@ -13,7 +13,7 @@ export default defineConfig({
       // frontend tree until the flip; the lab consumes it, never copies it.
       $tokens: path.resolve('../frontend/src/assets'),
       // Generated Wails bindings (same generation the old frontend uses).
-      $wails: path.resolve('../frontend/wailsjs'),
+      $wails: path.resolve('./wailsjs'),
     },
   },
   server: {

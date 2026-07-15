@@ -17,7 +17,7 @@
       "$kernel/*": ["./src/kernel/*"],
       "$screens/*": ["./src/screens/*"],
       "$tokens/*": ["../frontend/src/assets/*"],
-      "$wails/*": ["../frontend/wailsjs/*"]
+      "$wails/*": ["./wailsjs/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.svelte", "tests/**/*.ts"],
