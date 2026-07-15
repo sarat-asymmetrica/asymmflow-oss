@@ -38,8 +38,22 @@
   } from './payroll-vm.svelte'
   import type { CompensationProfile, PayrollPayout, PayrollPeriod, PayrollRunItem, PayrollRunSummary } from '../bridge/payroll'
 
+  let {
+    embedded = false,
+    presetEmployeeID = '',
+  }: {
+    /** Hosted inside PeopleHub's Payroll tab: drop the outer PageShell header. */
+    embedded?: boolean
+    /** Deep-link: prefill this employee's compensation profile on load. */
+    presetEmployeeID?: string
+  } = $props()
+
   const vm = new PayrollViewModel()
-  onMount(() => void vm.load())
+  onMount(() =>
+    void vm.load().then(() => {
+      if (presetEmployeeID) vm.presetEmployee(presetEmployeeID)
+    }),
+  )
 
   const VIEWS: { key: PayrollMode; label: string }[] = [
     { key: 'compensation', label: 'Compensation' },
@@ -165,7 +179,7 @@
   const profileFormTitle = $derived(vm.editingProfileId ? 'Edit Compensation Profile' : 'New Compensation Profile')
 </script>
 
-<PageShell title="Payroll" subtitle="Compensation profiles, payroll runs, and payout tracking.">
+<PageShell {embedded} title="Payroll" subtitle="Compensation profiles, payroll runs, and payout tracking.">
   {#snippet toolbar()}
     <Toolbar>
       <FilterChips label="Division" options={vm.divisions} bind:selected={vm.divisionFilter} />

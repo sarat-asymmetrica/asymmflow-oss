@@ -6,36 +6,53 @@
     subtitle,
     actions,
     toolbar,
+    embedded = false,
     children,
   }: {
     title: string
     subtitle?: string
     actions?: Snippet
     toolbar?: Snippet
+    /** Hosted inside a TabShell tab: drop the page header (the hub owns it),
+     * the page padding + height:100%, and — critically — the default scroll
+     * region, so the content flows in the hub's ONE scroll region instead of
+     * nesting a second one. `title`/`actions` are ignored when embedded. */
+    embedded?: boolean
     children: Snippet
   } = $props()
 </script>
 
-<div class="k-page">
-  <header class="k-page-header">
-    <div class="k-page-titles">
-      <h1 class="k-page-title">{title}</h1>
-      {#if subtitle}<p class="k-page-subtitle">{subtitle}</p>{/if}
-    </div>
-    {#if actions}
-      <div class="k-page-actions">{@render actions()}</div>
+{#if embedded}
+  <div class="k-page-embedded">
+    {#if toolbar}
+      <div class="k-page-toolbar">{@render toolbar()}</div>
     {/if}
-  </header>
-
-  {#if toolbar}
-    <div class="k-page-toolbar">{@render toolbar()}</div>
-  {/if}
-
-  <!-- Layout doctrine: THE one default scroll region per screen. -->
-  <div class="k-page-content">
-    {@render children()}
+    <div class="k-page-embedded-content">
+      {@render children()}
+    </div>
   </div>
-</div>
+{:else}
+  <div class="k-page">
+    <header class="k-page-header">
+      <div class="k-page-titles">
+        <h1 class="k-page-title">{title}</h1>
+        {#if subtitle}<p class="k-page-subtitle">{subtitle}</p>{/if}
+      </div>
+      {#if actions}
+        <div class="k-page-actions">{@render actions()}</div>
+      {/if}
+    </header>
+
+    {#if toolbar}
+      <div class="k-page-toolbar">{@render toolbar()}</div>
+    {/if}
+
+    <!-- Layout doctrine: THE one default scroll region per screen. -->
+    <div class="k-page-content">
+      {@render children()}
+    </div>
+  </div>
+{/if}
 
 <style>
   .k-page {
@@ -94,5 +111,17 @@
     min-height: 0;
     min-width: 0;
     overflow-y: auto;
+  }
+  /* Embedded: no height/padding/scroll of its own — flows in the hub's page
+   * content. Just the toolbar + content stacked with the standard gap. */
+  .k-page-embedded {
+    display: flex;
+    flex-direction: column;
+    gap: var(--k-space-md);
+    min-width: 0;
+    container-type: inline-size;
+  }
+  .k-page-embedded-content {
+    min-width: 0;
   }
 </style>

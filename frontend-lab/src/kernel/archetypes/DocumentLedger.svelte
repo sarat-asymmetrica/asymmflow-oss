@@ -19,10 +19,14 @@
   let {
     descriptor,
     initialQuery,
+    embedded = false,
   }: {
     descriptor: LedgerDescriptor<Row>
     /** Parity #4: dashboard drills seed filters/search on arrival. */
     initialQuery?: Partial<LedgerQuery> | undefined
+    /** Hosted inside a hub tab (WorkHub → Approvals): drop the page header +
+     * own scroll region so the hub owns the chrome. */
+    embedded?: boolean
   } = $props()
 
   // VM rebuilds if (and only if) the descriptor prop changes; the effect
@@ -40,6 +44,7 @@
 </script>
 
 <PageShell
+  {embedded}
   title={descriptor.title}
   subtitle={vm.loading ? 'Loading…' : `${vm.visible.length} of ${vm.rows.length}`}
 >

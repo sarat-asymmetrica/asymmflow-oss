@@ -249,6 +249,20 @@ export class PayrollViewModel {
     this.mode = mode
   }
 
+  /** Deep-link entry (PeopleHub → "Set up payroll" for one employee): jump to
+   * the Compensation view and prefill that employee's profile if one exists.
+   * Called after load() when the screen is embedded with a presetEmployeeID. */
+  presetEmployee(employeeId: string): void {
+    if (!employeeId) return
+    this.mode = 'compensation'
+    const profile = this.profiles.find((p) => p.employeeId === employeeId)
+    if (profile) this.editProfile(profile)
+    else {
+      this.resetProfileForm()
+      this.profileDraft = { ...this.profileDraft, employeeId }
+    }
+  }
+
   // ---- Compensation ----
   resetProfileForm(): void {
     this.editingProfileId = ''
