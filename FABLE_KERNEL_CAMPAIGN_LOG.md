@@ -11,6 +11,42 @@ Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
+## SPRINT 2 (fresh Opus 4.8 orchestrator, from 9011bdd)
+
+- **K4-L engine spine (commit 8363172):** 5 tech-lead primitives, all tested (55 tests):
+  LineItemsEditor(+line-items.ts) · ViewSwitcher · AllocationMatchPanel(+allocation.ts) ·
+  Stepper · ChatTranscript(+markdown.ts, escape-first XSS-safe). ViewSwitcher was a real
+  kernel gap (no left-nav/tab primitive existed → screens couldn't switch views L1-clean).
+- **K4 L-monsters DONE (commit 86b86d2):** Accounting + CostingSheet + BankRecon + Payroll
+  rebuilt (4 parallel Sonnet agents, orchestrator-gated+fixed). Gate green: check 0/0 (314),
+  test 80/80 (+25 costing sacred-math), build clean, layout-detector 0 @1440+420 (row-sel).
+  - Accounting: ViewSwitcher console; VAT string-match heuristic DROPPED (owner-ratified);
+    LineItemsEditor voucher (balanced badge display-only); 10 mutations INTEG-gapped.
+  - CostingSheet: 25-col LineItemsEditor waterfall; sacred math VERBATIM + 25 unit tests
+    (Math.ceil; freight/margin fallback=0; profit/cost asymmetry); 2 live bugs caught.
+  - BankRecon: old allocation UI → AllocationMatchPanel with ZERO mods (headline win);
+    edit-clears-match preserved; audit-trail ActivityFeed added; 13 mutations gapped.
+  - Payroll: Owner Q#4 RESOLVED (Wails IPC only). ViewSwitcher+Stepper; FIXED approve/post
+    confirm+operator-reason; field-mask net-new (canViewUnmasked default true); 6 gapped.
+  - Kernel: single-source form controls (k-field/k-field-label/k-input/k-input-area/
+    k-field-wide) in styles/kernel.css — killed .bs-/.pr-/.acc-/.br-/.cs- duplication (L1/L2).
+  - Harness: tests/gate.mjs (reusable Playwright layout-detector, each screen @1440/420).
+- **ORCHESTRATION LESSON:** a build agent edited registry.ts (shared merge point) to run its
+  own Playwright gate, then reverted — collision-free contract needs "do not touch registry
+  EVER, not even transiently; gate via a throwaway entry file or ask the orchestrator to wire."
+- **Butler DONE (commit 721d0ec):** AI-chat console on ChatTranscript; arm/confirm/6s hot-zone
+  preserved+verified-live; AI-authority boundary structurally enforced (23 bindings → 1 INTEG seam);
+  refuse-over-guess guards preserved; 3-tier fallback collapsed; insights feed dropped; RETIRES
+  IntelligenceHub. Kernel refinements from its gaps (all 41 screens re-gated clean): .k-grow utility;
+  Button min-width:0; Row shrink={false} prop. Deferred to K5: fill-page-height chain + bespoke navigate hook.
+- **ALL 5 K4 L-MONSTERS COMPLETE** (Accounting/CostingSheet/BankRecon/Payroll/Butler). Full-app gate 41/41
+  clean @1440+420. Next: K4-deferred (PeopleHub/WorkHub/DeploymentHub/OneDriveImport + operational-hub
+  tabbed-console primitive + Stepper-for-wizards), then K5 app shell + INTEG, then K6 flip.
+- **Owner questions parked for review** (all non-blocking — mutations INTEG-gapped): payroll
+  field-mask policy / post-before-pay / approve-reason-required; costing freight-margin +
+  profit/cost asymmetries + save-as-offer overwrite-guard; bankrecon K5 session primitive +
+  audit-drawer + book-vs-bank cross-nav; accounting VAT-heuristic-dropped confirmation.
+
 ## Architecture decisions (orchestrator, binding for all waves)
 
 - **Per-entity bridge modules** (`bridge/<entity>.ts`): each ledger/entity owns a
