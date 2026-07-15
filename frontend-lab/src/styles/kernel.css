@@ -1,0 +1,143 @@
+/* Kernel base layer.
+ * L3: the semantic token source of truth stays in the old frontend tree
+ * until the flip — imported here, never copied. Kernel additions are
+ * namespaced --k-* and never redefine existing tokens. */
+@import '$tokens/design-tokens.css';
+@import './fonts.css';
+
+:root {
+  /* Kernel spacing scale — aligned with the semantic layer's values
+   * (card padding 16, page padding 24, section spacing 20, grid gap 16). */
+  --k-space-none: 0;
+  --k-space-xs: 4px;
+  --k-space-sm: 8px;
+  --k-space-md: 16px;
+  --k-space-lg: 24px;
+  --k-space-xl: 32px;
+
+  /* Semantic tone palette — ONE source (L2) for Badge, summary distribution
+   * bars, and threshold-colored cells. Values match the pilot Badge exactly,
+   * so no visual regression. Namespaced --k-* (L3: never redefines a token). */
+  --k-tone-neutral-fg: var(--text-secondary);
+  --k-tone-neutral-bg: var(--onyx-tint);
+  --k-tone-info-fg: #0a5ab4;
+  --k-tone-info-bg: rgba(10, 90, 180, 0.1);
+  --k-tone-success-fg: #1e824c;
+  --k-tone-success-bg: rgba(30, 130, 76, 0.12);
+  --k-tone-warning-fg: #9a6700;
+  --k-tone-warning-bg: rgba(180, 120, 10, 0.12);
+  --k-tone-danger-fg: #b3261e;
+  --k-tone-danger-bg: rgba(179, 38, 30, 0.1);
+
+  /* Categorical series palette for Hub charts (donut / multi-series). Fixed
+   * order, assigned by slot — never cycled (dataviz law). CVD-validated on a
+   * white surface: worst adjacent ΔE 24.2 (>=12 target). The aqua/yellow
+   * sub-3:1 contrast WARN is satisfied by the relief rule — every Hub widget
+   * ships visible labels/legend, so identity is never colour-alone. Status
+   * meaning stays with --k-tone-* (reserved), never a categorical slot. */
+  --k-series-1: #2a78d6; /* blue */
+  --k-series-2: #1baf7a; /* aqua */
+  --k-series-3: #eda100; /* yellow */
+  --k-series-4: #008300; /* green */
+  --k-series-5: #4a3aa7; /* violet */
+  --k-series-6: #e34948; /* red */
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: calc(14px * var(--ui-font-scale));
+  line-height: var(--line-height-base);
+  color: var(--text-primary);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+/* Kernel form controls (L2 — ONE definition). Bespoke screens compose native
+ * <input>/<select>/<textarea> for forms the FormModal archetype doesn't cover
+ * (multi-section console forms: Payroll, Business Settings, Accounting voucher
+ * headers, Costing headers). Rather than each screen re-styling controls (the
+ * old .bs-input/.pr-input duplication), they apply these kernel-owned classes —
+ * layout/spacing lives here, in the kernel layer, not in screen <style> (L1),
+ * exactly like k-table-wrap. FormModal keeps its own scoped copies (they win
+ * locally via Svelte scoping); this is the shared surface for everything else. */
+.k-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--k-space-xs);
+  min-width: 0;
+}
+.k-field-row {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--k-space-sm);
+}
+.k-field-label {
+  font-size: var(--modal-label-size);
+  font-weight: var(--modal-label-weight);
+  color: var(--text-secondary);
+}
+.k-input {
+  font-family: var(--font-ui);
+  font-size: var(--modal-body-size);
+  color: var(--text-primary);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--border-radius-sm);
+  padding: 8px 10px;
+  max-width: 100%;
+  min-width: 0;
+  outline: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+/* Flex-grow utility for a control that should absorb a flex row's free space
+ * beside a fixed sibling (e.g. a chat input next to a Send button). Kernel-owned
+ * so screens engage it by class, not by writing flex CSS themselves (L1). In a
+ * k-field (flex column, align:stretch) inputs already fill width; this is only
+ * for the row-with-trailing-button shape. */
+.k-grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.k-input:focus {
+  border-color: var(--onyx);
+}
+.k-input-area {
+  min-height: 72px;
+  resize: vertical;
+}
+/* Full-width field inside a FormGrid (span all columns). */
+.k-field-wide {
+  grid-column: 1 / -1;
+}
+
+/* Reduced-motion law (L7): fully static. One global gate — kernel CSS
+ * transitions all use motion tokens, and this zeroes every one of them. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation: none !important;
+  }
+}
