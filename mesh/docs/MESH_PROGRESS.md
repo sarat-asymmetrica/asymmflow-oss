@@ -89,15 +89,53 @@ deterministically rejected on all peers ✅ · goldens pin the state ✅ — **G
 (with the two-physical-boxes ceremony left for when the Commander has both
 machines at hand).
 
-## Wave 2+ — Missions C/D/E/F (after the gate is green)
+## Wave 2 — MISSION C, kernel-as-reducer (2026-07-16) · ✅ GREEN
 
-- **C** — kernel-as-reducer, determinism-audited: compile
-  `pkg/kernel/{money,approval,actor,policy}` + invariant checks to wasip1; audit
-  every apply path for the two Go landmines (map-iteration order, `time.Now()`/`rand`).
-- **D** — Holesail transport + Ed25519 grant-with-epochs capability layer, kept
-  strictly separate (transport-auth ≠ capability-auth).
+The reducer now imports the **REAL kernel packages** —
+`pkg/kernel/{money,approval,actor,policy}` — compiled clean to wasip1 (3.7MB
+wasm) and proven through the real Autobase machinery:
+
+- **Reducer v2** (`mesh/reducer/reducer.go` + `kernel_domains.go`): typed op
+  envelope (`kind` selects the domain; `""` stays Wave-0-compatible), four
+  domains folded through kernel law:
+  - `inventory.move` — the Wave-0 floor invariant, unchanged.
+  - `ar.limit/charge/payment` — **kernel money** integer minor-unit arithmetic;
+    credit-limit invariant; currency mismatches are typed kernel errors.
+  - `approval.decide` — **kernel approval + actor**: subjects start at
+    pending_review; `ValidTransition` is the single truth (approved→rejected
+    refused); approve/reject/supersede requires `CanApprove()`;
+    needs_input/pending requires `CanPropose()`.
+  - `policy.violation/override` — **kernel policy**: only an approver may
+    override a standing violation, with a mandatory reason.
+- **The AI-authority boundary is DISTRIBUTED LAW:** the agent is stopped at
+  THREE kernel layers — `actor.New` (an agent can't even be CONSTRUCTED with
+  approve authority), `approval.NewRecord` ("agent actors cannot approve"),
+  `policy.Override` (CanApprove gate) — and the Mission C mesh gate proves the
+  rejection lands **identically on every peer, even from the agent's own
+  writer core**.
+- **Determinism audit:** the kernel packages take `now time.Time` as a
+  PARAMETER everywhere (no clock reads, no rand, no map-order output —
+  audited by grep + the 500-permutation test over the mixed-domain op set).
+  Reducer hands them `time.UnixMilli(op.TS).UTC()` — op data, never a clock.
+- **Tests:** `missionc_test.go` — kernel-law invariants, agent rejection with
+  kernel words, forged-authority agent, propose-level human refused,
+  500-permutation convergence, input-immutability. Plus the Wave-0 suite,
+  which passes UNCHANGED (envelope is backward compatible).
+- **Gates:** `npm run missionc` — 3 peers (one of them the agent's), genuine
+  offline fork, byte-identical views + kernel state on all peers, goldened
+  (`goldens/missionc_autobase.json`, reproducible).
+- **STATE SCHEMA v2:** the state digest now covers stock/ar/approvals/policies —
+  Wave-0/1 STATE goldens regenerated (MESH-D9). The Wave-1 VIEW digest was
+  untouched (`5962c1f9…`) — the op log didn't change, only the projection.
+
+## Wave 3+ — Missions D/E/F (next)
+
+- **D** — Ed25519 grant-with-epochs capability layer above the Holesail pipe
+  (transport-auth ≠ capability-auth; transport half already proven in Wave 1).
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).
 - **F** — this mirror + `MESH_DECISIONS.md`, kept honest per wave.
+- The `//go:wasmexport` incremental reactor (per MESH-D6) when marshalling
+  volume warrants it; candidate alongside Mission D.
 
 ---
 

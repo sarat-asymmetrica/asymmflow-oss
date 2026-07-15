@@ -11,6 +11,8 @@
     "wave1": "npm run build && node host/wave1-local.mjs",
     "wave1:update-golden": "npm run build && node host/wave1-local.mjs --update-golden",
     "wave1:holesail": "npm run build && node host/wave1-holesail.mjs",
+    "missionc": "npm run build && node host/missionc-mesh.mjs",
+    "missionc:update-golden": "npm run build && node host/missionc-mesh.mjs --update-golden",
     "wave1:host": "node host/peer.mjs host --storage ./.peer-host",
     "wave1:join": "node host/peer.mjs join --storage ./.peer-join",
     "test:go": "cd .. && go test ./mesh/..."

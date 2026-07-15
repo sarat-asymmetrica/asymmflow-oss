@@ -20,11 +20,22 @@ import Autobase from 'autobase'
 import { createHash } from 'node:crypto'
 import { applyViaWasm } from './apply.mjs'
 
-/** An op value appended by writers: { seq, actor, sku, delta, ts } */
+/**
+ * An op value appended by writers. Common envelope: { seq, actor, ts, kind? }.
+ * kind "" / "inventory.move" additionally needs { sku, delta } (Wave 0/1 shape);
+ * other kinds (ar.*, approval.decide, policy.*) carry their own fields — the
+ * REDUCER is the validator of record for those (kernel law), the host only
+ * screens the envelope.
+ */
 function isOp(v) {
-  return v && typeof v === 'object' &&
-    Number.isInteger(v.seq) && typeof v.actor === 'string' &&
-    typeof v.sku === 'string' && Number.isInteger(v.delta) && Number.isInteger(v.ts)
+  if (!v || typeof v !== 'object' ||
+      !Number.isInteger(v.seq) || typeof v.actor !== 'string' || !Number.isInteger(v.ts)) {
+    return false
+  }
+  if (v.kind === undefined || v.kind === '' || v.kind === 'inventory.move') {
+    return typeof v.sku === 'string' && Number.isInteger(v.delta)
+  }
+  return typeof v.kind === 'string'
 }
 
 /**

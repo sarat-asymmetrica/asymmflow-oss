@@ -7,6 +7,24 @@ auto-decided.
 
 ---
 
+### MESH-D10 — Mission C authority rules: deciding approved/rejected/superseded requires CanApprove; needs_input/pending requires CanPropose
+The reducer layers an explicit authority floor on top of the kernel state machine.
+**[Mirror]** `approval.NewRecord` only hard-blocks the agent-APPROVES case; a human with
+observe/propose authority "rejecting" a review would still be an authority transition
+recorded without approve power. The reducer composes the two kernel primitives —
+`ValidTransition` for WHAT may change, `CanApprove`/`CanPropose` for WHO may change it —
+so SoD is enforced in one place, from op data alone. A junior (propose) can send a
+review back for input; only an approver can conclude it.
+
+### MESH-D9 — State schema v2 changes the STATE digest; goldens regenerated, digest is schema-versioned
+Mission C extends the digested projection to stock/ar/approvals/policies.
+**[Mirror]** The digest is a convergence check between peers running THE SAME reducer
+build — it is not a cross-version contract. Pinning v1 bytes forever would have forced
+empty-map hacks into the projection just to preserve old hashes. Honest move: regenerate
+the state goldens at the schema bump and record it here. Note the Wave-1 VIEW digest
+(`5962c1f9…`) was untouched — op-log bytes and state-projection bytes version
+independently, which is exactly why wave1 gates BOTH.
+
 ### MESH-D8 — Wave 1 transport = raw Corestore replication over TCP, Holesail carries the socket
 `peer.mjs` speaks the Hypercore replication protocol over a plain TCP socket bound to
 127.0.0.1; Holesail (secure connector) tunnels that socket over the DHT.
