@@ -11,6 +11,39 @@ Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
+## SPRINT 3 (fresh Opus 4.8 orchestrator, from 5fe30bc)
+
+Continuation of `FABLE_CAMPAIGN_SPRINT3_HANDOFF.md`: finish the K5 tail (tripwires,
+known-violation fixes, OneDriveImport), then INTEG (owner-gated) + K6 flip.
+
+- **L1/L2 law tripwires + known-violation fixes (commit 0f94fbf):** the campaign's
+  hand-enforced laws are now MECHANICAL. `tests/l1-no-layout-css.test.ts` (scans every
+  `src/screens/*.svelte` `<style>`, fails on structural layout props / raw-px sizing /
+  min-width≠0 / raw hex; Showcase excluded) + `tests/l2-no-duplication.test.ts` (fails
+  on a screen redefining a `.k-*` class or re-implementing formatDate/Money/Number).
+  Proven to BITE (injected display/margin/hex/.k-field → both fail) then revert clean.
+  Fixed the two audited violations: BusinessSettings `.bs-*` form CSS → kernel
+  `k-field/k-field-label/k-input` + `#b3261e` → `var(--k-tone-danger-fg)` + margins →
+  Stack; CostingSheet `.cs-textarea{min-height:160px}` → `k-input k-input-area`.
+  `tests/node-builtins.d.ts` — tiny ambient shim for the node builtins the harness reads
+  with, so `npm run check` stays green WITHOUT adding `@types/node` (which would pollute
+  ambient globals across all ~50 screens). check 0/0 (343), test 80→139.
+- **OneDriveImport — THE LAST SCREEN (commit c0dc3b7):** 3-step Wizard (configure paths →
+  review deals → run import) on the `Wizard` primitive; closes the K4-deferred screen.
+  ONE Sonnet agent, orchestrator-gated+fixed. **DataTable interactive-cell RULING:** the
+  per-row include-checkbox + customer-select use the EXISTING `ColumnSpec.cell` L4 ejection
+  (two `Component<{row}>` cells mutating `$state`-backed rows directly; VM's derived
+  selection recomputes live) — NO new kernel API. The handoff's `ColumnSpec.rowAction`
+  candidate stays OPEN (poor fit for stateful checkbox+select; a button-style consumer like
+  DeploymentHub-retry may justify it later). All four bindings INTEG-gapped (screen runs on
+  an adversarial mock: 200-char/empty/RTL folder names, 0/1/2-3 matches, huge/zero files).
+  Fixed in review: scan mock regenerates fresh (was caching → Start-Over showed stale
+  selections). **Gate coverage gotcha:** `tests/gate.mjs` only reaches a Wizard's step 0
+  (it doesn't click Next) — steps 1/2 layout-verified with a throwaway driver (clean
+  @1440+420 incl. the 200-char + RTL rows). check 0/0 (348), test 148.
+- **★ K5 MOCK-SAFE TAIL COMPLETE.** Remaining: 2c i18n shell chrome (LOW/optional), 2e
+  deferred hub polish (nice-to-have), **2d INTEG (OWNER-GATED — pause for PG env)**, then K6.
+
 ## SPRINT 2 (fresh Opus 4.8 orchestrator, from 9011bdd)
 
 > **SPRINT 2 CLOSED at commit d335716 (2026-07-15).** K4 COMPLETE (all ~60 screens rebuilt-or-retired);
