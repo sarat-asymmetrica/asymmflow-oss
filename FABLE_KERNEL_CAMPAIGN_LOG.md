@@ -51,7 +51,15 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
   bulk-retry confirm added). OneDriveImport + the Wizard primitive it needs → DEFERRED to K5.
 - **★ K4 COMPLETE — every one of the ~60 old screens is now REBUILT or owner-RETIRED.** ~46 screens on the
   kernel + 7 retired. Next: K5 (app shell + auth chrome on a new Wizard primitive + OneDriveImport + close all
-  INTEG gaps via quarantine env + L1/L2 tripwire harness), then K6 (the flip).
+  INTEG gaps + L1/L2 tripwire harness), then K6 (the flip).
+- **★ K5 INTEG DIRECTION — OWNER RULING (Sprint 2, supersedes the handoff's quarantine-SQLite plan):** close the
+  INTEG gaps toward the **SOVEREIGN MESH** vision, NOT the old remote-Postgres sync. Concretely: (1) do NOT wire
+  or enable the legacy DuckDNS-exposed-Postgres remote sync (Era-1, retired); (2) wire the frontend `real*`
+  adapters to the Wails bindings and VALIDATE the INTEG surface against the OWNER'S LOCAL PostgreSQL server
+  (owner has PG tooling installed) — not the real PH SQLite/`%APPDATA%\Roaming\AsymmFlow`; (3) the sync/replication
+  layer becomes a **Holesail (holesail.io) P2P sidecar** — a SEPARATE future build, out of scope for closing these
+  gaps. This is the Era-3 architecture (DuckDNS→Holesail P2P mesh) applied to the kernel INTEG layer. NEVER touch
+  the live PH-adjacent DB with enabled remote sync.
 - **Kernel gap for K5 (non-blocking):** DataTable has no declarative lightweight per-row action (needs a `cell`
   override today) — candidate `ColumnSpec.rowAction` (label + predicate + onClick). Recurs (DeploymentHub queue,
   OneDriveImport per-deal). Also: no session/currentUser store yet (BankRecon/DeploymentHub); no fill-page-height
