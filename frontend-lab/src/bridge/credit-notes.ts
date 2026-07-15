@@ -6,7 +6,7 @@
  * (recon K1-B #392/#398), a silent-cap bug fixed here, not preserved. */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { ListCreditNotes } from '$wails/go/main/App'
+import { ApplyCreditNote, ListCreditNotes } from '$wails/go/main/App'
 
 export interface CreditNoteRow {
   id: string
@@ -128,11 +128,10 @@ async function realFetchAll(): Promise<CreditNoteRow[]> {
 }
 
 async function realApplyCreditNote(id: string): Promise<void> {
-  // ApplyCreditNote is a real, wired binding on the old screen (no INTEG gap
-  // there) — but K1 mutations are gated at K5 regardless (see build brief),
-  // so this throws honestly rather than posting from an unreviewed screen.
-  void id
-  throw new Error('INTEG gap: ApplyCreditNote — wires at K5')
+  // ApplyCreditNote(creditNoteID) — reduces AR by applying the note to its
+  // linked invoice and marks it Applied (see credit_note_service.go). The
+  // descriptor gates it behind a confirm (a fix over the old no-confirm apply).
+  await ApplyCreditNote(id)
 }
 
 /* ---- public switched API (descriptors import THESE) ---- */

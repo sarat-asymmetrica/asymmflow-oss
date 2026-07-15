@@ -68,7 +68,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Offers · `offers` | OffersScreen | Ledger | ✅ | real | read-only | `GenerateOfferPDF`/`OpenExportedFile` (PDF); Won/Lost + create ledgered | ☐ |
 | Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | **real** | mock (INTEG) | ✅ `GetRFQs`+`GetPipelineOpportunities` merge + `ListCustomers` (I2); still I3: `CreateRFQWithReference`, `DeleteRFQ`, `DeleteRFQWithCascade` 🔥 | ☐ |
 | Pricing · `pricing` | PricingScreen | Bespoke | ✅ | real* | `SimulateMargin` wired | `fetchPricingCustomers` (no real customer/win-rate endpoint yet) | ☐ |
-| Customer 360 · `customer-360` | Customer360 | Bespoke | ✅ | mock (INTEG) | read-only | ⚠️ `GetCustomer360`/`GetCustomer360Graph` — SHAPE-DIVERGENCE (real structs narrower/graph-shaped than this view); **owner shape decision** before wiring (I2 report) | ☐ |
+| Customer 360 · `customer-360` | Customer360 | Bespoke | ✅ | **real** | read-only | ✅ `GetCustomer360`+`GetCustomer360Graph` — view RESHAPED to backend (owner ruling): dropped mock-invented contact/TRN/credit/regime; connections derived from the graph | ☑ |
 | Costing Sheet · `costing-sheet` | CostingSheet (3026 L) | Bespoke | ✅ | real | mock (INTEG) | `CreateCostingSheet`, `UpdateCostingSheet`, `SaveCostingAsOffer` 🔥, `Clone…`, `SetActiveCostingRevision`, PDF/Excel export | ☐ |
 | Sales Hub · `sales-hub` | SalesHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes Opportunities/Costing/Offers/Orders (see those rows). `SalesAdminTools` tab DEFER | ☐ |
 | Relationships Hub · `crm-hub` | CRMHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes crm-customer/crm-supplier/data-quality | ☐ |

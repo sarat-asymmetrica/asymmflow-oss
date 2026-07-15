@@ -29,3 +29,22 @@ per the K4 brief — this is customer financial history and predictive grading,
 moderate-sensitivity read-only data, so the lab stays on adversarial synthetic
 data end to end (including a customer with zero predictions and a customer
 with zero connections, to exercise both tabs' empty states) until K5 wiring.
+
+## INTEG (Wave I2/I3): real path WIRED, view reshaped to backend (owner ruling 2026-07-15)
+
+`GetCustomer360` → `main.Customer360Data` and `GetCustomer360Graph` →
+`main.Customer360Graph` are now live (was: honest-throw INTEG gap). Per the owner
+shape ruling the view was reshaped to the backend rather than composing a
+supplementary fetch: the mock-invented contact block, TRN, credit limit, and
+`regime` string were dropped, and the fields the backend actually returns are
+surfaced (grade, three-regime dynamics r1/r2/r3, payment-terms/avg-payment/dispute
+metrics, risk flags, order/lifetime KPIs, receivables aging, and the
+recent-predictions / payment-history / open-opportunities / recent-orders lists).
+Connections are DERIVED from the node/edge graph (center customer node excluded;
+products/suppliers bucketed by entity `type`).
+
+**Honest-blanks:** (1) `Customer360Info.code` — `Customer360Data` carries no document
+code; blank ('') on the real path, so the header shows type/location instead.
+(2) `CustomerConnections.centralityScore` — the graph exposes only graph-level
+`metrics` (density / avg-connections), no per-customer centrality; kept as `0` for
+shape stability and NOT rendered.

@@ -65,6 +65,18 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
     or compose a supplementary customer-detail fetch). Read-only, no persistence risk.
   - **INTEG discipline held:** every mutation on these screens still throws its honest `INTEG gap:` —
     only reads (+ the benign MarkNotificationAsRead) flipped. No silent mock persistence anywhere.
+- **★ OWNER RULINGS at the I1/I2→I3 checkpoint (2026-07-15):**
+  1. **I3 validation = Go-test doctrine (ratified).** I cannot headlessly drive the WebView2 GUI
+     (Playwright hits the vite dev server = mock mode, no `window.go`). So each I3 hot-zone is validated
+     by: (a) `npm run check` proving the adapter↔binding contract via the generated d.ts, (b) a Go test
+     driving the actual App binding against a scratch SQLite asserting persisted state + audit trail +
+     the reversal path where one exists (the spec's "Go query snippet against the scratch DB"). The
+     owner's smoke checklist remains the human GUI pass. time.Time marshalling already proven (I1.3).
+  2. **Customer-360 = reshape the view to the backend.** Drop the mock-invented contact/TRN/credit/regime;
+     surface what `Customer360Data` provides (receivables aging, payment history, recent orders/RFQs);
+     derive connections from the `Customer360Graph` node/edge data. (Bespoke-screen rework.)
+  3. **AI-provider keys = encrypted in-app settings** via the existing FieldCrypto/DPAPI keystore (matches
+     the no-secrets-in-source posture); a Settings key field. Resolves the I1.4 parked decision.
 
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 

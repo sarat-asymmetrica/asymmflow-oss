@@ -18,7 +18,7 @@ import {
   type CustomerDirectoryEntry,
 } from '../bridge/customer-360'
 
-export type Customer360Tab = 'overview' | 'predictions' | 'connections'
+export type Customer360Tab = 'overview' | 'activity' | 'predictions' | 'connections'
 
 export class Customer360ViewModel {
   directory = $state<CustomerDirectoryEntry[]>([])
