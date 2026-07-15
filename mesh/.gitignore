@@ -1,0 +1,5 @@
+# Local Corestore / Hypercore data dirs (P2P storage — never commit)
+.mesh-*-store/
+*-store/
+corestore/
+# wasm build output is covered by the root .gitignore (dist/), regenerated via `npm run build`

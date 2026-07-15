@@ -1,0 +1,25 @@
+{
+  "name": "@asymmflow/mesh",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Sovereign Mesh track for AsymmFlow — the Go kernel as a deterministic Autobase apply() reducer over Hypercore/Corestore, replicated across Holesail P2P tunnels. See ../FABLE_CAMPAIGN_SOVEREIGN_MESH.md.",
+  "scripts": {
+    "build": "node scripts/build-reducer.mjs",
+    "smoke": "npm run build && node host/smoke.mjs",
+    "smoke:update-golden": "npm run build && node host/smoke.mjs --update-golden",
+    "test:go": "cd .. && go test ./mesh/..."
+  },
+  "dependencies": {
+    "autobase": "^7.11.0",
+    "corestore": "^7.4.0",
+    "holesail": "^2.0.0",
+    "hyperbee": "^2.24.0",
+    "hypercore": "^11.10.0",
+    "hyperswarm": "^4.11.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "AGPL-3.0"
+}
