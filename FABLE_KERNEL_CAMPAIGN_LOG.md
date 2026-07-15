@@ -203,6 +203,13 @@ tile); only the .svelte file retires. Recorded here + in the K4 report as the si
    bindings, drop the file (re-plumb into a future cash-position tile).
 All 6 are dead/unreferenced/dev-tooling/demo. Owner ratifies during review.
 
+### K4-deferred RETIRE — ✅ OWNER-RATIFIED (Sprint 2)
+7. **DeploymentHub → Activity tab / user-activity monitor** (weekly per-employee productivity/
+   surveillance report; `UserActivityMonitorPanel` + `CanViewUserActivityMonitoring` +
+   `GetWeeklyUserActivityReport`) — RETIRED ENTIRELY, owner-ratified. Surveillance-adjacent,
+   out of scope for the OSS kernel. The rebuilt DeploymentHub ships only Audit/Checklist/Support;
+   the two activity bindings are dropped from the kernel bridge entirely (no adapter, no mock).
+
 ## K3 COMPLETE (2026-07-14, commits d7d1531 + 0206ed9)
 4th archetype `Hub` + 8-widget data-viz library (donut/distribution h+v/ranked/stat-grid/
 list/activity/callout/comparison, no chart lib) + 4 dashboards (main Dashboard, Finance
