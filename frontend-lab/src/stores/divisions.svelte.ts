@@ -43,6 +43,16 @@ export function getDivisions(): DivisionOption[] {
   return registry.divisions.map((div) => ({ key: div.key, legalName: div.legalName }))
 }
 
+/** Division vocabulary as `{value,label}` form-select options — the ONE source
+ * for every division dropdown (L2/L7). Under mock this is the BUILTIN synthetic
+ * fallback; under real Wails it is the post-`initDivisions()` registry, so
+ * callers MUST read it lazily (at form-open), not capture it at module-eval —
+ * see invoices.descriptor.ts. Label is the division key (its short name), which
+ * is what the old dropdowns showed; `legalName` is the entity's long legal name. */
+export function getDivisionOptions(): { value: string; label: string }[] {
+  return registry.divisions.map((div) => ({ value: div.key, label: div.key }))
+}
+
 export function getDivisionKeys(): string[] {
   return registry.divisions.map((div) => div.key)
 }

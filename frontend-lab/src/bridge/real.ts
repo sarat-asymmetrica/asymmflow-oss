@@ -6,7 +6,8 @@
 
 import { DeleteCustomerInvoice, ListCustomerInvoices } from '$wails/go/main/FinanceService'
 import { ListCustomers } from '$wails/go/main/CRMService'
-import type { CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
+import { GetCustomerFullProfile } from '$wails/go/main/App'
+import type { CustomerProfilePatch, CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
 import { goDate, num, str } from './map'
 
 /* ---- Invoices ---- */
@@ -89,6 +90,28 @@ export async function fetchCustomers(): Promise<CustomerRow[]> {
 
 export async function setCustomerStatus(_id: string, _status: string): Promise<void> {
   throw new Error('INTEG gap: customer status changes go through UpdateCustomer (full record)')
+}
+
+/** Secondary profile fetch: GetCustomerFullProfile fills the depth ListCustomers
+ * omits (TRN/industry/credit/AR-aging/RFQ win-rate). AR buckets: the summary's
+ * two oldest (90-120 + 120+) collapse into this view's single "90+". */
+export async function fetchCustomerProfile(id: string): Promise<CustomerProfilePatch> {
+  const p = (await GetCustomerFullProfile(id)) as unknown as Record<string, unknown>
+  const aging = (p.ar_aging_buckets ?? {}) as Record<string, unknown>
+  return {
+    trn: str(p.trn),
+    industry: str(p.industry),
+    relationYears: num(p.relation_years),
+    paymentTermsDays: num(p.payment_terms_days),
+    isCreditBlocked: Boolean(p.is_credit_blocked),
+    arCurrent: num(aging.current),
+    ar30: num(aging.days_30_60),
+    ar60: num(aging.days_60_90),
+    ar90: num(aging.days_90_120) + num(aging.days_120_plus),
+    rfqsFloated: num(p.rfqs_floated),
+    rfqsWon: num(p.rfqs_won),
+    winRate: num(p.win_rate),
+  }
 }
 
 export async function customerOptions(): Promise<{ value: string; label: string }[]> {

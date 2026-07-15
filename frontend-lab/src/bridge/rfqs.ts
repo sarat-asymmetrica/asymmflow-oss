@@ -4,7 +4,7 @@
 
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetRFQs } from '$wails/go/main/App'
+import { DeleteRFQ, GetRFQs, UpdateRFQStatus } from '$wails/go/main/App'
 
 export interface RFQRow {
   id: string
@@ -148,14 +148,18 @@ async function realFetch(): Promise<RFQRow[]> {
 }
 
 async function realUpdateStage(id: string, stage: string): Promise<void> {
-  void id
-  void stage
-  throw new Error('INTEG gap: UpdateRFQStage — wires at K5')
+  // The row's editable pipeline column is `status` (mapped from r.status), so
+  // this routes to UpdateRFQStatus(id uint, status) — a free-form write on the
+  // SAME column the row reads. UpdateRFQStage writes a separate `stage` column
+  // under canonical-vocabulary state-machine validation that would REJECT this
+  // screen's status values (e.g. Pending/Negotiation), so it is the wrong
+  // binding here despite the adapter's historical name.
+  await UpdateRFQStatus(num(id), stage)
 }
 
 async function realDelete(id: string): Promise<void> {
-  void id
-  throw new Error('INTEG gap: DeleteRFQ — wires at K5')
+  // DeleteRFQ(id uint) — hard delete; the server owns referential-integrity guards.
+  await DeleteRFQ(num(id))
 }
 
 /* ---- public switched API (descriptors import THESE) ---- */

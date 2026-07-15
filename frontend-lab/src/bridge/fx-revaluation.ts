@@ -15,6 +15,8 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { GetActiveBankAccounts, GetFXRevaluations } from '$wails/go/main/FinanceService'
+import { PostFXRevaluation, ReverseRevaluation } from '$wails/go/main/App'
+import { actingUserId } from '../stores/session.svelte'
 
 export interface FxRevaluationRow {
   id: string
@@ -204,12 +206,16 @@ async function realFetchAll(): Promise<FxRevaluationRow[]> {
   return perAccount.flat()
 }
 
-async function realPost(_id: string): Promise<void> {
-  throw new Error('INTEG gap: PostFXRevaluation — wires at K5')
+async function realPost(id: string): Promise<void> {
+  // PostFXRevaluation(revaluationID, user) — posts the unrealized-gain/loss GL
+  // entries; the acting user is the audit actor. fx_revaluation_golden_test.go
+  // covers the posting math + reversal.
+  await PostFXRevaluation(id, actingUserId())
 }
 
-async function realReverse(_id: string, _reason: string): Promise<void> {
-  throw new Error('INTEG gap: ReverseRevaluation — wires at K5')
+async function realReverse(id: string, reason: string): Promise<void> {
+  // ReverseRevaluation(revaluationID, user, reason) — the un-post path.
+  await ReverseRevaluation(id, actingUserId(), reason)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

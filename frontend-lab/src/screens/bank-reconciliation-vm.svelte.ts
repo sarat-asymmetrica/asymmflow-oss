@@ -11,6 +11,7 @@
 
 import type { Tone } from '$kernel/tones'
 import { allocationKey, type AllocationDraft, type MatchCandidate } from '$kernel/allocation'
+import { actingUserId } from '../stores/session.svelte'
 import {
   fetchBankAccounts,
   fetchBankStatements,
@@ -94,12 +95,14 @@ function poolForTypes(pool: BankMatchCandidatePool, types: string[]): MatchCandi
 }
 
 export class BankReconciliationViewModel {
-  // No session/auth primitive exists in the kernel lab yet (K5 gap) — this
-  // placeholder stands in for the authenticated actor the real bindings
-  // require. Real mutations are INTEG-gapped regardless, so this value never
-  // reaches a live backend; it only lets the mock mutations attribute an
-  // action the way the old screen's $currentUser.id did.
-  readonly actor = 'lab-user'
+  // The authenticated actor the real bindings require for attribution
+  // (finalize/manual-match/unmatch). Sourced from the session store, which the
+  // app shell populates from the license-activation result (mock seeds a
+  // synthetic admin). A getter, not a captured constant, so it reflects the
+  // live session identity at mutation time rather than at VM construction.
+  get actor(): string {
+    return actingUserId()
+  }
 
   bankAccounts = $state<BankAccountOption[]>([])
   loading = $state(true)

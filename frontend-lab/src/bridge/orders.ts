@@ -3,7 +3,7 @@
  * CRMService — verified against wailsjs/go/main/CRMService.d.ts). */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { ListOrders } from '$wails/go/main/CRMService'
+import { ListOrders, QuickMarkOrderDelivered } from '$wails/go/main/CRMService'
 
 export interface OrderRow {
   id: string
@@ -130,8 +130,11 @@ async function realFetchAll(): Promise<OrderRow[]> {
   return realFetchPage(200, 0)
 }
 
-async function realMarkDelivered(_id: string): Promise<void> {
-  throw new Error('INTEG gap: QuickMarkOrderDelivered — wires at K5')
+async function realMarkDelivered(id: string): Promise<void> {
+  // QuickMarkOrderDelivered(orderID) → status string. Fulfillment-only flip
+  // (marks the order FullyDelivered); the returned status message is ignored
+  // here since the screen re-fetches. The server enforces the state transition.
+  await QuickMarkOrderDelivered(id)
 }
 
 /* ---- public switched API (descriptors import THESE) ---- */

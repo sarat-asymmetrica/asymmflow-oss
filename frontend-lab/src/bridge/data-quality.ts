@@ -8,7 +8,8 @@
  * built (see DataQuality.parity.md). */
 import { pick } from './runtime'
 import { str } from './map'
-import { PreviewCustomerDataQuality } from '$wails/go/main/App'
+import { PreviewCustomerDataQuality, ReviewDataQualityIssue } from '$wails/go/main/App'
+import type { main } from '$wails/go/models'
 
 export interface DataQualityIssueRow {
   id: string
@@ -145,13 +146,24 @@ async function realFetch(): Promise<DataQualityIssueRow[]> {
 }
 
 async function realReview(row: DataQualityIssueRow, action: string, note: string): Promise<void> {
-  // ReviewDataQualityIssue is a real, working binding on the old screen —
-  // but K1-class mutations are gated at K5 regardless (see build brief), so
-  // this throws honestly rather than posting from an unreviewed screen.
-  void row
-  void action
-  void note
-  throw new Error('INTEG gap: ReviewDataQualityIssue — wires at K5')
+  // ReviewDataQualityIssue(issue, action, note) takes the FULL DataQualityIssue
+  // struct, but every field the Go handler consumes — id, issue_type, severity,
+  // entity_type, entity_id, summary, detail, primary_action — is carried on the
+  // mapped row, so the struct is reconstructed losslessly from it (snake_case
+  // keys match the JSON tags mapIssue read on the way in). `action` is validated
+  // server-side (reviewed|resolved|dismissed) and the reviewer identity is taken
+  // from the session, not passed. Admin-only; a 4xx surfaces honestly.
+  const issue = {
+    id: row.id,
+    severity: row.severity,
+    issue_type: row.issueType,
+    entity_type: row.entityType,
+    entity_id: row.entityId,
+    summary: row.summary,
+    detail: row.detail,
+    primary_action: row.primaryAction,
+  } as unknown as main.DataQualityIssue
+  await ReviewDataQualityIssue(issue, action, note)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

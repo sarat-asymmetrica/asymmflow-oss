@@ -12,6 +12,9 @@
  * and the real fetch chain is multi-level, so mock stands in entirely until K5. */
 
 import { pick } from './runtime'
+import { goDate, str } from './map'
+import { GetActiveBankAccounts, GetBankStatements, GetAuditTrail, ReverseAction } from '$wails/go/main/FinanceService'
+import { actingUserId } from '../stores/session.svelte'
 
 export interface AuditTrailRow {
   id: string
@@ -88,15 +91,45 @@ async function mockReverse(row: AuditTrailRow, reason: string): Promise<void> {
  * ledger-integrity hot zone) — naming the exact bindings for K5 ---- */
 
 async function realFetch(): Promise<AuditTrailRow[]> {
-  throw new Error(
-    'INTEG gap: GetActiveBankAccounts → GetBankStatements(accountId) → GetAuditTrail(statementId), merged — wires at K5',
+  // Three-level fetch chain flattened into one feed (same shape the old
+  // AuditTrailViewer browsed): accounts → statements → per-statement audit log.
+  const accounts = await GetActiveBankAccounts()
+  const accountIds = (accounts ?? []).map((a) => str((a as unknown as Record<string, unknown>).id)).filter(Boolean)
+
+  const statementLists = await Promise.all(accountIds.map((id) => GetBankStatements(id)))
+  const statements = statementLists.flat().map((s) => {
+    const r = s as unknown as Record<string, unknown>
+    return { id: str(r.id), ref: str(r.statement_number) }
+  })
+
+  const logLists = await Promise.all(
+    statements.map((s) => GetAuditTrail(s.id).then((rows) => ({ ref: s.ref, rows: rows ?? [] }))),
   )
+
+  const out: AuditTrailRow[] = []
+  for (const { ref, rows } of logLists) {
+    for (const raw of rows) {
+      const r = raw as unknown as Record<string, unknown>
+      out.push({
+        id: str(r.id),
+        timestamp: goDate(r.performed_at) || goDate(r.created_at),
+        action: str(r.action) || 'UNKNOWN_ACTION',
+        statementRef: ref,
+        actor: str(r.performed_by),
+        // finance.BankReconciliationAuditLog carries no monetary amount — honest
+        // blank (the log references a line by id, not a value). Never fabricated.
+        amount: 0,
+        reversed: Boolean(r.is_reversed),
+      })
+    }
+  }
+  return out.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 }
 
-async function realReverse(_row: AuditTrailRow, _reason: string): Promise<void> {
-  void _row
-  void _reason
-  throw new Error('INTEG gap: ReverseAction(logId, user, reason) — wires at K5')
+async function realReverse(row: AuditTrailRow, reason: string): Promise<void> {
+  // FinanceService.ReverseAction(logId, user, reason) → void. Reversing user
+  // is sourced from the session (never trusted from the row/caller).
+  await ReverseAction(row.id, actingUserId(), reason)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

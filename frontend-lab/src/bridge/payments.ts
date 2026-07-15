@@ -7,7 +7,7 @@
  * Payments.parity.md — not built here. */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { ListCustomerReceipts } from '$wails/go/main/App'
+import { ListCustomerReceipts, ReverseCustomerReceipt } from '$wails/go/main/App'
 
 export interface ReceiptRow {
   id: string
@@ -153,8 +153,12 @@ async function realFetchAll(): Promise<ReceiptRow[]> {
   return realFetchPage(200, 0)
 }
 
-async function realReverseReceipt(_id: string, _reason: string): Promise<void> {
-  throw new Error('INTEG gap: ReverseCustomerReceipt — wires at K5')
+async function realReverseReceipt(id: string, reason: string): Promise<void> {
+  // ReverseCustomerReceipt(receiptID, reason) → *CustomerReceipt. The Go service
+  // enforces the reversal gate server-side (zero-application only; rejects an
+  // applied or already-reversed receipt) and writes the audit trail — see
+  // receipt_reversal_test.go. The screen surfaces any thrown 4xx honestly.
+  await ReverseCustomerReceipt(id, reason)
 }
 
 /* ---- public switched API (descriptors import THESE) ---- */

@@ -178,5 +178,11 @@ export interface EntityDescriptor<Row> extends LedgerDescriptor<Row> {
     badge?: StatusSpec<Row>
     kpis?: ProfileKpiSpec<Row>[]
     sections: ProfileSectionSpec<Row>[]
+    /** Secondary profile fetch (INTEG): the list `fetch` returns list-depth rows;
+     * when a row is SELECTED, the archetype calls this with the row and merges the
+     * returned partial in (e.g. GetCustomerFullProfile → TRN/aging/win-rate that
+     * ListCustomers doesn't carry). Idempotent per row; failure is non-fatal (the
+     * profile stays at list-depth). Omit when the list fetch is already complete. */
+    enrich?: (row: Row) => Promise<Partial<Row>>
   }
 }

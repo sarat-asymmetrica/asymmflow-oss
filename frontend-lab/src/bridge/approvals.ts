@@ -13,6 +13,13 @@
  * the lab stays on synthetic data end to end until K5. */
 
 import { pick } from './runtime'
+import { goDate, str } from './map'
+import {
+  ListDeleteApprovalRequests,
+  ListEmployeeArchiveRequests,
+  ReviewDeleteApprovalRequest,
+  ReviewEmployeeArchiveRequest,
+} from '$wails/go/main/App'
 
 export interface ApprovalRow {
   id: string
@@ -110,18 +117,62 @@ async function mockReject(row: ApprovalRow, notes: string): Promise<void> {
  * the exact bindings for K5 ---- */
 
 async function realFetch(): Promise<ApprovalRow[]> {
-  throw new Error('INTEG gap: ListDeleteApprovalRequests + ListEmployeeArchiveRequests (merged) — wires at K5')
+  // Both list bindings take a status filter; '' = all statuses (the queue shows
+  // pending + a decided tail). ListDeleteApprovalRequests returns [] server-side
+  // for non-admin sessions, so a non-admin sees an honest empty queue.
+  const [deletes, archives] = await Promise.all([
+    ListDeleteApprovalRequests(''),
+    ListEmployeeArchiveRequests(''),
+  ])
+  const deleteRows: ApprovalRow[] = (deletes ?? []).map((raw) => {
+    const r = raw as unknown as Record<string, unknown>
+    return {
+      id: str(r.id),
+      kind: 'delete',
+      target: str(r.entity_label) || `${str(r.entity_type)} ${str(r.entity_id)}`.trim(),
+      requestedBy: str(r.requested_by_name) || str(r.requested_by),
+      requestedAt: goDate(r.created_at),
+      reason: str(r.reason),
+      status: str(r.status),
+    }
+  })
+  const archiveRows: ApprovalRow[] = (archives ?? []).map((raw) => {
+    const r = raw as unknown as Record<string, unknown>
+    return {
+      id: str(r.id),
+      kind: 'archive',
+      target: str(r.employee_name),
+      requestedBy: str(r.requested_by_name) || str(r.requested_by),
+      requestedAt: goDate(r.created_at),
+      reason: str(r.reason),
+      status: str(r.status),
+    }
+  })
+  return [...deleteRows, ...archiveRows].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
 }
 
-async function realApprove(_row: ApprovalRow): Promise<void> {
-  void _row
-  throw new Error('INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="approve") — wires at K5')
+// Review* bindings take (requestID, decision, notes) — all strings, NO actor
+// arg: the reviewer identity is derived from the server session
+// (currentApprovalActor / GetCurrentEmployeeContext). Verified App.d.ts:1601/1603
+// and delete_approval_service.go:85 / employee_archive_service.go:138. `row.id`
+// IS the underlying request id here — realFetch maps it straight off the
+// DeleteApprovalRequest / EmployeeArchiveRequest struct. Decision vocabulary is
+// verbatim "approve"/"reject" (employee_archive_service.go:154). Approve carries
+// no reviewer note ('').
+async function realApprove(row: ApprovalRow): Promise<void> {
+  if (row.kind === 'delete') {
+    await ReviewDeleteApprovalRequest(row.id, 'approve', '')
+  } else {
+    await ReviewEmployeeArchiveRequest(row.id, 'approve', '')
+  }
 }
 
-async function realReject(_row: ApprovalRow, _notes: string): Promise<void> {
-  void _row
-  void _notes
-  throw new Error('INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="reject") — wires at K5')
+async function realReject(row: ApprovalRow, notes: string): Promise<void> {
+  if (row.kind === 'delete') {
+    await ReviewDeleteApprovalRequest(row.id, 'reject', notes)
+  } else {
+    await ReviewEmployeeArchiveRequest(row.id, 'reject', notes)
+  }
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

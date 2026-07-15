@@ -12,18 +12,24 @@
  * mock data (SYNTHETIC_IDENTITY.md) — invented Gulf names, no real people.
  */
 import { pick } from './runtime'
-import { goDate, num, str } from './map'
+import { goDate, goTime, num, str } from './map'
+import type { payroll } from '$wails/go/models'
 /* Only the FETCH bindings are actually invoked below — mutations are
  * INTEG-gap throws that NAME the real binding without importing it (same
  * convention as bridge/expenses.ts: importing a binding this file never
  * calls would just be an unused-import lint trap). */
 import {
+  ApprovePayrollRun,
+  CreatePayrollPeriod,
+  GeneratePayrollRun,
   GetActiveBankAccounts,
   GetPayrollRun,
   ListEmployeeCompensationProfiles,
   ListPayrollPayouts,
   ListPayrollPeriods,
   ListPayrollRuns,
+  MarkPayrollRunPaid,
+  PostPayrollRun,
 } from '$wails/go/main/FinanceService'
 
 /* ---- types (camelCase; mirrors payroll.* / finance.CompanyBankAccount) ---- */
@@ -875,24 +881,50 @@ async function realUpsertProfile(_draft: CompensationProfileDraft): Promise<Comp
   throw new Error('INTEG gap: UpsertEmployeeCompensationProfile — financial + PII hot-zone, wires at K5')
 }
 
-async function realCreatePeriod(_draft: PayrollPeriodDraft): Promise<PayrollPeriod> {
-  throw new Error('INTEG gap: CreatePayrollPeriod — wires at K5')
+async function realCreatePeriod(draft: PayrollPeriodDraft): Promise<PayrollPeriod> {
+  // Guard the two required dates at the seam: the backend rejects a zero-time
+  // period (start/end required, end >= start) — a blank date must never cross
+  // the wire as Go zero-time. payment_date is OMITTED when blank so the
+  // backend's nil-default (payment_date := period_end) applies, rather than a
+  // stored 0001 date. name/status left for the backend to default when empty.
+  if (!draft.periodStart || !draft.periodEnd) {
+    throw new Error('Period start and end dates are required.')
+  }
+  const period = {
+    name: draft.name,
+    division: draft.division,
+    period_start: goTime(draft.periodStart),
+    period_end: goTime(draft.periodEnd),
+    ...(draft.paymentDate ? { payment_date: goTime(draft.paymentDate) } : {}),
+    notes: draft.notes,
+  } as unknown as payroll.Period
+  const created = await CreatePayrollPeriod(period)
+  return mapPeriod(created as unknown as Record<string, unknown>)
 }
 
-async function realGenerateRun(_periodId: string): Promise<PayrollRun> {
-  throw new Error('INTEG gap: GeneratePayrollRun — wires at K5')
+async function realGenerateRun(periodId: string): Promise<PayrollRun> {
+  const run = await GeneratePayrollRun(periodId)
+  return mapRun(run as unknown as Record<string, unknown>)
 }
 
-async function realApproveRun(_runId: string, _notes: string): Promise<PayrollRun> {
-  throw new Error('INTEG gap: ApprovePayrollRun — wires at K5')
+async function realApproveRun(runId: string, notes: string): Promise<PayrollRun> {
+  const run = await ApprovePayrollRun(runId, notes)
+  return mapRun(run as unknown as Record<string, unknown>)
 }
 
-async function realPostRun(_runId: string): Promise<PayrollRun> {
-  throw new Error('INTEG gap: PostPayrollRun — wires at K5')
+async function realPostRun(runId: string): Promise<PayrollRun> {
+  // Posts the salary GL — irreversible. The backend enforces the state machine
+  // (only an approved run posts); the seam just passes the id through.
+  const run = await PostPayrollRun(runId)
+  return mapRun(run as unknown as Record<string, unknown>)
 }
 
-async function realMarkPaid(_runId: string, _paidAtIso: string, _paymentReference: string, _bankAccountId: string): Promise<PayrollRun> {
-  throw new Error('INTEG gap: MarkPayrollRunPaid — financial hot-zone, wires at K5')
+async function realMarkPaid(runId: string, paidAtIso: string, paymentReference: string, bankAccountId: string): Promise<PayrollRun> {
+  // MarkPayrollRunPaid(runID, paidAtISO, paymentReference, bankAccountID) — the
+  // date arg is a plain ISO string on the Go side (parsed server-side), NOT a
+  // time.Time binding param, so it passes through without goTime.
+  const run = await MarkPayrollRunPaid(runId, paidAtIso, paymentReference, bankAccountId)
+  return mapRun(run as unknown as Record<string, unknown>)
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

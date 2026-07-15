@@ -11,6 +11,8 @@
  * Go bindings it will call. */
 
 import { pick } from './runtime'
+import { goDate, num, str } from './map'
+import { GetRFQs, GetPipelineOpportunities, ListCustomers, CreateRFQWithReference, DeleteRFQ, DeleteOpportunity, DeleteRFQWithCascade } from '$wails/go/main/App'
 
 export interface OpportunityRow {
   id: string
@@ -146,31 +148,88 @@ async function mockCustomerOptions(): Promise<{ value: string; label: string }[]
 /* ---- real: INTEG-gapped entirely (fetch merges two sources; mutations touch
  * a financial/cascade-delete hot zone) — naming the exact bindings for K5 ---- */
 
+/* Mirrors costing-sheet.ts's proven RFQ+pipeline merge mapping (the same two
+ * bindings, already wired real there). Pipeline rows whose folder already has an
+ * RFQ row are dropped (they're the same deal further down the funnel), matching
+ * the old OpportunitiesScreen's dedup. */
+function mapRfq(r: Record<string, unknown>): OpportunityRow {
+  const id = str(num(r.id))
+  return {
+    id,
+    source: 'rfq',
+    ref: str(r.rfq_ref) || str(r.rfq_number) || `RFQ-${id}`,
+    customer: str(r.client),
+    project: str(r.project),
+    value: num(r.value),
+    stage: str(r.status) || str(r.stage),
+    createdAt: goDate(r.created_at),
+  }
+}
+function mapPipeline(o: Record<string, unknown>): OpportunityRow {
+  return {
+    id: str(o.id),
+    source: 'pipeline',
+    ref: str(o.eh_ref) || str(o.folder_number),
+    customer: str(o.customer_name),
+    project: str(o.title) || str(o.folder_name),
+    value: num(o.revenue_bhd),
+    stage: str(o.stage),
+    createdAt: goDate(o.updated_at) || goDate(o.offer_date),
+  }
+}
+
 async function realFetch(): Promise<OpportunityRow[]> {
-  throw new Error('INTEG gap: GetRFQs + GetPipelineOpportunities (merged) — wires at K5')
+  const [rfqs, pipeline] = await Promise.all([GetRFQs(500, 0), GetPipelineOpportunities(500, 0)])
+  const rfqRecords = (rfqs ?? [])
+    .map((r) => r as unknown as Record<string, unknown>)
+    .filter((r) => str(r.rfq_number).trim())
+  const rfqFolders = new Set(rfqRecords.map((r) => str(r.rfq_number)).filter(Boolean))
+  const rfqRows = rfqRecords.map(mapRfq)
+  const pipelineRows = (pipeline ?? [])
+    .map((o) => o as unknown as Record<string, unknown>)
+    .filter((o) => !rfqFolders.has(str(o.folder_number)))
+    .map(mapPipeline)
+  return [...pipelineRows, ...rfqRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-async function realCreate(_draft: NewOpportunityDraft): Promise<void> {
-  void _draft
-  throw new Error('INTEG gap: CreateRFQWithReference — wires at K5')
+async function realCreate(draft: NewOpportunityDraft): Promise<void> {
+  // App.CreateRFQWithReference(client, project, reference string, value float64, notes string) -> RFQData.
+  // Draft carries no user reference; reference passed '' so the backend auto-generates the RFQ number
+  // (createRFQ: userReference == "" -> generateRFQNumber()). Return RFQData is unused (screen refetches).
+  await CreateRFQWithReference(draft.customer, draft.project, '', draft.value ?? 0, draft.notes)
 }
 
-async function realDelete(_row: OpportunityRow): Promise<void> {
-  void _row
-  throw new Error('INTEG gap: DeleteRFQ (rfq rows) / DeleteOpportunity (pipeline rows) — wires at K5')
+async function realDelete(row: OpportunityRow): Promise<void> {
+  // Branch by the source table: RFQs use DeleteRFQ(id number), pipeline Opportunities use
+  // DeleteOpportunity(id string). RFQ ids are numeric strings (mapRfq: str(num(r.id))) -> Number().
+  if (row.source === 'rfq') {
+    await DeleteRFQ(Number(row.id))
+  } else {
+    await DeleteOpportunity(row.id)
+  }
 }
 
-async function realCascadeDelete(_row: OpportunityRow, _reason: string): Promise<void> {
-  void _row
+async function realCascadeDelete(row: OpportunityRow, _reason: string): Promise<void> {
+  // App.DeleteRFQWithCascade(id uint, cascade bool) -> DeleteCascadeResult. RFQ-sourced rows only;
+  // pipeline Opportunities have no cascade-delete binding.
+  if (row.source !== 'rfq') {
+    throw new Error(
+      'INTEG gap: DeleteRFQWithCascade — pipeline Opportunities have no cascade-delete binding (RFQ-sourced rows only).',
+    )
+  }
+  // cascade=true: proceed with deleting all linked costing sheets + offers. The Go func errors when
+  // cascade=false and links exist, so a confirmed cascade-delete must pass true. The reason arg has no
+  // binding slot (audit-only in the old UI) and is dropped, matching the mock.
   void _reason
-  throw new Error(
-    'INTEG gap: DeleteRFQWithCascade — wires at K5. (RFQ-sourced rows only; pipeline Opportunities ' +
-      'have no cascade-delete binding — see Opportunities.parity.md.)',
-  )
+  await DeleteRFQWithCascade(Number(row.id), true)
 }
 
 async function realCustomerOptions(): Promise<{ value: string; label: string }[]> {
-  throw new Error('INTEG gap: ListCustomers — wires at K5')
+  const rows = await ListCustomers(500, 0)
+  return (rows ?? [])
+    .map((c) => str((c as unknown as Record<string, unknown>).business_name))
+    .filter(Boolean)
+    .map((name) => ({ value: name, label: name }))
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

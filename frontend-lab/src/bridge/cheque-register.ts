@@ -6,7 +6,12 @@
  * picker on Mark Cleared are financial-hot-zone SLOTs, also ledgered. */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetActiveBankAccounts, GetOutstandingCheques } from '$wails/go/main/FinanceService'
+import {
+  CancelCheque,
+  GetActiveBankAccounts,
+  GetOutstandingCheques,
+  MarkChequeStale,
+} from '$wails/go/main/FinanceService'
 
 export interface OutstandingChequeRow {
   id: string
@@ -186,12 +191,16 @@ async function realFetchAll(): Promise<OutstandingChequeRow[]> {
   })
 }
 
-async function realMarkStale(_chequeNumber: string): Promise<void> {
-  throw new Error('INTEG gap: MarkChequeStale — wires at K5')
+async function realMarkStale(chequeNumber: string): Promise<void> {
+  // MarkChequeStale(chequeNumber) — row identity is the cheque number
+  // (cheque_register_service.go). The server gates on status IN
+  // (ISSUED, PRESENTED) and writes the audit trail; a 4xx surfaces honestly.
+  await MarkChequeStale(chequeNumber)
 }
 
-async function realCancel(_chequeNumber: string, _reason: string): Promise<void> {
-  throw new Error('INTEG gap: CancelCheque — wires at K5')
+async function realCancel(chequeNumber: string, reason: string): Promise<void> {
+  // CancelCheque(chequeNumber, reason) — server gates on ISSUED only.
+  await CancelCheque(chequeNumber, reason)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

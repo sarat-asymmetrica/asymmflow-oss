@@ -126,3 +126,4 @@ mac_dev_setup/
 
 # Generated marketing PDFs (build artifacts of docs/marketing/generate_pdfs.py; regenerate from the scrubbed .md sources)
 docs/marketing/*.pdf
+.env.integ.local

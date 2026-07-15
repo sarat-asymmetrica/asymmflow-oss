@@ -6,6 +6,8 @@
  * is deterministic + synthetic (SYNTHETIC_IDENTITY.md canon); real wiring
  * (GetCRMSupplierDashboard / GetCRMSupplierDashboardByYear) lands at K5. */
 import { pick } from '../runtime'
+import { num, str } from '../map'
+import { GetCRMSupplierDashboard, GetCRMSupplierDashboardByYear } from '$wails/go/main/App'
 
 export interface CRMSupplierDashboardData {
   totalSuppliers: number
@@ -40,15 +42,36 @@ function mockData(): CRMSupplierDashboardData {
   }
 }
 
-async function mockFetch(): Promise<CRMSupplierDashboardData> {
+async function mockFetch(_period?: string): Promise<CRMSupplierDashboardData> {
   await new Promise((r) => setTimeout(r, 250))
   return mockData()
 }
 
-async function realFetch(): Promise<CRMSupplierDashboardData> {
-  throw new Error(
-    'INTEG gap: crm-supplier hub needs GetCRMSupplierDashboard() / GetCRMSupplierDashboardByYear(year) — wires at K5',
-  )
+async function realFetch(period?: string): Promise<CRMSupplierDashboardData> {
+  const y = period ? Number(period) : NaN
+  const raw = Number.isFinite(y) ? await GetCRMSupplierDashboardByYear(y) : await GetCRMSupplierDashboard()
+  const d = raw as unknown as Record<string, unknown>
+  const totalPurchases = num(d.total_purchases)
+  const cards = (d.top_suppliers as unknown[] | null) ?? []
+  return {
+    totalSuppliers: num(d.total_suppliers),
+    activeSuppliers: num(d.active_suppliers),
+    totalPurchases,
+    outstandingPayables: num(d.outstanding_payables),
+    overduePayables: num(d.overdue_payables),
+    // SupplierMetricCard carries no purchase-share pct — derive it (VM-legit).
+    topSuppliers: cards.map((raw) => {
+      const c = raw as Record<string, unknown>
+      const purchases = num(c.total_purchases)
+      return {
+        name: str(c.supplier_name),
+        purchases,
+        pct: totalPurchases > 0 ? Math.round((purchases / totalPurchases) * 1000) / 10 : 0,
+        activePos: num(c.active_pos),
+      }
+    }),
+  }
 }
 
-export const fetchCrmSupplierDashboard = (): Promise<CRMSupplierDashboardData> => pick(realFetch, mockFetch)()
+export const fetchCrmSupplierDashboard = (period?: string): Promise<CRMSupplierDashboardData> =>
+  pick(realFetch, mockFetch)(period)

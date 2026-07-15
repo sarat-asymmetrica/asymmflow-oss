@@ -6,7 +6,7 @@
  * Suppliers.parity.md #1). */
 
 import type { EntityDescriptor } from '$kernel/descriptor'
-import { deleteSupplier, fetchSuppliers, type SupplierRow } from '../bridge/suppliers'
+import { deleteSupplier, fetchSupplierProfile, fetchSuppliers, type SupplierRow } from '../bridge/suppliers'
 
 export const suppliersDescriptor: EntityDescriptor<SupplierRow> = {
   entity: 'suppliers',
@@ -91,6 +91,8 @@ export const suppliersDescriptor: EntityDescriptor<SupplierRow> = {
   profile: {
     heading: (r) => r.name,
     subheading: (r) => `${r.code}${r.country ? ` · ${r.country}` : ''}`,
+    // Second fetch on select: GetSupplierFullProfile fills TRN/bank/KPIs.
+    enrich: (r) => fetchSupplierProfile(r.id),
     badge: {
       value: (r) => r.status,
       tones: {

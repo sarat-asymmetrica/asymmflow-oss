@@ -9,7 +9,8 @@
  * the VAT Return export — never re-derived client-side from free text. See
  * screens/parity/Accounting.parity.md. */
 import { pick } from './runtime'
-import { goDate, num, str } from './map'
+import { goDate, goTime, num, str } from './map'
+import type { finance } from '$wails/go/models'
 import {
   GetChartOfAccounts,
   GetJournalEntries,
@@ -19,6 +20,9 @@ import {
   ListCashflowEvidenceProposalReviews,
   GenerateProfitAndLoss,
   GenerateBalanceSheet,
+  CreateAccount,
+  CreateJournalEntry,
+  ReviewCashflowEvidenceProposal,
 } from '$wails/go/main/FinanceService'
 
 /* ---- types (camelCase mirrors of the Go models named in BUILD_CONTEXT) ---- */
@@ -897,21 +901,61 @@ async function realGenerateBS(year: number): Promise<BalanceSheetRow> {
   }
 }
 
-/* ---- real mutations: financial hot-zones, honest INTEG-gap throws ---- */
-async function realCreateAccount(_draft: NewAccountDraft): Promise<ChartOfAccountRow> {
-  throw new Error('INTEG gap: CreateAccount — wires at K5')
+/* ---- real mutations ---- */
+async function realCreateAccount(draft: NewAccountDraft): Promise<ChartOfAccountRow> {
+  // FinanceService.CreateAccount(finance.ChartOfAccount) → finance.ChartOfAccount.
+  // Only the user-authored fields are sent; the backend assigns id/balance/etc.
+  const arg = {
+    account_code: draft.accountCode,
+    account_name: draft.accountName,
+    account_type: draft.accountType,
+    is_vat_account: draft.isVatAccount,
+    vat_direction: draft.vatDirection,
+  } as unknown as finance.ChartOfAccount
+  const created = await CreateAccount(arg)
+  return mapAccount(created as unknown as Record<string, unknown>)
 }
 async function realUpdateAccount(_id: string, _patch: Partial<ChartOfAccountRow>): Promise<void> {
-  throw new Error('INTEG gap: UpdateAccount — wires at K5')
+  // GAP: UpdateAccount(id, Record<string, any>) — the patch arg is an untyped
+  // map; neither the accepted key set nor the camelCase→snake_case contract is
+  // verifiable from the binding signature. Left gapped rather than guess keys.
+  throw new Error('INTEG gap: UpdateAccount — arg2 is an untyped Record<string, any> patch; accepted keys unverifiable from the binding')
 }
-async function realCreateJournalEntry(_draft: NewJournalEntryDraft): Promise<JournalEntryRow> {
-  throw new Error('INTEG gap: CreateJournalEntry — wires at K5')
+async function realCreateJournalEntry(draft: NewJournalEntryDraft): Promise<JournalEntryRow> {
+  // FinanceService.CreateJournalEntry(finance.JournalEntry) → finance.JournalEntry
+  // (double-entry posting). The draft is a 1:1 shape of JournalEntry: each field
+  // maps to a named struct field, each line to a named JournalLine field. Totals
+  // are the sum of the line legs (the backend enforces debit==credit and rejects
+  // an unbalanced entry, which surfaces here as a thrown error).
+  const debitTotal = Math.round(draft.lines.reduce((s, l) => s + l.debit, 0) * 1000) / 1000
+  const creditTotal = Math.round(draft.lines.reduce((s, l) => s + l.credit, 0) * 1000) / 1000
+  const arg = {
+    entry_date: goTime(draft.entryDate),
+    description: draft.description,
+    fiscal_year: draft.fiscalYear,
+    fiscal_period: draft.fiscalPeriod,
+    debit_total: debitTotal,
+    credit_total: creditTotal,
+    source_type: 'manual',
+    lines: draft.lines.map((l) => ({
+      account_id: l.accountId,
+      account_name: l.accountName,
+      debit: l.debit,
+      credit: l.credit,
+      description: l.description,
+    })),
+  } as unknown as finance.JournalEntry
+  const created = await CreateJournalEntry(arg)
+  return mapJournalEntry(created as unknown as Record<string, unknown>)
 }
 async function realSyncProposalReviews(_days: number): Promise<CashflowProposalReviewRow[]> {
   throw new Error('INTEG gap: SyncCashflowEvidenceProposalReviews — wires at K5')
 }
-async function realReviewProposal(_id: string, _status: string, _note: string): Promise<CashflowProposalReviewRow> {
-  throw new Error('INTEG gap: ReviewCashflowEvidenceProposal — wires at K5')
+async function realReviewProposal(id: string, status: string, note: string): Promise<CashflowProposalReviewRow> {
+  // FinanceService.ReviewCashflowEvidenceProposal(id, status, note) →
+  // main.CashflowEvidenceProposalReview. Not a GL posting; updates a review row.
+  const reviewed = await ReviewCashflowEvidenceProposal(id, status, note)
+  return mapProposalReview(reviewed as unknown as Record<string, unknown>)
 }
 async function realExportCashflowEvidencePack(_days: number): Promise<string> {
   throw new Error('INTEG gap: ExportCashflowEvidencePack — wires at K5')

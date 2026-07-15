@@ -4,6 +4,8 @@
  * + synthetic (SYNTHETIC_IDENTITY.md canon); real wiring (GetCRMCustomerDashboard
  * / GetCRMCustomerDashboardByYear) lands at K5. */
 import { pick } from '../runtime'
+import { num, str } from '../map'
+import { GetCRMCustomerDashboard, GetCRMCustomerDashboardByYear } from '$wails/go/main/App'
 
 export interface CRMCustomerDashboardData {
   totalCustomers: number
@@ -49,15 +51,45 @@ function mockData(): CRMCustomerDashboardData {
   }
 }
 
-async function mockFetch(): Promise<CRMCustomerDashboardData> {
+async function mockFetch(_period?: string): Promise<CRMCustomerDashboardData> {
   await new Promise((r) => setTimeout(r, 250))
   return mockData()
 }
 
-async function realFetch(): Promise<CRMCustomerDashboardData> {
-  throw new Error(
-    'INTEG gap: crm-customer hub needs GetCRMCustomerDashboard() / GetCRMCustomerDashboardByYear(year) — wires at K5',
-  )
+async function realFetch(period?: string): Promise<CRMCustomerDashboardData> {
+  const y = period ? Number(period) : NaN
+  const raw = Number.isFinite(y) ? await GetCRMCustomerDashboardByYear(y) : await GetCRMCustomerDashboard()
+  const d = raw as unknown as Record<string, unknown>
+  const totalRevenue = num(d.total_revenue)
+  const cards = (d.top_customers as unknown[] | null) ?? []
+  return {
+    totalCustomers: num(d.total_customers),
+    activeCustomers: num(d.active_customers),
+    totalRevenue,
+    revenueYoy: num(d.revenue_yoy),
+    totalOutstanding: num(d.total_outstanding),
+    overdueAmount: num(d.overdue_amount),
+    overduePct: num(d.overdue_pct),
+    // CustomerMetricCard carries no revenue-share pct — derive it (VM-legit,
+    // not fabricated): the card's revenue over the dashboard total.
+    topCustomers: cards.map((raw) => {
+      const c = raw as Record<string, unknown>
+      const revenue = num(c.total_revenue)
+      return {
+        name: str(c.business_name),
+        revenue,
+        pct: totalRevenue > 0 ? Math.round((revenue / totalRevenue) * 1000) / 10 : 0,
+      }
+    }),
+    gradeA: { count: num(d.grade_a_count), revenue: num(d.grade_a_revenue) },
+    gradeB: { count: num(d.grade_b_count), revenue: num(d.grade_b_revenue) },
+    gradeC: { count: num(d.grade_c_count), revenue: num(d.grade_c_revenue) },
+    gradeD: { count: num(d.grade_d_count), revenue: num(d.grade_d_revenue) },
+    top3RevenuePct: num(d.top3_revenue_pct),
+    top5RevenuePct: num(d.top5_revenue_pct),
+    top10RevenuePct: num(d.top10_revenue_pct),
+  }
 }
 
-export const fetchCrmCustomerDashboard = (): Promise<CRMCustomerDashboardData> => pick(realFetch, mockFetch)()
+export const fetchCrmCustomerDashboard = (period?: string): Promise<CRMCustomerDashboardData> =>
+  pick(realFetch, mockFetch)(period)

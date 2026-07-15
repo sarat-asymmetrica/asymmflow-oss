@@ -35,6 +35,13 @@
     void vm.load()
   })
 
+  // Secondary profile fetch (INTEG): when a row is selected and the descriptor
+  // declares `profile.enrich`, pull its full-profile depth and merge it in.
+  $effect(() => {
+    const enrich = descriptor.profile.enrich
+    if (enrich && vm.selectedId != null) void vm.enrichSelected(enrich)
+  })
+
   const screenActions = $derived((descriptor.actions ?? []).filter((a) => a.kind === 'screen'))
   const rowActions = $derived((descriptor.actions ?? []).filter((a) => a.kind === 'row'))
   const reload = () => vm.load()

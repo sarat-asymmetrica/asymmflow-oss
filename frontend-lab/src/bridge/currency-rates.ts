@@ -12,8 +12,8 @@
  * Synthetic-only data (SYNTHETIC_IDENTITY.md). */
 
 import { pick } from './runtime'
-import { goDate, num, str } from './map'
-import { GetActiveCurrencyRates } from '$wails/go/main/App'
+import { goDate, goTime, num, str } from './map'
+import { GetActiveCurrencyRates, SetExchangeRate } from '$wails/go/main/App'
 
 export interface CurrencyRateRow {
   id: string
@@ -116,11 +116,15 @@ async function realFetchAll(): Promise<CurrencyRateRow[]> {
   return (rows ?? []).map((r) => mapRate(r as unknown as Record<string, unknown>))
 }
 
-async function realSetRate(_draft: CurrencyRateDraft): Promise<void> {
-  throw new Error(
-    'INTEG gap: SetExchangeRate(currency, rate, asOfDate, source) takes a Go time.Time for asOfDate — ' +
-      'wires at K5 once the form layer has a real date-to-time.Time bridge, not a naive string pass-through.',
-  )
+async function realSetRate(draft: CurrencyRateDraft): Promise<void> {
+  // The date→time.Time bridge (map.goTime) is the whole reason this was gapped.
+  // Guard the required fields at the seam so we never emit a Go zero-time write
+  // or a NaN rate; the backend also validates (currency whitelist, rate range).
+  if (!draft.currency) throw new Error('Currency is required.')
+  if (draft.rate == null || Number.isNaN(draft.rate)) throw new Error('A numeric rate is required.')
+  if (!draft.asOfDate) throw new Error('An effective date is required.')
+  // Go signature: SetExchangeRate(currencyCode, rate, effectiveFrom time.Time, notes).
+  await SetExchangeRate(draft.currency, draft.rate, goTime(draft.asOfDate), draft.source)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

@@ -11,6 +11,136 @@ Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
+## INTEG EXECUTION (fresh Opus 4.8 orchestrator, from c29e17a-minus-repoint) — `FABLE_CAMPAIGN_INTEG.md`
+
+- **Tooling:** installed the SQLite CLI (winget `SQLite.SQLite` 3.53.3) for scratch-DB
+  verification per §3/§4 (Go query snippets remain the primary check).
+- **★ Wave I1 — cross-cutting prerequisites DONE (green: check 0/0 348, test 148, build clean, go build ./... clean).**
+  - **I1.1 session actor:** the last `actor='lab-user'` placeholder (bank-reconciliation-vm.svelte.ts)
+    now reads `actingUserId()` from the session store (a getter, so it reflects the live license
+    identity at mutation time). Grep for `lab-user` in `src/` = zero screen hits. Session is already
+    populated for real by the shell (App.svelte `setSession` from the license-activation result).
+  - **I1.2 divisions registry as the ONE division-vocabulary source:** added `getDivisionOptions()` to
+    `stores/divisions.svelte.ts`; routed `bridge/index.ts divisionOptions` (invoice/payment forms) and
+    `bridge/costing-sheet.ts costingDivisionOptions`/`defaultCostingDivision` through it; deleted the
+    dead static-mock `mock.divisionOptions`. Under real Wails these now reflect `GetDivisionRegistry`
+    (loaded during boot, `await initDivisions()` before render); under mock they keep the BUILTIN
+    synthetic fallback. Invoice division options made LAZY (`options: async () => divisionOptions()`)
+    so they read the post-boot registry rather than the module-eval fallback. Mock DATA seeding keeps
+    private synthetic literals (L7 audit-exempt, like every generator).
+  - **I1.3 date→time.Time form bridge:** built ONE kernel-level helper `map.goTime(dateStr)` — emits the
+    UTC-midnight RFC3339 string Wails marshals into a Go `time.Time` (the generated `time.Time` TS class
+    is an empty codegen stub, so we pass the wire string + cast). Wired `SetExchangeRate` as the proof
+    consumer (currency-rates mutation row flipped mock→**wired**). VALIDATED end-to-end by
+    `integ_date_bridge_test.go` against a scratch SQLite: the exact wire string round-trips into the
+    correct `time.Time`, the rate persists, a re-set closes the prior active rate (effective_to), and the
+    empty-date guard maps to Go zero time (refused at the seam, never a silent "today").
+  - **I1.4 AI-provider-key secrets storage:** parked owner decision — surfaced, NOT improvised (see
+    INTEG checkpoint). Only affects the Settings/Butler AI-key path (a DEFER); does not block I2/I3.
+- **★ Wave I2 — read swaps (mock→real) DONE (green: check 0/0 348, test 148, build clean, FULL layout sweep 49/49).**
+  Committed in 3 batches (`9dd1660` dashboards, `fc970f1` sales+system reads, `7097633` profile-enrich engine).
+  - **Batch A — 5 dashboards:** main (3-binding composition GetDashboardStats+pipeline+AR-aging via
+    Promise.all; focus/alerts/tasks honest-blank — no roster binding), finance-overview
+    (GetFinancialDashboardForYear, ~35 fields 1:1), ahs-finance (GetFinancialDashboardByDivision with
+    division resolved from the registry `dashboardVariant==='ahs'` — consumes the I1.2 store, no literal),
+    crm-customer/crm-supplier (GetCRM*Dashboard[ByYear]; metric-card share pct DERIVED since the cards
+    carry none).
+  - **Batch B — sales+system reads:** serial-trace (SearchSerials/GetRecentlyDeliveredSerials);
+    opportunities READ (RFQ+pipeline merge mirroring costing-sheet's proven mapping + folder dedup, +
+    ListCustomers options — mutations stay I3); audit-trail 3-level chain
+    (accounts→statements→GetAuditTrail flattened, amount honest-blank — the log has none); approvals
+    fetch (ListDeleteApprovalRequests+ListEmployeeArchiveRequests, status=''=all — reviews stay I3);
+    notifications (ListNotificationFeed+MarkNotificationAsRead — the recon's transport uncertainty
+    RESOLVED, direct bindings exist; reviewStatus/requester/reason honest-blank as they live on the
+    request, not the notification; approve/reject reviews stay I3; live-push DEFER).
+  - **Batch C — EntityMaster `profile.enrich` ENGINE (fix-at-the-kernel):** new
+    `EntityDescriptor.profile.enrich?(row)` + `LedgerViewModel.enrichSelected()` (idempotent per id,
+    reset on reload, non-fatal) + an EntityMaster `$effect` on selection. Wires the secondary-fetch
+    depth: GetCustomerFullProfile (customers) + GetSupplierFullProfile (suppliers). GetCashPosition was
+    already wired (bank-recon); finance-overview has no separate overlay consumer.
+  - **⚠️ customer-360 STOP-AND-SURFACED (not wired):** real `Customer360Data` is NARROWER than the
+    view (no contact/TRN/credit-limit/regime; adds aging/history/orders) and `Customer360Graph` is a
+    node/edge graph, not the flat connections summary — a genuine SHAPE-DIVERGENCE, not a swap. Kept
+    honestly gapped with precise notes; needs an OWNER shape decision (reshape the view to the backend,
+    or compose a supplementary customer-detail fetch). Read-only, no persistence risk.
+  - **INTEG discipline held:** every mutation on these screens still throws its honest `INTEG gap:` —
+    only reads (+ the benign MarkNotificationAsRead) flipped. No silent mock persistence anywhere.
+- **★ OWNER RULINGS at the I1/I2→I3 checkpoint (2026-07-15):**
+  1. **I3 validation = Go-test doctrine (ratified).** I cannot headlessly drive the WebView2 GUI
+     (Playwright hits the vite dev server = mock mode, no `window.go`). So each I3 hot-zone is validated
+     by: (a) `npm run check` proving the adapter↔binding contract via the generated d.ts, (b) a Go test
+     driving the actual App binding against a scratch SQLite asserting persisted state + audit trail +
+     the reversal path where one exists (the spec's "Go query snippet against the scratch DB"). The
+     owner's smoke checklist remains the human GUI pass. time.Time marshalling already proven (I1.3).
+  2. **Customer-360 = reshape the view to the backend.** Drop the mock-invented contact/TRN/credit/regime;
+     surface what `Customer360Data` provides (receivables aging, payment history, recent orders/RFQs);
+     derive connections from the `Customer360Graph` node/edge data. (Bespoke-screen rework.)
+  3. **AI-provider keys = encrypted in-app settings** via the existing FieldCrypto/DPAPI keystore (matches
+     the no-secrets-in-source posture); a Settings key field. Resolves the I1.4 parked decision.
+- **★ Wave I3 — financial hot-zones (in progress).** VALIDATION DOCTRINE (owner-ratified): each hot-zone =
+  type-gate (adapter↔binding contract via generated d.ts) + a Go persistence/audit/reversal test on scratch
+  SQLite (I cannot headlessly drive the WebView2 GUI; the owner's smoke checklist is the human pass). The
+  repo's existing hundreds of Go tests already cover many bindings — where present, wire-and-verify; else
+  wire-and-write-test. Operating model: 3 parallel Sonnet agents wired the mechanical adapters (each honoring
+  a **gap-if-uncertain** rule on sacred posting paths), orchestrator wrote/ran the Go tests + gated + committed.
+  - **AR (5dc6f7b):** ReverseCustomerReceipt (receipt_reversal_test.go) + ApplyCreditNote (NEW
+    integ_ar_hotzone_test.go: partial/full apply, auto-Paid, guards).
+  - **recon/FX/AP/payroll/costing/CRM (2a084a4):** FX Post/Reverse (golden test); recon Finalize/Delete/
+    AutoMatch/ManualMatch/Split/Unmatch/two-phase-import/line-delete (split+unmatch in service test); book-bank
+    Finalize; accounting CreateAccount/**CreateJournalEntry**(NEW integ_accounting_hotzone_test.go — balanced
+    legs enforced)/ReviewProposal; payroll Generate/Approve/Post/MarkPaid/CreatePeriod (golden test); AP
+    **DeleteSupplierPayment**(NEW integ_ap_hotzone_test.go — removes + re-derives invoice status) + supplier-
+    invoice Approve/MarkPaid/3-way bridge fns (supplier_ap_gate_test); costing Create/Clone/SetActive;
+    opportunities Create/Delete(by source)/DeleteRFQWithCascade.
+  - **recon test + scoreboard (6b0a69d):** NEW integ_recon_hotzone_test.go (FinalizeReconciliation +
+    DeleteBankStatement); 11 parity rows flipped to wired.
+  - **Go-test tally:** 5 NEW persistence tests (ApplyCreditNote, CreateJournalEntry, DeleteSupplierPayment,
+    FinalizeReconciliation, DeleteBankStatement) + verified existing golden/gate/service tests for the rest.
+  - **Orchestrator TODOs (honestly gapped, NOT silently wired):** `SaveCostingAsOffer` 🔥 (CostingExportData
+    payload assembly — declined by the agent per discipline), supplier-invoice DESCRIPTOR consumption (bridge
+    fns added but the screen's actions don't call them yet), `CreateJournalEntry` UI already wired; deferred Go
+    tests for FinalizeBookBankReconciliation + DeleteRFQWithCascade + the two Review* bindings (Review* have
+    existing app_test/employee_archive_service_test coverage). See the INTEG handoff.
+  - **operational + inventory + reviews + OneDrive (28b3af2, 6ddda89):** 2 more parallel agents.
+    Wired: orders QuickMarkDelivered; rfqs UpdateRFQStatus+DeleteRFQ; cheque MarkStale+Cancel;
+    expenses Submit/Approve/Reject/Delete; data-quality ReviewDataQualityIssue; bank-accounts Delete;
+    PO UpdatePOStatus; delivery DeleteDeliveryNote; approvals reviews (both kinds, server-derived
+    reviewer); OneDrive Detect/Validate/Scan/**ImportOneDriveDeals** 🔥 (server skips deals without a
+    confirmed customer → a mapping slip degrades to skip/error, never a wrong offer).
+    **Structural findings (honestly ledgered, NOT silently wired):** PO Receive-Items + GRN
+    Receive/QC/Complete are SLOT — the bindings exist (CompleteGRN/UpdateGRNQCStatus/ReceiveAgainstPO)
+    but there is NO frontend adapter/action (net-new capture UI); delivery Dispatch/Confirm need
+    driver/vehicle/POD-signature capture forms (InTransit has no binding); expenses Post posts a real GL
+    journal entry (owner decision if it belongs on the ledger screen); bank-accounts Create/Update carry
+    encrypted IBAN/SWIFT (need an encryption-safe adapter, never pre-encrypt client-side); notifications
+    reviews need a source_id→request-id mapper (the SAME reviews are fully wired via Approvals Queue).
+  - **★ I3 CLOSE-OUT GATES GREEN:** check 0/0 (348), vitest 148/148, `npm run build` clean, FULL layout
+    sweep **49/49**, and the FULL `go test .` main-package suite **green (exit 0, no regressions)** with the
+    5 new INTEG persistence tests. ~34 parity rows now `wired`/`real`; the residue is the ledgered TODO
+    list in `FABLE_CAMPAIGN_INTEG_HANDOFF.md` (SaveCostingAsOffer, SLOT capture forms, encrypted bank-acct
+    write, expenses-Post, notifications-review mapper, the non-financial people/work/deployment/butler
+    mutations, AI-key encrypted settings, and the deferred Go tests). K6 flip remains owner-gated (Task #5).
+
+## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
+
+- **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
+  `wails.json` repoint** (held back as flip step 2; the repoint lives only on this branch —
+  do NOT naively `git merge main` here or it reverts). Gates at merge: check 0/0 (348),
+  vitest 148/148, go build+test clean, mesh smoke green.
+- **★ OWNER RULING (2026-07-15, supersedes the runtime clause of `1779b3c`): SQLite-primary
+  is PERMANENT; Postgres RETIRED from the target architecture.** Rationale ratified after
+  architectural review: the boot path is deeply SQLite-shaped (PRAGMA/writable-schema
+  CHECK-constraint surgery, app.go:1984–2046), mesh peers run SQLite, and DB-row-level sync
+  can't express business-invariant conflict semantics — the mesh reducer can. The always-on
+  office machine's job changes: **always-on mesh peer** (durability anchor + backup
+  custodian), not a database server. Owner also validated the Holepunch stack first-hand
+  (keet.io). Consequence: INTEG's Wave I0 (PG-runtime spike) was cut from the spec before
+  launch; validation runtime = quarantined scratch SQLite. Verified-then-retired PG artifacts
+  (throwaway `asymmflow_integ` DB, `.env.integ.local`) were dropped/deleted.
+- **`FABLE_CAMPAIGN_INTEG.md`** = the Task #4 execution spec (I1 prereqs → I2 read swaps →
+  I3 financial hot-zones). Runs parallel to sovereign-mesh Wave 1 (`asymmflow-mesh`
+  worktree, Fable-driven) — disjoint surfaces by design.
+
 ## SPRINT 3 (fresh Opus 4.8 orchestrator, from 5fe30bc)
 
 Continuation of `FABLE_CAMPAIGN_SPRINT3_HANDOFF.md`: finish the K5 tail (tripwires,

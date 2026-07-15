@@ -1,7 +1,7 @@
 /* Purchase Orders bridge module — self-contained: types + mock + real + switch. */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetPurchaseOrders } from '$wails/go/main/App'
+import { GetPurchaseOrders, UpdatePOStatus } from '$wails/go/main/App'
 
 export interface PurchaseOrderRow {
   id: string
@@ -147,12 +147,16 @@ async function realFetchAll(): Promise<PurchaseOrderRow[]> {
   return (rows ?? []).map((x) => mapPurchaseOrder(x as unknown as Record<string, unknown>))
 }
 
-async function realSetStatus(_id: string, _status: string): Promise<void> {
-  throw new Error(
-    'INTEG gap: UpdatePOStatus — wires at K5. (The Approve transition specifically routes ' +
-      'through ApprovePurchaseOrder(id, userId), a separate SoD-gated binding, not this one — ' +
-      "it isn't offered as a plain status flip here; see PurchaseOrders.parity.md.)",
-  )
+async function realSetStatus(id: string, status: string): Promise<void> {
+  // UpdatePOStatus(id, status) — App binding (verified App.d.ts:1821, string,
+  // string). The Go service enforces the legal-transition map and the
+  // "po:update" permission server-side (purchase_order_service.go:668). The
+  // SoD-gated Approve transition (Pending Approval→Approved) is deliberately NOT
+  // routed here — the descriptor never offers it as a plain flip; it needs
+  // ApprovePurchaseOrder(id, userId), a separate binding. Receiving posts
+  // inventory through a ledgered Receive-Items panel, also not this setter.
+  // See PurchaseOrders.parity.md.
+  await UpdatePOStatus(id, status)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

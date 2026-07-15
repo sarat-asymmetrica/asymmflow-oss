@@ -9,7 +9,7 @@
  * blanks/zeroes until GetCustomerFullProfile is wired (K5). */
 
 import type { EntityDescriptor } from '$kernel/descriptor'
-import { fetchCustomers, setCustomerStatus, type CustomerRow } from '../bridge'
+import { fetchCustomerProfile, fetchCustomers, setCustomerStatus, type CustomerRow } from '../bridge'
 
 export const customersDescriptor: EntityDescriptor<CustomerRow> = {
   entity: 'customers',
@@ -123,6 +123,8 @@ export const customersDescriptor: EntityDescriptor<CustomerRow> = {
   profile: {
     heading: (r) => r.name,
     subheading: (r) => `${r.code}${r.city ? ` · ${r.city}` : ''}`,
+    // Second fetch on select: GetCustomerFullProfile fills TRN/aging/win-rate.
+    enrich: (r) => fetchCustomerProfile(r.id),
     badge: {
       value: (r) => r.status,
       tones: {
