@@ -53,6 +53,10 @@ import Butler from './Butler.svelte'
 import PeopleHub from './PeopleHub.svelte'
 import WorkHub from './WorkHub.svelte'
 import DeploymentHub from './DeploymentHub.svelte'
+import FinanceHub from './FinanceHub.svelte'
+import SalesHub from './SalesHub.svelte'
+import CRMHub from './CRMHub.svelte'
+import OperationsHub from './OperationsHub.svelte'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -131,6 +135,11 @@ export const screens: ScreenEntry[] = [
   { key: 'people', label: 'People', group: 'People', archetype: 'bespoke', component: PeopleHub },
   { key: 'work', label: 'Work', group: 'Operations', archetype: 'bespoke', component: WorkHub },
   { key: 'deployment', label: 'Deployment', group: 'System', archetype: 'bespoke', component: DeploymentHub },
+  // K5 — tab-navigator hubs (TabShell over built screens)
+  { key: 'sales-hub', label: 'Sales Hub', group: 'Sales', archetype: 'bespoke', component: SalesHub },
+  { key: 'finance-hub', label: 'Finance Hub', group: 'Finance', archetype: 'bespoke', component: FinanceHub },
+  { key: 'operations-hub', label: 'Operations Hub', group: 'Operations', archetype: 'bespoke', component: OperationsHub },
+  { key: 'crm-hub', label: 'Relationships Hub', group: 'Sales', archetype: 'bespoke', component: CRMHub },
   // Lab
   { key: 'showcase', label: 'Showcase', group: 'Lab', archetype: 'bespoke', component: Showcase },
 ]
