@@ -13,7 +13,7 @@
 
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetAllSupplierPayments } from '$wails/go/main/App'
+import { DeleteSupplierPayment, GetAllSupplierPayments } from '$wails/go/main/App'
 
 export interface SupplierPaymentRow {
   id: string
@@ -181,12 +181,13 @@ async function realFetch(): Promise<SupplierPaymentRow[]> {
   return (rows ?? []).map((x) => mapSupplierPayment(x as unknown as Record<string, unknown>))
 }
 
-async function realDelete(_id: string): Promise<void> {
-  throw new Error(
-    'INTEG gap: DeleteSupplierPayment — wires at K5. (Scoped to source===\'Supplier Invoice\' rows ' +
-      "only, mirroring the old screen's isExpenseSettlement guard — expense settlements are never " +
-      'deletable from this ledger.)',
-  )
+async function realDelete(id: string): Promise<void> {
+  // Backend DeleteSupplierPayment(id) deletes a supplier_payment by id behind
+  // its own permission + delete-request guard. WHICH rows expose a delete
+  // action — source==='Supplier Invoice' only, never expense settlements —
+  // is a UI concern (the old screen's isExpenseSettlement guard); this seam
+  // just passes the id through.
+  await DeleteSupplierPayment(id)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

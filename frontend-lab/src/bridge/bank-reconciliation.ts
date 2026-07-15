@@ -20,10 +20,12 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import type { MatchCandidate } from '$kernel/allocation'
-// Only FETCH bindings are imported — every MUTATION below is an honest
-// INTEG-gap throw naming the binding as a string (bank-accounts.ts /
-// audit-trail.ts pattern: the real adapter never calls a binding it can't
-// safely pass through).
+import type { banking } from '$wails/go/models'
+import { actingUserId } from '../stores/session.svelte'
+// FETCH bindings + the safely-mappable MUTATIONS are wired. Mutations whose
+// Go arg is an untyped `Record<string, any>` patch (Update statement/line,
+// create line) keep an honest INTEG-gap throw — the accepted key set isn't
+// verifiable from the binding signature.
 import {
   GetActiveBankAccounts,
   GetBankStatements,
@@ -35,7 +37,19 @@ import {
   ListExpenseEntries,
   ListUnreconciledPayrollPayouts,
   GetAuditTrail,
+  FinalizeReconciliation,
+  DeleteBankStatement,
+  AutoMatchBankLines,
+  ManualMatchLine,
+  CreateSplitAllocation,
+  UnmatchLine,
+  DeleteBankStatementLine,
 } from '$wails/go/main/FinanceService'
+import {
+  PreviewBankStatementImportWithDialog,
+  ConfirmBankStatementImport,
+  DiscardBankStatementImportPreview,
+} from '$wails/go/main/App'
 
 /* ---------------------------------------------------------------------- */
 /* Types                                                                   */
@@ -988,44 +1002,87 @@ async function realFetchAuditTrail(statementId: string): Promise<AuditTrailEntry
   return (rows ?? []).map((r) => mapAuditLog(r as unknown as Record<string, unknown>))
 }
 
-async function realPreviewImport(_accountId: string): Promise<StatementImportPreview> {
-  throw new Error('INTEG gap: PreviewBankStatementImportWithDialog — wires at K5')
+// Two-phase import: Preview returns an unsaved finance.BankStatement (with its
+// parsed lines) whose id round-trips to Confirm/Discard — exactly the shape the
+// vm drives (preview → confirm(preview.id) / discard(preview.id)). Nothing
+// persists until Confirm.
+async function realPreviewImport(accountId: string): Promise<StatementImportPreview> {
+  const bs = (await PreviewBankStatementImportWithDialog(accountId)) as unknown as Record<string, unknown>
+  return {
+    id: str(bs.id),
+    bankAccountId: str(bs.bank_account_id),
+    statementNumber: str(bs.statement_number),
+    periodStart: goDate(bs.period_start),
+    periodEnd: goDate(bs.period_end),
+    openingBalance: num(bs.opening_balance),
+    closingBalance: num(bs.closing_balance),
+    lines: Array.isArray(bs.lines) ? (bs.lines as Record<string, unknown>[]).map(mapBankStatementLine) : [],
+  }
 }
-async function realConfirmImport(_previewId: string): Promise<BankStatementRow> {
-  throw new Error('INTEG gap: ConfirmBankStatementImport — wires at K5')
+async function realConfirmImport(previewId: string): Promise<BankStatementRow> {
+  const bs = await ConfirmBankStatementImport(previewId)
+  return mapBankStatement(bs as unknown as Record<string, unknown>)
 }
-async function realDiscardImportPreview(_previewId: string): Promise<void> {
-  throw new Error('INTEG gap: DiscardBankStatementImportPreview — wires at K5')
+async function realDiscardImportPreview(previewId: string): Promise<void> {
+  await DiscardBankStatementImportPreview(previewId)
 }
-async function realAutoMatch(_statementId: string): Promise<AutoMatchResult> {
-  throw new Error('INTEG gap: AutoMatchBankLines — wires at K5')
+async function realAutoMatch(statementId: string): Promise<AutoMatchResult> {
+  // FinanceService.AutoMatchBankLines(statementId) → banking.BankReconciliationMatchResult.
+  const r = (await AutoMatchBankLines(statementId)) as unknown as Record<string, unknown>
+  return {
+    // auto_matched_count = lines matched THIS run (mirrors the mock's matchedNow).
+    matchedCount: num(r.auto_matched_count),
+    unmatchedCount: num(r.unmatched_count),
+    totalLines: num(r.total_lines),
+    matchedPercent: num(r.matched_percent),
+  }
 }
-async function realManualMatch(_lineId: string, _type: string, _candidateId: string, _user: string): Promise<void> {
-  throw new Error('INTEG gap: ManualMatchLine — wires at K5')
+async function realManualMatch(lineId: string, type: string, candidateId: string, _user: string): Promise<void> {
+  // FinanceService.ManualMatchLine(lineId, matchType, candidateId, user) → void.
+  await ManualMatchLine(lineId, type, candidateId, actingUserId())
 }
-async function realCreateSplitAllocation(_lineId: string, _allocations: SplitAllocationInput[], _user: string): Promise<void> {
-  throw new Error('INTEG gap: CreateSplitAllocation — wires at K5')
+async function realCreateSplitAllocation(lineId: string, allocations: SplitAllocationInput[], _user: string): Promise<void> {
+  // FinanceService.CreateSplitAllocation(lineId, []banking.AllocationInput, user) → void.
+  const inputs = allocations.map((a) => ({
+    allocation_type: a.allocationType,
+    entity_id: a.entityId,
+    allocated_amount: a.allocatedAmount,
+  })) as unknown as banking.AllocationInput[]
+  await CreateSplitAllocation(lineId, inputs, actingUserId())
 }
-async function realUnmatchLine(_lineId: string, _user: string, _reason: string): Promise<void> {
-  throw new Error('INTEG gap: UnmatchLine — wires at K5')
+async function realUnmatchLine(lineId: string, _user: string, reason: string): Promise<void> {
+  // FinanceService.UnmatchLine(lineId, user, reason) → void.
+  await UnmatchLine(lineId, actingUserId(), reason)
 }
-async function realFinalizeReconciliation(_statementId: string, _user: string): Promise<void> {
-  throw new Error('INTEG gap: FinalizeReconciliation — wires at K5 (HOT-ZONE: posting-adjacent)')
+async function realFinalizeReconciliation(statementId: string, _user: string): Promise<void> {
+  // FinanceService.FinalizeReconciliation(statementID, user) → void (HOT-ZONE:
+  // posting-adjacent). Finalizing user is sourced from the session.
+  await FinalizeReconciliation(statementId, actingUserId())
 }
-async function realDeleteBankStatement(_statementId: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteBankStatement — wires at K5 (HOT-ZONE: posting-adjacent)')
+async function realDeleteBankStatement(statementId: string): Promise<void> {
+  // FinanceService.DeleteBankStatement(statementID) → void (HOT-ZONE).
+  await DeleteBankStatement(statementId)
 }
 async function realUpdateBankStatement(_statementId: string, _draft: BankStatementDraft): Promise<void> {
-  throw new Error('INTEG gap: UpdateBankStatement — wires at K5')
+  // GAP: UpdateBankStatement(id, Record<string, any>) — the patch arg is an
+  // untyped map; the accepted key set (and whether balances are among the
+  // editable keys) isn't verifiable from the binding signature. Posting-adjacent
+  // (edits opening/closing balance) → left gapped rather than guess the keys.
+  throw new Error('INTEG gap: UpdateBankStatement — arg2 is an untyped Record<string, any> patch; accepted keys unverifiable from the binding')
 }
 async function realCreateBankStatementLine(_statementId: string, _draft: BankStatementLineDraft): Promise<void> {
-  throw new Error('INTEG gap: CreateBankStatementLine — wires at K5')
+  // GAP: CreateBankStatementLine(id, Record<string, any>) — untyped map arg;
+  // accepted keys unverifiable from the binding signature.
+  throw new Error('INTEG gap: CreateBankStatementLine — arg2 is an untyped Record<string, any>; accepted keys unverifiable from the binding')
 }
 async function realUpdateBankStatementLine(_lineId: string, _draft: BankStatementLineDraft): Promise<void> {
-  throw new Error('INTEG gap: UpdateBankStatementLine — wires at K5')
+  // GAP: UpdateBankStatementLine(id, Record<string, any>) — untyped map arg;
+  // accepted keys unverifiable from the binding signature.
+  throw new Error('INTEG gap: UpdateBankStatementLine — arg2 is an untyped Record<string, any>; accepted keys unverifiable from the binding')
 }
-async function realDeleteBankStatementLine(_lineId: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteBankStatementLine — wires at K5')
+async function realDeleteBankStatementLine(lineId: string): Promise<void> {
+  // FinanceService.DeleteBankStatementLine(lineId) → void.
+  await DeleteBankStatementLine(lineId)
 }
 
 /* ---------------------------------------------------------------------- */

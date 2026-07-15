@@ -18,7 +18,7 @@ import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { getDivisionOptions, getDefaultDivisionKey } from '../stores/divisions.svelte'
 import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions } from '$wails/go/main/App'
-import { GetCostingSheets, GetCostingsByRFQ } from '$wails/go/main/CRMService'
+import { GetCostingSheets, GetCostingsByRFQ, CreateCostingSheet, CloneCostingAsNewRevision, SetActiveCostingRevision } from '$wails/go/main/CRMService'
 import { GetSettings } from '$wails/go/main/DocumentsService'
 
 /* ---- FX table — hardcoded per the sacred spec, no live binding. ---- */
@@ -684,20 +684,34 @@ async function realFetchRecentSheets(limit: number): Promise<CostingSheetSummary
   return (rows ?? []).map((s) => mapSheetSummary(s as unknown as Record<string, unknown>))
 }
 
-async function realCreateCostingSheet(_rfqId: number, _items: string, _preparedBy: string): Promise<{ id: number; revisionNumber: number }> {
-  throw new Error('INTEG gap: CreateCostingSheet — wires at K5')
+async function realCreateCostingSheet(rfqId: number, items: string, preparedBy: string): Promise<{ id: number; revisionNumber: number }> {
+  // CRMService.CreateCostingSheet(rfqId number, items string, preparedBy string) -> CostingSheetData
+  const result = (await CreateCostingSheet(rfqId, items, preparedBy)) as unknown as Record<string, unknown>
+  return { id: num(result.id), revisionNumber: num(result.revision_number) }
 }
 async function realUpdateCostingSheet(_id: number, _items: string, _preparedBy: string): Promise<void> {
-  throw new Error('INTEG gap: UpdateCostingSheet — wires at K5')
+  // GAP: binding is UpdateCostingSheet(id number, data main.CostingSheetData) -> CostingSheetData.
+  // arg2 is a FULL CostingSheetData struct (rfq_id, final_price, subtotal, margin_percent, …),
+  // but this call only carries (items, preparedBy) — cannot assemble the struct without guessing
+  // required pricing/linkage fields. A wrong wire is worse than an honest gap.
+  throw new Error('INTEG gap: UpdateCostingSheet — binding takes (id, CostingSheetData struct); this call only carries (items, preparedBy), which cannot assemble a full CostingSheetData')
 }
-async function realCloneCostingAsNewRevision(_sourceId: number, _preparedBy: string): Promise<{ id: number; revisionNumber: number }> {
-  throw new Error('INTEG gap: CloneCostingAsNewRevision — wires at K5')
+async function realCloneCostingAsNewRevision(sourceId: number, preparedBy: string): Promise<{ id: number; revisionNumber: number }> {
+  // CRMService.CloneCostingAsNewRevision(sourceId number, preparedBy string) -> CostingSheetData
+  const result = (await CloneCostingAsNewRevision(sourceId, preparedBy)) as unknown as Record<string, unknown>
+  return { id: num(result.id), revisionNumber: num(result.revision_number) }
 }
-async function realSetActiveCostingRevision(_id: number): Promise<void> {
-  throw new Error('INTEG gap: SetActiveCostingRevision — wires at K5')
+async function realSetActiveCostingRevision(id: number): Promise<void> {
+  // CRMService.SetActiveCostingRevision(id number) -> void
+  await SetActiveCostingRevision(id)
 }
 async function realSaveCostingAsOffer(_payload: CostingExportPayload): Promise<{ offerNumber: string }> {
-  throw new Error('INTEG gap: SaveCostingAsOffer — wires at K5 (HOT-ZONE: creates/overwrites an Offer)')
+  // GAP (HOT-ZONE: creates/overwrites an Offer): binding is SaveCostingAsOffer(main.CostingExportData) -> crm.Offer.
+  // CostingExportData is a flat struct (top-level header fields + lineItems: CostingExportLineItem[]),
+  // whereas CostingExportPayload nests a CostingHeaderDraft + CostingLineRow[] lines and is a declared
+  // lab-scoped SUBSET. This module assembles no CostingExportData, and the shapes do not map cleanly —
+  // wiring would require guessing the export/offer payload, which is exactly what the brief forbids.
+  throw new Error('INTEG gap: SaveCostingAsOffer — binding takes main.CostingExportData (flat header + CostingExportLineItem[]); module assembles none and CostingExportPayload does not map cleanly (HOT-ZONE: creates/overwrites an Offer)')
 }
 async function realExportCostingToPDF(_payload: CostingExportPayload): Promise<string> {
   throw new Error('INTEG gap: ExportCostingToPDF — wires at K5')

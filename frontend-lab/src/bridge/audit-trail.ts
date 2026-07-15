@@ -13,7 +13,8 @@
 
 import { pick } from './runtime'
 import { goDate, str } from './map'
-import { GetActiveBankAccounts, GetBankStatements, GetAuditTrail } from '$wails/go/main/FinanceService'
+import { GetActiveBankAccounts, GetBankStatements, GetAuditTrail, ReverseAction } from '$wails/go/main/FinanceService'
+import { actingUserId } from '../stores/session.svelte'
 
 export interface AuditTrailRow {
   id: string
@@ -125,10 +126,10 @@ async function realFetch(): Promise<AuditTrailRow[]> {
   return out.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
 }
 
-async function realReverse(_row: AuditTrailRow, _reason: string): Promise<void> {
-  void _row
-  void _reason
-  throw new Error('INTEG gap: ReverseAction(logId, user, reason) — wires at K5')
+async function realReverse(row: AuditTrailRow, reason: string): Promise<void> {
+  // FinanceService.ReverseAction(logId, user, reason) → void. Reversing user
+  // is sourced from the session (never trusted from the row/caller).
+  await ReverseAction(row.id, actingUserId(), reason)
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

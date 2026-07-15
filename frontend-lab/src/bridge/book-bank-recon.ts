@@ -8,6 +8,8 @@
  * INTO the dataset (see bridge/mock.ts). Deterministic (seeded LCG) so
  * Playwright baselines are stable run-to-run. */
 import { pick } from './runtime'
+import { FinalizeBookBankReconciliation } from '$wails/go/main/InfraService'
+import { actingUserId } from '../stores/session.svelte'
 
 export interface ReconciliationLine {
   label: string
@@ -192,8 +194,10 @@ async function realFetch(): Promise<BookBankReconciliationRow[]> {
   )
 }
 
-async function realFinalize(_id: string): Promise<void> {
-  throw new Error('INTEG gap: FinalizeBookBankReconciliation — wires at K5')
+async function realFinalize(id: string): Promise<void> {
+  // InfraService.FinalizeBookBankReconciliation(id, user) → void. Finalizing
+  // user comes from the session (posting-adjacent: locks the period recon).
+  await FinalizeBookBankReconciliation(id, actingUserId())
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

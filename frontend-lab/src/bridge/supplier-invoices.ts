@@ -1,13 +1,21 @@
 /* SupplierInvoices bridge module — self-contained: types + mock + real +
  * switch. K1 scope note: every mutating capability on this screen (New/Edit,
  * 3-Way Match, Approve, Mark Paid) is a financial hot-zone or a form-archetype
- * SLOT — see screens/parity/SupplierInvoices.parity.md. This module is
- * read-only: fetch + mapping only, no mutations to switch (same shape as
- * bridge/grns.ts). */
+ * SLOT — see screens/parity/SupplierInvoices.parity.md. Fetch + three action
+ * adapters are wired to real bindings (Approve = SoD via the session actor;
+ * Mark Paid; 3-Way Match). New/Create stays an honest gap: the CreateSupplier-
+ * Invoice binding takes a full finance.SupplierInvoice struct with no clean
+ * frontend draft, so it is intentionally not adapted here. */
 
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetSupplierInvoices } from '$wails/go/main/App'
+import {
+  ApproveSupplierInvoice,
+  GetSupplierInvoices,
+  MarkSupplierInvoicePaid,
+  PerformThreeWayMatch,
+} from '$wails/go/main/App'
+import { actingUserId } from '../stores/session.svelte'
 
 export interface SupplierInvoiceRow {
   id: string
@@ -32,6 +40,12 @@ export interface SupplierInvoiceRow {
   dueDate: string
   invoiceDate: string
   discrepancyReason: string
+}
+
+/** PerformThreeWayMatch result — mirrors main.ThreeWayMatchResult exactly. */
+export interface ThreeWayMatchResult {
+  matched: boolean
+  reason: string
 }
 
 /* ---- mock: adversarial + deterministic (see bridge/mock.ts) ---- */
@@ -129,6 +143,37 @@ async function mockFetch(): Promise<SupplierInvoiceRow[]> {
   return [...cache]
 }
 
+async function mockApprove(id: string): Promise<void> {
+  cache ??= generate()
+  const row = cache.find((r) => r.id === id)
+  if (row) row.status = 'Approved'
+  await sleep(140)
+}
+
+async function mockMarkPaid(id: string, _paymentRef: string, _paymentMethod: string): Promise<void> {
+  cache ??= generate()
+  const row = cache.find((r) => r.id === id)
+  if (row) {
+    row.status = 'Paid'
+    row.paymentStatus = 'Paid'
+  }
+  await sleep(140)
+}
+
+async function mockThreeWayMatch(id: string): Promise<ThreeWayMatchResult> {
+  cache ??= generate()
+  await sleep(160)
+  const row = cache.find((r) => r.id === id)
+  if (!row) return { matched: false, reason: `Supplier invoice ${id} not found.` }
+  const matched = row.matchStatus === 'Matched'
+  return {
+    matched,
+    reason: matched
+      ? 'PO, GRN and invoice amounts agree within tolerance.'
+      : row.discrepancyReason || `Match status is ${row.matchStatus}.`,
+  }
+}
+
 /* ---- real: fetch WIRED (no mutations to gap — this module is read-only) ---- */
 function mapSupplierInvoice(r: Record<string, unknown>): SupplierInvoiceRow {
   return {
@@ -159,5 +204,32 @@ async function realFetch(): Promise<SupplierInvoiceRow[]> {
   return (rows ?? []).map((x) => mapSupplierInvoice(x as unknown as Record<string, unknown>))
 }
 
-/* ---- public switched API (descriptor imports THIS) ---- */
+async function realApprove(id: string): Promise<void> {
+  // Segregation-of-duties: the approver is the acting session user, not a
+  // free-text field. The backend re-derives from its own identity when handed
+  // a shared/admin id and rejects an empty approver.
+  await ApproveSupplierInvoice(id, actingUserId())
+}
+
+async function realMarkPaid(id: string, paymentRef: string, paymentMethod: string): Promise<void> {
+  // MarkSupplierInvoicePaid(id, paymentRef, paymentMethod). Backend enforces the
+  // invoice is Approved (or already Paid, for idempotency) before settling.
+  await MarkSupplierInvoicePaid(id, paymentRef, paymentMethod)
+}
+
+async function realThreeWayMatch(id: string): Promise<ThreeWayMatchResult> {
+  const res = await PerformThreeWayMatch(id)
+  const r = res as unknown as Record<string, unknown>
+  return { matched: !!r.matched, reason: str(r.reason) }
+}
+
+/* ---- public switched API (descriptor imports THESE) ---- */
 export const fetchSupplierInvoices = (): Promise<SupplierInvoiceRow[]> => pick(realFetch, mockFetch)()
+export const approveSupplierInvoice = (id: string): Promise<void> => pick(realApprove, mockApprove)(id)
+export const markSupplierInvoicePaid = (
+  id: string,
+  paymentRef: string,
+  paymentMethod: string,
+): Promise<void> => pick(realMarkPaid, mockMarkPaid)(id, paymentRef, paymentMethod)
+export const performThreeWayMatch = (id: string): Promise<ThreeWayMatchResult> =>
+  pick(realThreeWayMatch, mockThreeWayMatch)(id)
