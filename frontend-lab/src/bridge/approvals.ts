@@ -13,6 +13,8 @@
  * the lab stays on synthetic data end to end until K5. */
 
 import { pick } from './runtime'
+import { goDate, str } from './map'
+import { ListDeleteApprovalRequests, ListEmployeeArchiveRequests } from '$wails/go/main/App'
 
 export interface ApprovalRow {
   id: string
@@ -110,7 +112,38 @@ async function mockReject(row: ApprovalRow, notes: string): Promise<void> {
  * the exact bindings for K5 ---- */
 
 async function realFetch(): Promise<ApprovalRow[]> {
-  throw new Error('INTEG gap: ListDeleteApprovalRequests + ListEmployeeArchiveRequests (merged) — wires at K5')
+  // Both list bindings take a status filter; '' = all statuses (the queue shows
+  // pending + a decided tail). ListDeleteApprovalRequests returns [] server-side
+  // for non-admin sessions, so a non-admin sees an honest empty queue.
+  const [deletes, archives] = await Promise.all([
+    ListDeleteApprovalRequests(''),
+    ListEmployeeArchiveRequests(''),
+  ])
+  const deleteRows: ApprovalRow[] = (deletes ?? []).map((raw) => {
+    const r = raw as unknown as Record<string, unknown>
+    return {
+      id: str(r.id),
+      kind: 'delete',
+      target: str(r.entity_label) || `${str(r.entity_type)} ${str(r.entity_id)}`.trim(),
+      requestedBy: str(r.requested_by_name) || str(r.requested_by),
+      requestedAt: goDate(r.created_at),
+      reason: str(r.reason),
+      status: str(r.status),
+    }
+  })
+  const archiveRows: ApprovalRow[] = (archives ?? []).map((raw) => {
+    const r = raw as unknown as Record<string, unknown>
+    return {
+      id: str(r.id),
+      kind: 'archive',
+      target: str(r.employee_name),
+      requestedBy: str(r.requested_by_name) || str(r.requested_by),
+      requestedAt: goDate(r.created_at),
+      reason: str(r.reason),
+      status: str(r.status),
+    }
+  })
+  return [...deleteRows, ...archiveRows].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
 }
 
 async function realApprove(_row: ApprovalRow): Promise<void> {

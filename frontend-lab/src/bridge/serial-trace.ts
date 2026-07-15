@@ -7,6 +7,8 @@
  * K5 alongside the ledger-archetype screens rather than special-casing
  * one bespoke view early. */
 import { pick } from './runtime'
+import { goDate, str } from './map'
+import { SearchSerials, GetRecentlyDeliveredSerials } from '$wails/go/main/App'
 
 export interface SerialTraceRow {
   id: string
@@ -126,12 +128,31 @@ async function mockRecentlyDelivered(n: number): Promise<SerialTraceRow[]> {
  * this screen, so the bindings aren't imported here at all; wiring them at
  * K5 is a straight `pick(realSearch, mockSearch)` swap plus the field
  * mapping documented above, same shape as data-quality.ts's realFetch. ---- */
-async function realSearch(_query: string, _limit: number): Promise<SerialTraceRow[]> {
-  throw new Error('INTEG gap: SearchSerials — wires at K5')
+function mapSerial(raw: unknown): SerialTraceRow {
+  const r = raw as Record<string, unknown>
+  return {
+    id: str(r.id),
+    serialNo: str(r.serial_no),
+    productCode: str(r.product_code),
+    status: str(r.status),
+    poNumber: str(r.po_number),
+    grnNumber: str(r.grn_number),
+    dnNumber: str(r.dn_number),
+    invoiceNumber: str(r.invoice_number),
+    customerName: str(r.customer_name),
+    warrantyStartDate: goDate(r.warranty_start_date),
+    warrantyEndDate: goDate(r.warranty_end_date),
+  }
 }
 
-async function realRecentlyDelivered(_n: number): Promise<SerialTraceRow[]> {
-  throw new Error('INTEG gap: GetRecentlyDeliveredSerials — wires at K5')
+async function realSearch(query: string, limit: number): Promise<SerialTraceRow[]> {
+  const rows = await SearchSerials(query, limit)
+  return (rows ?? []).map(mapSerial)
+}
+
+async function realRecentlyDelivered(n: number): Promise<SerialTraceRow[]> {
+  const rows = await GetRecentlyDeliveredSerials(n)
+  return (rows ?? []).map(mapSerial)
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

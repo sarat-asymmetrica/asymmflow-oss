@@ -11,6 +11,8 @@
  * Go bindings it will call. */
 
 import { pick } from './runtime'
+import { goDate, num, str } from './map'
+import { GetRFQs, GetPipelineOpportunities, ListCustomers } from '$wails/go/main/App'
 
 export interface OpportunityRow {
   id: string
@@ -146,8 +148,48 @@ async function mockCustomerOptions(): Promise<{ value: string; label: string }[]
 /* ---- real: INTEG-gapped entirely (fetch merges two sources; mutations touch
  * a financial/cascade-delete hot zone) — naming the exact bindings for K5 ---- */
 
+/* Mirrors costing-sheet.ts's proven RFQ+pipeline merge mapping (the same two
+ * bindings, already wired real there). Pipeline rows whose folder already has an
+ * RFQ row are dropped (they're the same deal further down the funnel), matching
+ * the old OpportunitiesScreen's dedup. */
+function mapRfq(r: Record<string, unknown>): OpportunityRow {
+  const id = str(num(r.id))
+  return {
+    id,
+    source: 'rfq',
+    ref: str(r.rfq_ref) || str(r.rfq_number) || `RFQ-${id}`,
+    customer: str(r.client),
+    project: str(r.project),
+    value: num(r.value),
+    stage: str(r.status) || str(r.stage),
+    createdAt: goDate(r.created_at),
+  }
+}
+function mapPipeline(o: Record<string, unknown>): OpportunityRow {
+  return {
+    id: str(o.id),
+    source: 'pipeline',
+    ref: str(o.eh_ref) || str(o.folder_number),
+    customer: str(o.customer_name),
+    project: str(o.title) || str(o.folder_name),
+    value: num(o.revenue_bhd),
+    stage: str(o.stage),
+    createdAt: goDate(o.updated_at) || goDate(o.offer_date),
+  }
+}
+
 async function realFetch(): Promise<OpportunityRow[]> {
-  throw new Error('INTEG gap: GetRFQs + GetPipelineOpportunities (merged) — wires at K5')
+  const [rfqs, pipeline] = await Promise.all([GetRFQs(500, 0), GetPipelineOpportunities(500, 0)])
+  const rfqRecords = (rfqs ?? [])
+    .map((r) => r as unknown as Record<string, unknown>)
+    .filter((r) => str(r.rfq_number).trim())
+  const rfqFolders = new Set(rfqRecords.map((r) => str(r.rfq_number)).filter(Boolean))
+  const rfqRows = rfqRecords.map(mapRfq)
+  const pipelineRows = (pipeline ?? [])
+    .map((o) => o as unknown as Record<string, unknown>)
+    .filter((o) => !rfqFolders.has(str(o.folder_number)))
+    .map(mapPipeline)
+  return [...pipelineRows, ...rfqRows].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
 async function realCreate(_draft: NewOpportunityDraft): Promise<void> {
@@ -170,7 +212,11 @@ async function realCascadeDelete(_row: OpportunityRow, _reason: string): Promise
 }
 
 async function realCustomerOptions(): Promise<{ value: string; label: string }[]> {
-  throw new Error('INTEG gap: ListCustomers — wires at K5')
+  const rows = await ListCustomers(500, 0)
+  return (rows ?? [])
+    .map((c) => str((c as unknown as Record<string, unknown>).business_name))
+    .filter(Boolean)
+    .map((name) => ({ value: name, label: name }))
 }
 
 /* ---- public switched API (descriptor imports THESE) ---- */

@@ -190,12 +190,27 @@ async function mockCustomer360Connections(id: string): Promise<CustomerConnectio
 
 async function realCustomer360(_id: string): Promise<Customer360Info> {
   void _id
-  throw new Error('INTEG gap: GetCustomer360 — wires at K5')
+  // INTEG SHAPE-DIVERGENCE (not a straight swap): the real GetCustomer360 →
+  // main.Customer360Data is NARROWER than this view's Customer360Info — it
+  // carries no contactPerson/phone/email/address, no TRN, no creditLimit, and
+  // no `regime` string (only current_grade + R1/R2/R3), while adding fields
+  // this view doesn't show (receivables aging, payment history, open opps,
+  // recent orders). Wiring it verbatim would blank half the panels. Deferred
+  // for an owner shape decision (reshape Customer360Info to the backend, or
+  // compose a supplementary customer-detail fetch for contact/TRN/credit) —
+  // see the I2 wave report. Stays honest-synthetic until then (read-only, no
+  // persistence risk).
+  throw new Error('INTEG gap: GetCustomer360 — real main.Customer360Data shape diverges from this view; needs owner shape decision (see I2 report)')
 }
 
 async function realCustomer360Connections(_id: string): Promise<CustomerConnections> {
   void _id
-  throw new Error('INTEG gap: GetCustomer360Graph — wires at K5')
+  // INTEG SHAPE-DIVERGENCE: GetCustomer360Graph → main.Customer360Graph is a
+  // node/edge graph (GraphEntity[] + GraphRelation[]), not this view's flat
+  // {totalConnections, centralityScore, relatedProducts[], relatedSuppliers[]}
+  // summary — connections would have to be DERIVED from the graph (count nodes,
+  // bucket related entities by type). Deferred with GetCustomer360 above.
+  throw new Error('INTEG gap: GetCustomer360Graph — real main.Customer360Graph is a node/edge graph; connections need derivation (see I2 report)')
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

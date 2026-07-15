@@ -9,6 +9,8 @@
  * K4, same posture as approvals.ts. */
 
 import { pick } from './runtime'
+import { goDate, str } from './map'
+import { ListNotificationFeed, MarkNotificationAsRead } from '$wails/go/main/App'
 import type { Tone } from '../kernel/tones'
 
 export interface NotificationRow {
@@ -161,13 +163,47 @@ async function mockReject(row: NotificationRow, reason: string): Promise<void> {
 /* ---- real: INTEG-gapped entirely (unconfirmed transport, admin-privileged,
  * employee-PII surface — see file header) ---- */
 
-async function realFetch(): Promise<NotificationRow[]> {
-  throw new Error('INTEG gap: listNotifications + getCurrentEmployeeContext (merged, live via EventsOn) — wires at K5')
+/* notification_type vocabulary (collaboration_service.go / delete_approval /
+ * employee_archive): task | project | delete_approval |
+ * employee_archive_approval | document_expiry. Only the two approval kinds get
+ * a review card; everything else renders as a plain feed item. */
+const KIND_MAP: Record<string, NotificationRow['kind']> = {
+  delete_approval: 'delete-approval',
+  employee_archive_approval: 'archive-approval',
 }
 
-async function realMarkRead(_id: string): Promise<void> {
-  void _id
-  throw new Error('INTEG gap: markNotificationAsRead — wires at K5')
+function mapNotification(raw: unknown): NotificationRow {
+  const r = raw as Record<string, unknown>
+  const kind = KIND_MAP[str(r.notification_type)] ?? 'task'
+  const iso = str(r.created_at)
+  const read = !!r.read_at || str(r.status).toLowerCase() === 'read'
+  return {
+    id: str(r.id),
+    kind,
+    title: str(r.title),
+    subtitle: str(r.message),
+    date: goDate(r.created_at),
+    time: iso.length >= 16 ? iso.slice(11, 16) : '',
+    read,
+    tone: read ? 'neutral' : kind === 'archive-approval' ? 'warning' : 'info',
+    // The notification record does not carry the approval decision, requester, or
+    // reason — those live on the underlying delete/archive request (source_id).
+    // Honest blanks here; the review card's status/requester enrich when the
+    // review mutations wire (I3), not faked now. Live-push (EventsOn) stays DEFER.
+    reviewStatus: '',
+    requestedBy: '',
+    reason: '',
+  }
+}
+
+async function realFetch(): Promise<NotificationRow[]> {
+  // ListNotificationFeed(limit, unreadOnly) — full feed (unreadOnly=false).
+  const rows = await ListNotificationFeed(100, false)
+  return (rows ?? []).map(mapNotification)
+}
+
+async function realMarkRead(id: string): Promise<void> {
+  await MarkNotificationAsRead(id)
 }
 
 async function realApprove(_row: NotificationRow): Promise<void> {
