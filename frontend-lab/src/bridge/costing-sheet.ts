@@ -17,9 +17,10 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { getDivisionOptions, getDefaultDivisionKey } from '../stores/divisions.svelte'
-import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions } from '$wails/go/main/App'
+import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions, SaveCostingAsOffer } from '$wails/go/main/App'
 import { GetCostingSheets, GetCostingsByRFQ, CreateCostingSheet, CloneCostingAsNewRevision, SetActiveCostingRevision } from '$wails/go/main/CRMService'
 import { GetSettings } from '$wails/go/main/DocumentsService'
+import type { main } from '$wails/go/models'
 
 /* ---- FX table — hardcoded per the sacred spec, no live binding. ---- */
 export const CURRENCY_RATES: Record<string, number> = {
@@ -179,6 +180,100 @@ export interface CostingExportPayload {
   opportunityId: number
   opportunityRecordId: string
   projectName: string
+}
+
+/** One line of the FLAT export payload that crosses the wire to the real
+ * `SaveCostingAsOffer(main.CostingExportData)` binding. Mirrors
+ * models.ts `main.CostingExportLineItem` field-for-field (camelCase json
+ * keys). Unlike CostingLineRow (input-only), this carries the COMPUTED
+ * per-line values (fobBHD, suggestedPrice, totalPrice, …) the VM derives via
+ * calcLine — the backend stores them for detailed-costing persistence and
+ * uses suggestedPrice/totalPrice to build the offer's line items. */
+export interface CostingExportLineItem {
+  slNo: number
+  supplier: string
+  equipment: string
+  model: string
+  serialNumber: string
+  longCode: string
+  specification: string
+  detailedDescription: string
+  currency: string
+  quantity: number
+  fob: number
+  freight: number
+  freightPercent: number
+  totalCost: number
+  marginPercent: number
+  markupPercent: number
+  suggestedPrice: number
+  totalPrice: number
+  exchangeRate: number
+  fobBHD: number
+  freightBHD: number
+  insurance: number
+  customsPercent: number
+  customsBHD: number
+  handlingPercent: number
+  handlingBHD: number
+  financePercent: number
+  financeBHD: number
+  otherCosts: number
+  userPrice: number
+  userPriceSet: boolean
+}
+
+/** The FLAT CostingExportData the real save-as-offer binding takes — mirrors
+ * models.ts `main.CostingExportData` exactly (only the two datasheet-attachment
+ * fields, attachmentScopeId/attachments, are omitted: this lab has no
+ * attachment surface and the Go side treats them as optional — empty scope =
+ * no datasheets merged). Assembled by the VM's buildCostingExportData(); the
+ * bridge maps it 1:1 to the binding arg. `offerId` empty ⇒ CREATE a new offer
+ * (offers:create); a non-empty UUID would route the server's UPDATE path. */
+export interface CostingExportData {
+  division: string
+  source: string
+  offerId: string
+  offerNumber: string
+  date: string
+  preparedBy: string
+  customerId: string
+  customerName: string
+  contactPerson: string
+  rfqReference: string
+  folderNumber: string
+  costingId: string
+  subject: string
+  estDelivery: string
+  deliveryTerms: string
+  paymentTerms: string
+  orderType: string
+  countryOfOrigin: string
+  cocCoo: string
+  testCertificate: string
+  installation: string
+  commissioning: string
+  testing: string
+  quoteType: string
+  vatRate: number
+  hiddenCharges: number
+  placeOfSupply: string
+  taxCategory: string
+  customerTRN: string
+  body: string
+  lineItems: CostingExportLineItem[]
+  subtotal: number
+  discount: number
+  netAmount: number
+  vat: number
+  grandTotal: number
+  totalCost: number
+  profit: number
+  profitPercent: number
+  opportunityId: number
+  opportunityRecordId: string
+  projectName: string
+  termsAndConditions: string
 }
 
 /* ---- shared mock helpers (see bridge/mock.ts pattern) ---- */
@@ -520,7 +615,7 @@ async function mockSetActiveCostingRevision(_id: number): Promise<void> {
   await sleep(150)
 }
 let mockOfferSeq = 200
-async function mockSaveCostingAsOffer(_payload: CostingExportPayload): Promise<{ offerNumber: string }> {
+async function mockSaveCostingAsOffer(_data: CostingExportData): Promise<{ offerNumber: string }> {
   await sleep(250)
   mockOfferSeq += 1
   return { offerNumber: `OFR-${pad(mockOfferSeq, 4)}` }
@@ -705,13 +800,17 @@ async function realSetActiveCostingRevision(id: number): Promise<void> {
   // CRMService.SetActiveCostingRevision(id number) -> void
   await SetActiveCostingRevision(id)
 }
-async function realSaveCostingAsOffer(_payload: CostingExportPayload): Promise<{ offerNumber: string }> {
-  // GAP (HOT-ZONE: creates/overwrites an Offer): binding is SaveCostingAsOffer(main.CostingExportData) -> crm.Offer.
-  // CostingExportData is a flat struct (top-level header fields + lineItems: CostingExportLineItem[]),
-  // whereas CostingExportPayload nests a CostingHeaderDraft + CostingLineRow[] lines and is a declared
-  // lab-scoped SUBSET. This module assembles no CostingExportData, and the shapes do not map cleanly —
-  // wiring would require guessing the export/offer payload, which is exactly what the brief forbids.
-  throw new Error('INTEG gap: SaveCostingAsOffer — binding takes main.CostingExportData (flat header + CostingExportLineItem[]); module assembles none and CostingExportPayload does not map cleanly (HOT-ZONE: creates/overwrites an Offer)')
+async function realSaveCostingAsOffer(data: CostingExportData): Promise<{ offerNumber: string }> {
+  // HOT-ZONE: creates an Offer. The VM (buildCostingExportData) assembles the
+  // FLAT CostingExportData with per-line COMPUTED values from calcLine, so the
+  // shapes now map 1:1 to main.CostingExportData — no guessing. `offerId` is
+  // empty ⇒ the server's CREATE path (offers:create); its duplicate/uniqueness
+  // guards (one active offer per RFQ, unique offer number) surface honestly.
+  // The two optional attachment fields are absent (no lab attachment surface);
+  // the structural cast satisfies the generated model type (map.ts precedent).
+  const offer = await SaveCostingAsOffer(data as unknown as main.CostingExportData)
+  const rec = offer as unknown as Record<string, unknown>
+  return { offerNumber: str(rec.offer_number) }
 }
 async function realExportCostingToPDF(_payload: CostingExportPayload): Promise<string> {
   throw new Error('INTEG gap: ExportCostingToPDF — wires at K5')
@@ -748,8 +847,8 @@ export const cloneCostingAsNewRevision = (sourceId: number, preparedBy: string):
   pick(realCloneCostingAsNewRevision, mockCloneCostingAsNewRevision)(sourceId, preparedBy)
 export const setActiveCostingRevision = (id: number): Promise<void> =>
   pick(realSetActiveCostingRevision, mockSetActiveCostingRevision)(id)
-export const saveCostingAsOffer = (payload: CostingExportPayload): Promise<{ offerNumber: string }> =>
-  pick(realSaveCostingAsOffer, mockSaveCostingAsOffer)(payload)
+export const saveCostingAsOffer = (data: CostingExportData): Promise<{ offerNumber: string }> =>
+  pick(realSaveCostingAsOffer, mockSaveCostingAsOffer)(data)
 export const exportCostingToPDF = (payload: CostingExportPayload): Promise<string> =>
   pick(realExportCostingToPDF, mockExportCostingToPDF)(payload)
 export const exportCostingToExcel = (payload: CostingExportPayload): Promise<string> =>

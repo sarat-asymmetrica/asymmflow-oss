@@ -16,6 +16,8 @@ export const fetchInvoicesPage = (l: number, o: number): ReturnType<typeof mock.
   pick(real.fetchInvoicesPage, mock.fetchInvoicesPage)(l, o)
 export const markInvoicePaid = (id: string): Promise<void> =>
   pick(real.markInvoicePaid, mock.markInvoicePaid)(id)
+export const sendInvoice = (id: string): Promise<void> =>
+  pick(real.sendInvoice, mock.sendInvoice)(id)
 export const createInvoice = (d: mock.NewInvoiceDraft): Promise<void> =>
   pick(real.createInvoice, mock.createInvoice)(d)
 export const deleteInvoice = (id: string): Promise<void> =>

@@ -1,7 +1,8 @@
 /* Purchase Orders bridge module — self-contained: types + mock + real + switch. */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { GetPurchaseOrders, UpdatePOStatus } from '$wails/go/main/App'
+import { GetPurchaseOrders, GetPurchaseOrderByID, ReceiveAgainstPO, UpdatePOStatus } from '$wails/go/main/App'
+import type { crm } from '$wails/go/models'
 
 export interface PurchaseOrderRow {
   id: string
@@ -159,7 +160,110 @@ async function realSetStatus(id: string, status: string): Promise<void> {
   await UpdatePOStatus(id, status)
 }
 
+/* ---- Receive Items against PO (R5): a second bridge surface — the ledger's
+ * flat row doesn't carry line items (GetPurchaseOrders never preloads them),
+ * so receiving needs its own by-ID fetch + its own mutation. ---- */
+
+export interface POReceiveLine {
+  poItemId: string
+  productCode: string
+  description: string
+  quantityOrdered: number
+  quantityAlreadyReceived: number
+}
+
+/** Plain shape the VM assembles per accepted line; cast to crm.GRNItem at the
+ * wire boundary — the generated class carries codegen-only fields (id,
+ * timestamps, grn_id, quantity_accepted, …) that ReceiveAgainstPO computes
+ * server-side and this caller never sets (map.ts precedent). */
+export interface GRNItemInput {
+  po_item_id: string
+  quantity_received: number
+  quantity_rejected: number
+  rejection_reason?: string
+}
+
+function mockReceiveLines(poId: string): POReceiveLine[] {
+  return [
+    {
+      poItemId: `${poId}-item-1`,
+      productCode: 'VLV-2200-SS',
+      description: 'Ball valve, 2" 316SS, flanged ANSI 300#',
+      quantityOrdered: 50,
+      quantityAlreadyReceived: 0,
+    },
+    {
+      // Already fully received on a prior GRN — must still render (audit
+      // context) but the modal's guard refuses any further quantity.
+      poItemId: `${poId}-item-2`,
+      productCode: 'GSK-STD-004',
+      description: 'Spiral-wound gasket set, graphite-filled, per attached BOM',
+      quantityOrdered: 20,
+      quantityAlreadyReceived: 20,
+    },
+    {
+      // 200-char description monster.
+      poItemId: `${poId}-item-3`,
+      productCode: 'ACT-9000-XL',
+      description:
+        'Pneumatic quarter-turn rack-and-pinion actuator, double-acting, spring-return fail-safe configuration, NAMUR-mounted solenoid interface, anodized aluminium body, fitted with position indicator and limit switch box, OEM cert pack attached'.slice(
+          0,
+          200,
+        ),
+      quantityOrdered: 5,
+      quantityAlreadyReceived: 2,
+    },
+    {
+      // Zero-quantity line — data artifact from a since-corrected PO revision.
+      poItemId: `${poId}-item-4`,
+      productCode: 'MISC-0000',
+      description: 'Zero-quantity line (superseded revision, kept for audit trail)',
+      quantityOrdered: 0,
+      quantityAlreadyReceived: 0,
+    },
+  ]
+}
+
+async function mockFetchReceiveLines(poId: string): Promise<POReceiveLine[]> {
+  await sleep(200)
+  return mockReceiveLines(poId)
+}
+
+async function mockReceiveAgainstPO(_poId: string, _items: GRNItemInput[]): Promise<void> {
+  await sleep(200)
+}
+
+function mapReceiveLine(r: Record<string, unknown>): POReceiveLine {
+  return {
+    poItemId: str(r.id),
+    productCode: str(r.product_code),
+    description: str(r.description),
+    quantityOrdered: num(r.quantity),
+    quantityAlreadyReceived: num(r.quantity_received),
+  }
+}
+
+async function realFetchReceiveLines(poId: string): Promise<POReceiveLine[]> {
+  // GetPurchaseOrderByID Preloads .items (PurchaseOrderItem[]) — the flat
+  // ledger fetch (GetPurchaseOrders) never carries them.
+  const po = await GetPurchaseOrderByID(poId)
+  const items = (po?.items ?? []) as unknown as Record<string, unknown>[]
+  return items.map(mapReceiveLine)
+}
+
+async function realReceiveAgainstPO(poId: string, items: GRNItemInput[]): Promise<void> {
+  // ReceiveAgainstPO(poId, []crm.GRNItem) — the server computes
+  // quantity_accepted and enforces the per-line over-receive guard
+  // (already_received + received <= ordered); ReceivedBy resolves from the
+  // session server-side, so no actor arg is threaded here.
+  await ReceiveAgainstPO(poId, items as unknown as crm.GRNItem[])
+}
+
 /* ---- public switched API (descriptor imports THESE) ---- */
 export const fetchPurchaseOrders = (): Promise<PurchaseOrderRow[]> => pick(realFetchAll, mockFetchAll)()
 export const setPurchaseOrderStatus = (id: string, status: string): Promise<void> =>
   pick(realSetStatus, mockSetStatus)(id, status)
+export const fetchPOReceiveLines = (poId: string): Promise<POReceiveLine[]> =>
+  pick(realFetchReceiveLines, mockFetchReceiveLines)(poId)
+export const receiveAgainstPO = (poId: string, items: GRNItemInput[]): Promise<void> =>
+  pick(realReceiveAgainstPO, mockReceiveAgainstPO)(poId, items)

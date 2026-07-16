@@ -1,27 +1,34 @@
 /* Butler bridge module — self-contained: types + mock + real + switch.
  * FETCH is real (ListConversations/GetConversationMessages on ButlerService,
  * ListCustomers/GetCustomer/ListSuppliers/GetSupplier on CRMService for the
- * name<->id lookup cache the action-payload resolver needs). Every MUTATION
- * is INTEG-gapped by design (Butler.parity.md):
- *  - sendButlerMessage: the old screen's 3-tier fallback (persistent chat ->
- *    fresh-persistent retry -> legacy ChatWithButler) collapses to ONE INTEG
- *    throw naming ChatWithButlerPersistent when a live Wails runtime is
- *    present; the mock path still returns a canned acknowledgement so the
- *    chat feels alive in the lab (mirrors the old screen's `!window.go`
- *    branch, which already behaved this way).
- *  - deleteButlerConversation / purgeAllButlerConversations: real throws
- *    naming DeleteConversation/PurgeAllConversations; mock actually mutates
- *    the seeded cache so the sidebar's delete-arm/clear-all-arm hot zones are
- *    demonstrably functional in the lab.
- *  - executeButlerActionBinding: the ONE generic thrower behind ALL 23
- *    write-action bindings (CreateOfferDraftFromButler, CreateFollowUp, ...
- *    see butler-actions.ts's resolveBindingName). Unlike the mutations above,
- *    these are NEVER simulated — even in mock mode — because "the AI proposed
- *    a write, a human armed+confirmed it" is exactly the boundary K5 wiring
- *    must cross for real; faking success here would hide that boundary. */
+ * name<->id lookup cache the action-payload resolver needs). Per-mutation
+ * status (Butler.parity.md):
+ *  - sendButlerMessage / deleteButlerConversation / purgeAllButlerConversations
+ *    are now WIRED (R3): ChatWithButlerPersistent/DeleteConversation/
+ *    PurgeAllConversations are all bound on ButlerService, each maps 1:1 onto
+ *    this bridge's existing mock contract, and none of the three lets the AI
+ *    itself approve/post/delete a financial record — they're conversation
+ *    housekeeping (send a chat turn, remove a thread) gated by
+ *    `intelligence:chat` / `*` permission on the Go side, the same
+ *    human-in-the-loop shape as any other chat UI.
+ *  - executeButlerActionBinding stays INTEG-gapped by design, confirmed on
+ *    review: there is no single Go `ExecuteButlerAction` — the 23 write
+ *    actions are 23 distinct `(a *App)` methods (CreateOfferDraftFromButler,
+ *    ApprovePurchaseOrder, ...). Wiring this seam for real would need the
+ *    resolved action's DATA payload, but `executeButlerAction` in
+ *    butler-actions.ts only ever passes `resolved.bindingName` through to
+ *    this function — the payload is validated there and then dropped, never
+ *    threaded to the bridge. Carrying it through is a butler-actions.ts
+ *    change (outside this file's ownership) and, per the AI-authority
+ *    boundary, would also require re-checking EACH of the 23 targets for
+ *    whether the Go handler itself demands a separate human confirm/approval
+ *    step or would let an armed chat action post/approve/delete a financial
+ *    record on its own say-so. Gap-if-uncertain: left throwing, never
+ *    simulated even in mock mode (see below), so this boundary is never
+ *    silently papered over. */
 import { pick } from './runtime'
-import { goDate, str } from './map'
-import { ListConversations, GetConversationMessages } from '$wails/go/main/ButlerService'
+import { goDate, num, str } from './map'
+import { ChatWithButlerPersistent, DeleteConversation, GetConversationMessages, ListConversations, PurgeAllConversations } from '$wails/go/main/ButlerService'
 import { ListCustomers, GetCustomer, ListSuppliers, GetSupplier } from '$wails/go/main/CRMService'
 
 export interface ButlerConversationRow {
@@ -618,16 +625,22 @@ async function realResolveSupplierName(id: string): Promise<string> {
   }
 }
 
-async function realSendMessage(_conversationId: string, _text: string): Promise<ButlerChatResult> {
-  throw new Error('INTEG gap: ChatWithButlerPersistent — wires at K5')
+async function realSendMessage(conversationId: string, text: string): Promise<ButlerChatResult> {
+  const r = await ChatWithButlerPersistent(conversationId, text)
+  return {
+    responseText: str(r.response),
+    conversationId: str(r.conversation_id),
+    actions: (r.actions ?? []).map((a) => ({ type: str(a.type), target: str(a.target), label: str(a.label), data: a.data })),
+    confidence: num(r.confidence),
+  }
 }
 
-async function realDeleteConversation(_id: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteConversation — wires at K5')
+async function realDeleteConversation(id: string): Promise<void> {
+  await DeleteConversation(id)
 }
 
 async function realPurgeAllConversations(): Promise<void> {
-  throw new Error('INTEG gap: PurgeAllConversations — wires at K5')
+  await PurgeAllConversations()
 }
 
 /** The single seam behind all 23 write-action bindings (CreateOfferDraftFromButler,

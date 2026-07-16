@@ -11,9 +11,93 @@
  * kernel/primitives/DataTable.svelte's `content === 'status' && status`
  * branch). Ledgered as an ENGINE gap (secondaryStatus) below. */
 
-import type { LedgerDescriptor } from '$kernel/descriptor'
+import type { ActionSpec, LedgerDescriptor } from '$kernel/descriptor'
+import type { FormSpec } from '$kernel/form'
 import type { Tone } from '$kernel/tones'
-import { fetchSupplierInvoices, type SupplierInvoiceRow } from '../bridge/supplier-invoices'
+import {
+  approveSupplierInvoice,
+  fetchSupplierInvoices,
+  markSupplierInvoicePaid,
+  performThreeWayMatch,
+  type SupplierInvoiceRow,
+} from '../bridge/supplier-invoices'
+
+// Settlement channels for the Mark-Paid capture form. A recorded reference +
+// method is required (audit-trail discipline) — the payment lands as a real
+// supplier-payment ledger entry server-side, not just a status flag.
+const PAYMENT_METHODS = ['Bank Transfer', 'Cheque', 'Cash']
+
+const markSupplierInvoicePaidForm: FormSpec<{ paymentMethod: string; paymentReference: string }> = {
+  title: 'Record Supplier Invoice Payment',
+  submitLabel: 'Record Payment',
+  initial: () => ({ paymentMethod: 'Bank Transfer', paymentReference: '' }),
+  fields: [
+    {
+      key: 'paymentMethod',
+      label: 'Payment Method',
+      kind: 'select',
+      required: true,
+      options: PAYMENT_METHODS.map((m) => ({ value: m, label: m })),
+    },
+    {
+      key: 'paymentReference',
+      label: 'Payment Reference',
+      kind: 'text',
+      required: true,
+      placeholder: 'e.g. transfer confirmation / cheque no.',
+    },
+  ],
+  submit: async (draft, row) => {
+    const r = row as SupplierInvoiceRow
+    await markSupplierInvoicePaid(r.id, draft.paymentReference, draft.paymentMethod)
+  },
+}
+
+const supplierInvoiceActions: ActionSpec<SupplierInvoiceRow>[] = [
+  {
+    key: 'three-way-match',
+    label: '3-Way Match',
+    kind: 'row',
+    // Re-runs PO ↔ GRN ↔ invoice verification and PERSISTS the resulting
+    // match status server-side; reload then surfaces the new Match Status
+    // badge + discrepancy reason (no announce toast — L7). Hidden once the
+    // invoice is settled/rejected, where re-matching is meaningless.
+    visible: (r) => r != null && r.status !== 'Paid' && r.status !== 'Rejected',
+    run: async ({ row, reload }) => {
+      if (!row) return
+      await performThreeWayMatch(row.id)
+      await reload()
+    },
+  },
+  {
+    key: 'approve',
+    label: 'Approve',
+    kind: 'row',
+    // The server requires a clean 3-way match AND segregation of duties
+    // (approver ≠ creator, approver derived from the session). Gate the button
+    // on the same match precondition so it only shows when approval can succeed;
+    // the SoD check stays server-side and surfaces its error honestly if hit.
+    visible: (r) => r != null && r.status === 'Pending' && r.matchStatus === 'Matched',
+    confirm: (r) =>
+      `Approve ${r ? r.invoiceNumber : 'this invoice'} for payment? You are recorded as the approver (segregation of duties).`,
+    run: async ({ row, reload }) => {
+      if (!row) return
+      await approveSupplierInvoice(row.id)
+      await reload()
+    },
+  },
+  {
+    key: 'mark-paid',
+    label: 'Mark Paid',
+    kind: 'row',
+    // Backend enforces the invoice is Approved before settling.
+    visible: (r) => r != null && r.status === 'Approved',
+    form: markSupplierInvoicePaidForm,
+    run: () => {
+      /* form action submits via markSupplierInvoicePaidForm; run is unused */
+    },
+  },
+]
 
 const MATCH_TONES: Record<string, Tone> = {
   Pending: 'warning',
@@ -164,8 +248,11 @@ export const supplierInvoicesDescriptor: LedgerDescriptor<SupplierInvoiceRow> = 
     },
   ],
 
-  // No actions: New/Edit, 3-Way Match, Approve (SoD), and Mark Paid are all
-  // ledgered as financial hot-zones — see the parity doc. Row click still
-  // opens the default column-list detail panel.
+  // Per-status actions (R1.2): 3-Way Match (verify + persist), Approve (SoD),
+  // Mark Paid (capture form). New/Edit + CreateSupplierInvoice remain ledgered
+  // as struct-arg form SLOTs — see the parity doc. Row click still opens the
+  // default column-list detail panel.
+  actions: supplierInvoiceActions,
+
   emptyMessage: 'No supplier invoices yet. Match against a GRN once one is received.',
 }

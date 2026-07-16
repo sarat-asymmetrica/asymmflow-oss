@@ -3,7 +3,7 @@
  * wailsjs/go/main/App.d.ts (no params, no pagination — flat load). */
 import { pick } from './runtime'
 import { goDate, str } from './map'
-import { DeleteDeliveryNote, GetDeliveryNotes } from '$wails/go/main/App'
+import { ConfirmDeliveryNote, DeleteDeliveryNote, DispatchDeliveryNote, GetDeliveryNotes } from '$wails/go/main/App'
 
 export interface DeliveryNoteRow {
   id: string
@@ -33,12 +33,15 @@ function lcg(seed: number) {
 const pad = (n: number, w: number) => String(n).padStart(w, '0')
 
 const STATUSES = ['Prepared', 'Dispatched', 'InTransit', 'Delivered']
-// Old screen's live status transitions (Prepared→Dispatched→InTransit→Delivered).
+// The REAL backend flow is a 2-step machine: Prepared→Dispatched (DispatchDeliveryNote,
+// driver/vehicle capture) → Delivered (ConfirmDeliveryNote, POD signature). There is no
+// `InTransit` binding — it was an old-screen intermediate with no server transition, so
+// it's terminal here (a mock-only state kept in the adversarial fixtures, actionless).
 // `Signed`/`Cancelled` exist in the backend enum but have no UI path — not modeled.
 const TRANSITIONS: Record<string, string[]> = {
   Prepared: ['Dispatched'],
-  Dispatched: ['InTransit'],
-  InTransit: ['Delivered'],
+  Dispatched: ['Delivered'],
+  InTransit: [],
   Delivered: [],
 }
 const CUSTOMERS = [
@@ -95,16 +98,23 @@ async function mockFetchAll(): Promise<DeliveryNoteRow[]> {
   return [...cache]
 }
 
-/** Simplified status advance (Prepared→Dispatched→InTransit→Delivered) — a
- * plain confirm, not the real screen's driver/vehicle capture (Dispatch) or
- * POD signature capture (Confirm Delivery). Those stay ledgered (parity #4/#5). */
-async function mockAdvanceStatus(id: string): Promise<void> {
+/** Dispatch (Prepared → Dispatched): capture driver + vehicle (R5). */
+async function mockDispatch(id: string, driverName: string, vehicleNumber: string): Promise<void> {
   cache ??= generate()
   const row = cache.find((r) => r.id === id)
   if (row) {
-    const next = TRANSITIONS[row.status]?.[0]
-    if (next) row.status = next
+    row.status = 'Dispatched'
+    row.driverName = driverName
+    row.vehicleNumber = vehicleNumber
   }
+  await sleep(120)
+}
+
+/** Confirm Delivery (Dispatched → Delivered): capture POD signatory (R5). */
+async function mockConfirm(id: string, _signedBy: string): Promise<void> {
+  cache ??= generate()
+  const row = cache.find((r) => r.id === id)
+  if (row) row.status = 'Delivered'
   await sleep(120)
 }
 
@@ -142,19 +152,18 @@ async function realFetchAll(): Promise<DeliveryNoteRow[]> {
   return (rows ?? []).map((r) => mapDeliveryNote(r as unknown as Record<string, unknown>))
 }
 
-async function realAdvanceStatus(_id: string): Promise<void> {
-  // GAP (kept honest): the real advance is NOT a single id-only flip.
-  //   Prepared→Dispatched  = DispatchDeliveryNote(id, driverName, vehicleNumber) — driver/vehicle capture
-  //   InTransit→Delivered  = ConfirmDeliveryNote(id, signedBy)                    — POD signature capture
-  //   Dispatched→InTransit = (no backend binding exists at all)
-  // This adapter only receives `id`, so it can neither supply the required
-  // capture args nor pick the right binding — wiring it would be a lossy/guessed
-  // call. Stays ledgered as the richer Dispatch/Confirm forms (parity #4/#5).
-  throw new Error(
-    'INTEG gap: DispatchDeliveryNote(id, driver, vehicle) / ConfirmDeliveryNote(id, signedBy) — ' +
-      'this id-only advance carries neither the driver/vehicle nor the POD-signature args the real ' +
-      'bindings require (and Dispatched→InTransit has no binding); needs the richer capture forms.',
-  )
+async function realDispatch(id: string, driverName: string, vehicleNumber: string): Promise<void> {
+  // DispatchDeliveryNote(id, driverName, vehicleNumber) — Prepared → Dispatched.
+  // Server rejects any non-Prepared status and marks the DN's serials Shipped.
+  await DispatchDeliveryNote(id, driverName, vehicleNumber)
+}
+
+async function realConfirm(id: string, signedBy: string): Promise<void> {
+  // ConfirmDeliveryNote(id, signedBy) — Dispatched → Delivered (records POD
+  // signatory + signed_at). Returns a non-fatal downstream warning string
+  // (order-progression); the capture form only needs success/failure, so the
+  // warning is dropped here (surfaced in logs server-side).
+  await ConfirmDeliveryNote(id, signedBy)
 }
 async function realDelete(id: string): Promise<void> {
   // DeleteDeliveryNote(id) — App binding (verified App.d.ts:381). The Go service
@@ -166,8 +175,10 @@ async function realDelete(id: string): Promise<void> {
 
 /* ---- public switched API (descriptors import THESE) ---- */
 export const fetchDeliveryNotes = (): Promise<DeliveryNoteRow[]> => pick(realFetchAll, mockFetchAll)()
-export const advanceDeliveryNoteStatus = (id: string): Promise<void> =>
-  pick(realAdvanceStatus, mockAdvanceStatus)(id)
+export const dispatchDeliveryNote = (id: string, driverName: string, vehicleNumber: string): Promise<void> =>
+  pick(realDispatch, mockDispatch)(id, driverName, vehicleNumber)
+export const confirmDeliveryNote = (id: string, signedBy: string): Promise<void> =>
+  pick(realConfirm, mockConfirm)(id, signedBy)
 export const deleteDeliveryNote = (id: string): Promise<void> => pick(realDelete, mockDelete)(id)
 
 export const deliveryNoteTransitions = TRANSITIONS

@@ -22,10 +22,11 @@ import { goDate, num, str } from './map'
 import type { MatchCandidate } from '$kernel/allocation'
 import type { banking } from '$wails/go/models'
 import { actingUserId } from '../stores/session.svelte'
-// FETCH bindings + the safely-mappable MUTATIONS are wired. Mutations whose
-// Go arg is an untyped `Record<string, any>` patch (Update statement/line,
-// create line) keep an honest INTEG-gap throw — the accepted key set isn't
-// verifiable from the binding signature.
+// FETCH bindings + every MUTATION are wired. The three patch-arg mutations
+// (Update statement/line, create line) take a Go `map[string]any`, but the
+// server (pkg/finance/banking/service.go) whitelists/sanitizes accepted keys
+// per-call — see realUpdateBankStatement / realCreateBankStatementLine /
+// realUpdateBankStatementLine below for the confirmed key sets.
 import {
   GetActiveBankAccounts,
   GetBankStatements,
@@ -44,6 +45,9 @@ import {
   CreateSplitAllocation,
   UnmatchLine,
   DeleteBankStatementLine,
+  UpdateBankStatement,
+  CreateBankStatementLine,
+  UpdateBankStatementLine,
 } from '$wails/go/main/FinanceService'
 import {
   PreviewBankStatementImportWithDialog,
@@ -1063,22 +1067,53 @@ async function realDeleteBankStatement(statementId: string): Promise<void> {
   // FinanceService.DeleteBankStatement(statementID) → void (HOT-ZONE).
   await DeleteBankStatement(statementId)
 }
-async function realUpdateBankStatement(_statementId: string, _draft: BankStatementDraft): Promise<void> {
-  // GAP: UpdateBankStatement(id, Record<string, any>) — the patch arg is an
-  // untyped map; the accepted key set (and whether balances are among the
-  // editable keys) isn't verifiable from the binding signature. Posting-adjacent
-  // (edits opening/closing balance) → left gapped rather than guess the keys.
-  throw new Error('INTEG gap: UpdateBankStatement — arg2 is an untyped Record<string, any> patch; accepted keys unverifiable from the binding')
+async function realUpdateBankStatement(statementId: string, draft: BankStatementDraft): Promise<void> {
+  // FinanceService.UpdateBankStatement(id, Record<string, any>) — confirmed
+  // whitelist (pkg/finance/banking/service.go UpdateBankStatement):
+  // bank_account_id, division, statement_number, statement_date,
+  // period_start, period_end, opening_balance, closing_balance, currency,
+  // status, notes. The draft only carries the editable subset the screen
+  // exposes; server also refuses the edit outright on a finalized statement.
+  const arg = {
+    opening_balance: draft.openingBalance,
+    closing_balance: draft.closingBalance,
+    period_start: draft.periodStart,
+    period_end: draft.periodEnd,
+    status: draft.status,
+    notes: draft.notes,
+  }
+  await UpdateBankStatement(statementId, arg)
 }
-async function realCreateBankStatementLine(_statementId: string, _draft: BankStatementLineDraft): Promise<void> {
-  // GAP: CreateBankStatementLine(id, Record<string, any>) — untyped map arg;
-  // accepted keys unverifiable from the binding signature.
-  throw new Error('INTEG gap: CreateBankStatementLine — arg2 is an untyped Record<string, any>; accepted keys unverifiable from the binding')
+async function realCreateBankStatementLine(statementId: string, draft: BankStatementLineDraft): Promise<void> {
+  // FinanceService.CreateBankStatementLine(statementId, Record<string, any>)
+  // — confirmed field reads (pkg/finance/banking/service.go
+  // CreateBankStatementLine): transaction_date, description, reference,
+  // debit, credit, balance. `balance` is omitted here — a missing key reads
+  // as Go zero-value (0) in parseBankStatementAmountValue, and the rollup is
+  // recomputed server-side after insert anyway.
+  const arg = {
+    transaction_date: draft.transactionDate,
+    description: draft.description,
+    reference: draft.reference,
+    debit: draft.debit,
+    credit: draft.credit,
+  }
+  await CreateBankStatementLine(statementId, arg)
 }
-async function realUpdateBankStatementLine(_lineId: string, _draft: BankStatementLineDraft): Promise<void> {
-  // GAP: UpdateBankStatementLine(id, Record<string, any>) — untyped map arg;
-  // accepted keys unverifiable from the binding signature.
-  throw new Error('INTEG gap: UpdateBankStatementLine — arg2 is an untyped Record<string, any>; accepted keys unverifiable from the binding')
+async function realUpdateBankStatementLine(lineId: string, draft: BankStatementLineDraft): Promise<void> {
+  // FinanceService.UpdateBankStatementLine(lineId, Record<string, any>) —
+  // confirmed accepted keys (sanitizeBankStatementLineUpdates in
+  // pkg/finance/banking/service.go): transaction_date, description,
+  // reference, debit, credit, balance. Editing a matched line clears its
+  // match server-side (OCR-review re-queue) — same surprise the mock preserves.
+  const arg = {
+    transaction_date: draft.transactionDate,
+    description: draft.description,
+    reference: draft.reference,
+    debit: draft.debit,
+    credit: draft.credit,
+  }
+  await UpdateBankStatementLine(lineId, arg)
 }
 async function realDeleteBankStatementLine(lineId: string): Promise<void> {
   // FinanceService.DeleteBankStatementLine(lineId) → void.

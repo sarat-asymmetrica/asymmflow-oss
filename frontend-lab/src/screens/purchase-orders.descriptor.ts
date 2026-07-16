@@ -1,12 +1,14 @@
 /* PurchaseOrdersScreen as a descriptor. K1 scope: the ledger spine (list,
  * paging-free fetch, multi-currency columns, status machine) plus the
  * simple status-flip transitions; the deep features (multi-currency
- * create/edit, SoD-gated Approve, Receive Items) are ledgered — see
- * screens/parity/PurchaseOrders.parity.md. */
+ * create/edit, SoD-gated Approve) are ledgered — see
+ * screens/parity/PurchaseOrders.parity.md. Receive Items (R5) is built as a
+ * bespoke modal (ActionSpec.modal, PurchaseOrderReceiveModal.svelte). */
 
 import type { ActionSpec, LedgerDescriptor } from '$kernel/descriptor'
 import { nextStates } from '$kernel/ledger-core'
 import { fetchPurchaseOrders, setPurchaseOrderStatus, type PurchaseOrderRow } from '../bridge/purchase-orders'
+import PurchaseOrderReceiveModal from './PurchaseOrderReceiveModal.svelte'
 
 // Mirrors purchase_order_service.go's UpdatePOStatus map exactly (source of
 // truth for legal transitions — do not let this drift independently).
@@ -26,9 +28,10 @@ const PO_STATUS_TRANSITIONS: Record<string, string[]> = {
 // old screen already carried — see the parity doc's #4).
 const PO_APPROVAL_THRESHOLD_BHD = 5000
 
-// Receiving posts inventory and is routed exclusively through the (ledgered)
-// Receive Items panel — these targets never appear as a plain status-flip
-// button, mirroring PurchaseOrdersScreen.svelte's RECEIVABLE_STATUSES gate.
+// Receiving posts inventory and is routed exclusively through the Receive
+// Items modal (receiveItemsAction below) — these targets never appear as a
+// plain status-flip button, mirroring PurchaseOrdersScreen.svelte's
+// RECEIVABLE_STATUSES gate.
 const RECEIVABLE_STATUSES = ['Sent', 'Acknowledged', 'Partially Received']
 
 const STATUS_BUTTON_LABELS: Record<string, string> = {
@@ -74,6 +77,18 @@ function statusAction(target: string): ActionSpec<PurchaseOrderRow> {
       await reload()
     },
   }
+}
+
+// L4 ejection (R5): the bespoke Receive Items modal — per-line receiving/
+// rejected quantities → GRNItem[] via ReceiveAgainstPO. `run` is unused for
+// modal actions (ActionHost dispatches to the component instead).
+const receiveItemsAction: ActionSpec<PurchaseOrderRow> = {
+  key: 'receive',
+  label: 'Receive Items',
+  kind: 'row',
+  visible: (r) => r != null && RECEIVABLE_STATUSES.includes(r.status),
+  modal: PurchaseOrderReceiveModal,
+  run: () => {},
 }
 
 const STATUS_TONES = {
@@ -174,6 +189,7 @@ export const purchaseOrdersDescriptor: LedgerDescriptor<PurchaseOrderRow> = {
     statusAction('Acknowledged'),
     statusAction('Draft'),
     statusAction('Cancelled'),
+    receiveItemsAction,
   ],
 
   emptyMessage: 'No purchase orders yet. Raise the first one from an order.',

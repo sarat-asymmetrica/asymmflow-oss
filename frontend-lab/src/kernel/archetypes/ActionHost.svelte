@@ -4,7 +4,8 @@
   import ConfirmDialog from '../controls/ConfirmDialog.svelte'
 
   /* ONE action-running path for every archetype (L2). Declarative actions
-   * escalate by shape: form → FormModal, confirm → ConfirmDialog, else run.
+   * escalate by shape: form → FormModal, modal → bespoke component (L4),
+   * confirm → ConfirmDialog, else run.
    *
    * Deliberately non-generic: `bind:this` erases component generics
    * (svelte2tsx instantiates them as unknown), so this seam types rows as
@@ -15,6 +16,7 @@
   let { reload }: { reload: () => Promise<void> } = $props()
 
   let formAction = $state<{ action: ActionSpec<Row>; row: Row | null } | null>(null)
+  let modalAction = $state<{ action: ActionSpec<Row>; row: Row | null } | null>(null)
   let confirmAction = $state<{ action: ActionSpec<Row>; row: Row | null; message: string } | null>(
     null,
   )
@@ -22,12 +24,16 @@
   export function run(action: ActionSpec<Row>, row: Row | null): void {
     if (action.form) {
       formAction = { action, row }
+    } else if (action.modal) {
+      modalAction = { action, row }
     } else if (action.confirm) {
       confirmAction = { action, row, message: action.confirm(row) }
     } else {
       void action.run({ row, reload })
     }
   }
+
+  const ModalComponent = $derived(modalAction?.action.modal)
 </script>
 
 {#if formAction}
@@ -39,6 +45,14 @@
       void reload()
     }}
     onCancel={() => (formAction = null)}
+  />
+{/if}
+
+{#if modalAction && ModalComponent}
+  <ModalComponent
+    row={modalAction.row}
+    {reload}
+    close={() => (modalAction = null)}
   />
 {/if}
 

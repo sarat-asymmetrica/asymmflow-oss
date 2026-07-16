@@ -11,6 +11,7 @@ import {
   ApproveExpenseEntry,
   DeleteExpenseEntry,
   ListExpenseEntries,
+  PostExpenseEntry,
   RejectExpenseEntry,
   SubmitExpenseEntry,
 } from '$wails/go/main/FinanceService'
@@ -262,15 +263,13 @@ async function realReject(id: string, reason: string): Promise<void> {
   await RejectExpenseEntry(id, reason)
 }
 
-async function realPost(_id: string): Promise<void> {
-  // GL hot-zone: PostExpenseEntry posts a real general-ledger JOURNAL ENTRY
-  // (postExpenseJournal), not just a status flip. Held honestly gapped per the
-  // build discipline (GL-affecting mutation from the ledger screen), even though
-  // the arg itself is an unambiguous bare id.
-  throw new Error(
-    'INTEG gap: PostExpenseEntry — posts a general-ledger journal entry (postExpenseJournal); ' +
-      'GL-affecting mutation intentionally held from the operational-ledger screen.',
-  )
+async function realPost(id: string): Promise<void> {
+  // GL hot-zone (R1.4 owner-ratified: posting belongs where users act):
+  // PostExpenseEntry(entryID) posts a real general-ledger JOURNAL ENTRY
+  // (postExpenseJournal) and flips the entry to `posted`. The server guards the
+  // lifecycle (only approved/paid/posted entries post; idempotent once posted).
+  // The descriptor gates this behind a ConfirmDialog that names the GL effect.
+  await PostExpenseEntry(id)
 }
 
 async function realDelete(id: string): Promise<void> {

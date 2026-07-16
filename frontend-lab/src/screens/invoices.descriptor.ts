@@ -11,6 +11,7 @@ import {
   fetchInvoices,
   fetchInvoicesPage,
   markInvoicePaid,
+  sendInvoice,
   type InvoiceRow,
   type NewInvoiceDraft,
 } from '../bridge'
@@ -154,6 +155,20 @@ export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
       form: newInvoiceForm,
       run: () => {
         /* form actions submit via their FormSpec; run is unused */
+      },
+    },
+    {
+      // R5: send a Draft invoice to the customer (Draft → Sent). Server rejects
+      // a non-Draft status or an invoice with no line items.
+      key: 'send',
+      label: 'Send',
+      kind: 'row',
+      visible: (r) => r != null && r.status === 'Draft',
+      confirm: (r) => `Send ${r ? (r as InvoiceRow).number : 'this invoice'} to the customer?`,
+      run: async ({ row, reload }) => {
+        if (!row) return
+        await sendInvoice(row.id)
+        await reload()
       },
     },
     {

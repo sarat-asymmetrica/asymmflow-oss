@@ -4,7 +4,7 @@
  * screens). Functions marked INTEG-GAP throw honestly — the archetypes
  * surface the error inline instead of pretending. */
 
-import { DeleteCustomerInvoice, ListCustomerInvoices } from '$wails/go/main/FinanceService'
+import { DeleteCustomerInvoice, ListCustomerInvoices, SendCustomerInvoice } from '$wails/go/main/FinanceService'
 import { ListCustomers } from '$wails/go/main/CRMService'
 import { GetCustomerFullProfile } from '$wails/go/main/App'
 import type { CustomerProfilePatch, CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
@@ -43,6 +43,12 @@ export async function markInvoicePaid(_id: string): Promise<void> {
   throw new Error(
     'INTEG gap: settlement flows through customer receipts (ApplyCustomerReceiptToInvoice), not a status flip',
   )
+}
+
+export async function sendInvoice(id: string): Promise<void> {
+  // SendCustomerInvoice(id) — Draft → Sent. Server rejects any non-Draft status
+  // and an invoice with no line items; the descriptor surfaces that honestly.
+  await SendCustomerInvoice(id)
 }
 
 export async function createInvoice(_draft: NewInvoiceDraft): Promise<void> {

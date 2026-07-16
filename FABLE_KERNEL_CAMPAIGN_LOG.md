@@ -121,6 +121,155 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
     write, expenses-Post, notifications-review mapper, the non-financial people/work/deployment/butler
     mutations, AI-key encrypted settings, and the deferred Go tests). K6 flip remains owner-gated (Task #5).
 
+## RESIDUE & TECH-DEBT PASS (fresh Opus 4.8 orchestrator, from `6223d6d`) — `FABLE_CAMPAIGN_RESIDUE.md`
+
+Closes the INTEG residue ledger (§A–E) + pays ledgered tech debt. Same model:
+Sonnet 5 agents code the parallelizable tail (R3/R5), orchestrator owns the hot
+zones (R1/R2), gates every wave, fixes what agents miss. `INTEG gap:` count at
+kickoff = **71**.
+
+- **★ Wave R1 — orchestrator-owned hot items DONE (green: check 0/0 348, vitest 150, build clean,
+  layout gate 3/3 on touched screens, `go test` R1 suite green). Gap count 71 → 67.**
+  - **R1.1 `SaveCostingAsOffer`:** the VM now assembles the FLAT `main.CostingExportData` (header +
+    per-line COMPUTED values from the sacred `calcLine` waterfall) that the binding takes — the previous
+    orchestrator correctly refused to guess when only the input-only `CostingLineRow` was on hand. New
+    bridge types `CostingExportData`/`CostingExportLineItem` mirror the model field-for-field; the per-line
+    mapping is extracted as the pure `costingExportLine()` (testable like `sheetTotals`). Wired to the
+    CREATE path (`offerId=''`); the server's duplicate/uniqueness guards surface honestly. **In-place
+    offer overwrite (update path) needs the offer UUID the costing VM doesn't carry — ledgered, not
+    guessed.** `integ_costing_hotzone_test.go`: a costing export creates an Offer with correct totals
+    (value/margin/discount/VAT) + line items, persisted. +2 vitest on `costingExportLine`.
+  - **R1.2 supplier-invoice descriptor actions:** the wired bridge fns were unreachable; added per-status
+    actions to `supplier-invoices.descriptor.ts` — **3-Way Match** (re-verify + persist match status,
+    reload surfaces it, no toast), **Approve** (gated on `matchStatus==='Matched'`, SoD approver from
+    session server-side, confirm dialog), **Mark Paid** (capture form: method + reference, gated on
+    `status==='Approved'`). Bridge fns already Go-tested in I3 (`supplier_ap_gate_test.go`).
+  - **R1.3 Expenses Post (owner default ratified):** wired `expenses.ts realPost` → `PostExpenseEntry`;
+    the descriptor confirm now NAMES the GL effect ("creates a GL journal entry"). `PostExpenseEntry`
+    posts a real balanced journal entry, not a status flip. `integ_expense_hotzone_test.go`: approved
+    entry posts → status `posted` + linked balanced JE (2 lines) + idempotent re-post (no dup JE).
+  - **R1.4 Bank Accounts Create/Update — FINDING, contract corrected:** the handoff assumed encrypted
+    IBAN/SWIFT, but `CompanyBankAccount` stores them **PLAINTEXT by deliberate design** —
+    `migrateBankAccountEncryption` strips leftover ciphertext back to plaintext and
+    `TestBankAccount_UpdatePreservesEncryption` asserts the plaintext roundtrip. So the correct contract
+    is plaintext struct/patch (no client-side crypto, no server FieldCrypto to feed); wired
+    `realCreate`→`CreateBankAccount(struct)`, `realUpdate`→`UpdateBankAccount(id, whitelisted patch)`.
+    `integ_bank_account_hotzone_test.go` asserts the plaintext ROUNDTRIP (create→read-back, update→re-read),
+    NOT ciphertext≠plaintext (which would be false). The spec's ciphertext assertion was based on the
+    outdated premise — surfaced here, implemented correctly.
+
+- **★ Wave R2 — deferred Go persistence tests DONE (full `go test .` green, no regressions).**
+  New file `integ_residue_r2_test.go`, house style:
+  - **FinalizeBookBankReconciliation:** zero-difference recon finalizes (is_reconciled + session
+    reviewer + timestamp); already-reconciled and non-zero-difference are refused, and a refused
+    finalize writes nothing.
+  - **DeleteRFQWithCascade:** cascade=false with links → error + nothing deleted; cascade=true removes
+    the RFQ + linked costings + offers + offer items. (Offer needs a valid `Stage` — CHECK constraint.)
+  - **BankStatement import two-phase:** Preview stages nothing; Confirm persists once then consumes the
+    preview (second Confirm errors); Discard drops the preview so a later Confirm writes nothing.
+    Driven via the package-level preview store (the dialog half of Preview can't run headlessly; the
+    persistence guarantee lives entirely in Confirm/Discard).
+  - **ReviewDeleteApprovalRequest reject:** fills the one gap — approve is covered in app_test.go, and
+    BOTH employee-archive review paths are covered in employee_archive_service_test.go, so only the
+    delete-approval reject was untested. Reject flips pending→rejected, target preserved.
+
+- **★ Wave R3 — non-financial mutation tail DONE (4 Sonnet agents, disjoint bridge files; orchestrator
+  gated + fixed). Gap count 67 → 24 (−43); combined tree green: check 0/0 348, vitest 150, go build clean.**
+  The 24 survivors are all honest DEFERs (side-effecting exports, no-binding cases, AI-authority boundary,
+  data-loss risk, architectural indirection) — not missing features.
+  - **Batch A — People (13/13 wired):** Create/Update/SetState/RequestArchive/ReviewArchive/ReassignManager/
+    CreateAccessLink/ReassignLicense/GenerateLicenseKey/CreateUser/Create-Update-DeleteEmployeeDocument.
+    Verified by orchestrator: no secret leakage (keys/passwords never logged/echoed), `goTime` for date
+    args, `actingUserId()` for GenerateLicenseKey's client-supplied createdBy (the one binding not
+    session-resolved server-side), field-encrypted doc numbers sent plaintext (server encrypts), mocks intact.
+  - **Batch B — Work (14/14 wired):** project + task CRUD; the HOT-ZONE mutations (Archive/Shelve/Delete
+    project) thread the MANDATORY audit `reason` from the caller to the binding; task due-date uses a local
+    RFC3339 string helper (the binding takes `string`, not `time.Time` — `goTime` would be the wrong type;
+    verified the Go side `time.Parse(RFC3339)` + empty-clears). Mocks intact.
+  - **Batch C — Deployment/Butler/Settings (r3-ops):** deployment checklist/sync/retry/reassign/display-name
+    WIRED; the two pilot EXPORTS stay gapped (confirmed side-effecting disk writes). Butler chat/delete/purge
+    WIRED. **`executeButlerAction` correctly GAPPED — AI-authority boundary preserved:** the seam passes only
+    the binding NAME (payload dropped at `butler-actions.ts`), so there's no plumbing to carry drafted data;
+    threading it would need a butler-actions change + per-target human-confirm verification. Never simulated
+    in mock either. **`UpdateSettings` GAPPED with a CONFIRMED data-loss reason (not just "unverified"):**
+    real keys are `companyName`/`currency`/`business.{default_margin,vat_rate}`/`apiKeys`/`folders`/… — the
+    bridge's assumed keys were ALL wrong, and `saveUserSettings` FULL-OVERWRITES settings.json, so wiring the
+    narrow 5-field shape would WIPE `apiKeys` (Mistral/AIML) + `folders` on every save. Agent also FIXED the
+    fetch-side `mapSettings` (was returning blanks in real mode — a real latent bug) to the confirmed keys.
+  - **Batch D — untyped-patch stragglers (r3-patches):** `UpdateAccount`, `UpdateBankStatement`,
+    `CreateBankStatementLine`, `UpdateBankStatementLine` wired to VERIFIED server whitelists (snake_case
+    columns matching each Go `allowedColumns`); `DeleteSupplier` (plain id, server refuses if linked);
+    book-bank-recon reads fanned out over active accounts. **Judgment call endorsed:** for the recon history
+    list, used each record's OWN persisted totals (deposits_in_transit/outstanding_cheques/… columns) rather
+    than `GetDepositsInTransit`/`GetOutstandingCheques` (which return today's LIVE pending set — attaching
+    them to finalized history would misrepresent it).
+  - **Orchestrator-added test:** `integ_residue_r3_test.go` `TestIntegR3_UpdateAccountWhitelist` — proves the
+    Go whitelist drops posting-owned `balance` and refuses an all-non-whitelisted patch (UpdateAccount had no
+    prior coverage). UpdateBankStatement/Line already covered in bank_reconciliation_service_test.go; the
+    People/Work/Deployment/Butler wirings rely on type-gate + existing collaboration/employee service tests.
+
+- **★ Wave R4 — AI-provider key encrypted at rest DONE (green: check 0/0 348, L1 tripwire, build clean,
+  layout gate 1/1 Business Settings, Go test green). Owner-ratified read-back approach.**
+  Unblocks the previously-DEFERred AI-key surface (Settings.parity.md) now that §D ratifies encrypted-in-app.
+  - **Write:** the Butler/Mistral key persists via `SetAPIKeys` → `SetSetting(encrypt=true)` (HKDF +
+    AES-256-GCM in the settings DB). Plaintext crosses the wire (server encrypts); NEVER logged/echoed; the
+    field is write-only in the VM (`aiKeyInput` cleared on submit).
+  - **★ FINDING + owner ruling:** the spec's "load back masked via GetSettings" does NOT round-trip —
+    `SetAPIKeys` writes the settings **DB table**, but `GetSettings` reads **settings.json** (a different
+    store), and there was no bound single-setting DB read. Surfaced to the owner (crypto stop-and-ask); ruling
+    (2026-07-16): **add a DB-backed masked read binding.** Added `App.GetAIProviderKeyStatus()` → reads the
+    same encrypted store, decrypts only to compute `maskSecret` (last-4), returns `{maskedKey, isSet}` —
+    plaintext never returned. Hand-added the thin wails wrapper (App auto-binds at runtime). Now the
+    save→read round-trip is honest.
+  - **UI:** an "AI Provider Key (Butler)" Card on Business Settings (bespoke-on-primitives, L1/L2-safe,
+    reuses `k-field`/`bs-message`); shows the masked current key + a password input; "(not set)"/masked, no
+    plaintext ever displayed.
+  - **Go test:** `integ_residue_r4_test.go` — not-set → "(not set)"; after `SetAPIKeys`, the Setting row is
+    encrypted (no plaintext) and `GetAIProviderKeyStatus` returns the masked last-4, never the plaintext.
+    (Existing `TestSetAPIKeys_EncryptsToDatabase`/`_SkipsMaskedValues` cover encrypt + masked-skip write.)
+
+- **★ Wave R5 — capture-form SLOT items DONE (green throughout: check 0/0 351, vitest 166, build clean,
+  layout gates on every touched screen). Delivered in parts:**
+  - **Delivery Notes (R5.1):** replaced the fictional generic status-advance with the REAL two-step flow —
+    Dispatch (driver/vehicle capture form) + Confirm Delivery (POD-signatory form). The mock `InTransit`
+    state had no backend binding (`DispatchDeliveryNote`/`ConfirmDeliveryNote` are strictly
+    Prepared→Dispatched→Delivered) and was retired from transitions.
+  - **GRNs (R5.1):** built QC Review (verdict select + notes; qcBy from session) + Complete (confirm) from
+    scratch (bridge was read-only).
+  - **Invoice Send (R5.2):** `SendCustomerInvoice` Draft→Sent row action (existing send_invoice_guard_test.go).
+  - **★ Engine seam:** added `ActionSpec.modal?` (L4 ejection at action granularity) — ActionHost renders a
+    bespoke component `{row, reload, close}` for flows a flat FormSpec can't express. Pre-approved engine work;
+    no behavior change for existing screens.
+  - **PO Receive-Items (R5.3, Sonnet agent on the seam + orchestrator gate):** a per-line receive/reject
+    capture MODAL on the Purchase Orders ledger → `ReceiveAgainstPO` creates the GRN. `GetPurchaseOrderByID`
+    loads the PO's items; the VM's `validateRow` MIRRORS the server over-receive guard
+    (alreadyReceived+receiving ≤ ordered, rejected ≤ received, non-negative) so bad lines are caught before
+    the round-trip; `buildReceiveItems` assembles `GRNItem[]` (server computes accepted). Built on Modal +
+    LineItemsEditor (L1/L5-clean); 13 new vitest + full suite 166. Orchestrator gate: reviewed the financial
+    assembly + validation (correct), ruled NO extra ConfirmDialog (the modal's quantity-entry + "Receive
+    Items" button IS the intent, unlike a one-click row action), confirmed existing Go coverage
+    (grn_receive_and_complete_test.go). GRN "Receive-from-PO" now lives here (same binding).
+
+## CAMPAIGN CLOSE-OUT (Residue & Tech-Debt Pass R1–R5) — `INTEG gap:` 71 → 24, all survivors named
+
+R1–R5 complete. Every mutation wired-and-verified or honestly gapped. The 24 remaining `INTEG gap:` throws
+are all owner-accepted-by-category survivors, NOT missing features:
+- **~11 side-effecting file exports** (accounting 5× CSV/VAT + evidence pack, costing PDF/Excel/OpenFile,
+  deployment 2 pilot bundles) — the lab defers all disk-writing exports as a class.
+- **1 AI-authority boundary** — `executeButlerAction` (seam passes binding name only; wiring needs a
+  per-target human-confirm gate).
+- **~6 architectural/data-loss** — `UpdateSettings` (full-overwrite would wipe apiKeys/folders; needs
+  merge-safe path), invoice `markInvoicePaid` (settlement = customer receipts), `createInvoice`
+  (raised-from-order), customer status (via UpdateCustomer full record), `UpdateCostingSheet` (struct-arg).
+- **~6 no-binding / no-endpoint** — pipeline `DeleteRFQWithCascade` (RFQ-only binding), pricing win-rate,
+  payroll cross-domain employee list + `UpsertEmployeeCompensationProfile` (PII hot-zone), notification
+  review-mapper (§E; reviews live on Approvals Queue).
+Two findings surfaced and resolved: bank-account IBAN/SWIFT are plaintext-by-design (R1.4); `UpdateSettings`
+full-overwrite data-loss + a latent real-mode blank-read bug (R3, fixed). One owner decision taken: the
+R4 AI-key read-back binding. New Go tests this campaign: costing/expense/bank-account hot-zones (R1),
+residue R2 (4), R3 UpdateAccount whitelist, R4 AI-key masked read. Kernel-flip readiness: unchanged owner-gated
+Task #5 — this campaign closes the wiring residue so only the human smoke pass + flip remain.
+
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
 - **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the

@@ -8,7 +8,9 @@
  * INTO the dataset (see bridge/mock.ts). Deterministic (seeded LCG) so
  * Playwright baselines are stable run-to-run. */
 import { pick } from './runtime'
-import { FinalizeBookBankReconciliation } from '$wails/go/main/InfraService'
+import { goDate, num, str } from './map'
+import { FinalizeBookBankReconciliation, GetBookBankReconciliations } from '$wails/go/main/InfraService'
+import { GetActiveBankAccounts } from '$wails/go/main/FinanceService'
 import { actingUserId } from '../stores/session.svelte'
 
 export interface ReconciliationLine {
@@ -182,16 +184,87 @@ async function mockFinalize(id: string): Promise<void> {
   row.finalizedBy = 'You (mock)'
 }
 
-/* ---- real: GetBookBankReconciliations returns the header rows; the detail
- * lines come from two further calls per record (GetDepositsInTransit,
- * GetOutstandingCheques — FinanceService), and book-side adjustments from
- * UpdateBookBankReconciliationAdjustments's read path. All INTEG-gapped —
- * wiring is a 3-call aggregation per record (same shape as cheque-register.ts's
- * realFetchAll), not a straight 1:1 swap. ---- */
+/* ---- real: GetBookBankReconciliations returns the per-account HISTORY rows
+ * (book_bank_reconciliation_service.go), each already carrying its own
+ * persisted deposits/cheques/adjustment TOTALS (recorded at reconciliation
+ * time — Wave 9.3 B1b). GetDepositsInTransit / GetOutstandingCheques are
+ * deliberately NOT called here: both return the bank account's CURRENTLY
+ * pending set (status = PENDING / ISSUED|PRESENTED), not a point-in-time
+ * breakdown for a given historical row — attaching today's pending items to
+ * every past reconciliation (including already-Finalized ones) would
+ * misrepresent history. The record's own scalar totals are what's mapped. ---- */
+
+function mapBankAccountLabel(r: Record<string, unknown>): { id: string; name: string; number: string } {
+  const bankName = str(r.bank_name)
+  const accountName = str(r.account_name)
+  return {
+    id: str(r.id),
+    name: bankName ? `${bankName} ${accountName}`.trim() : accountName,
+    number: str(r.account_number),
+  }
+}
+
+function mapReconciliation(r: Record<string, unknown>, accountName: string, accountNumber: string): BookBankReconciliationRow {
+  const isReconciled = Boolean(r.is_reconciled)
+  const depositsTotal = num(r.deposits_in_transit)
+  const chequesTotal = num(r.outstanding_cheques)
+  const bankErrors = num(r.bank_errors)
+  const bankCharges = num(r.bank_charges_not_recorded)
+  const interest = num(r.interest_not_recorded)
+  const nsf = num(r.nsf_cheques)
+  const bookErrors = num(r.book_errors)
+
+  const depositsInTransit: ReconciliationLine[] = []
+  if (depositsTotal !== 0) depositsInTransit.push({ label: 'Deposits in transit', value: depositsTotal })
+  if (bankErrors !== 0) {
+    depositsInTransit.push({
+      label: 'Other bank errors/adjustments',
+      value: bankErrors,
+      note: 'Recorded on the reconciliation at the time it was worked; not a live bank-statement line.',
+    })
+  }
+
+  const outstandingCheques: ReconciliationLine[] = []
+  if (chequesTotal !== 0) outstandingCheques.push({ label: 'Outstanding cheques', value: chequesTotal })
+
+  const bookAdjustments: ReconciliationLine[] = []
+  if (bankCharges !== 0) bookAdjustments.push({ label: 'Bank charges not recorded', value: -bankCharges })
+  if (interest !== 0) bookAdjustments.push({ label: 'Interest earned (not recorded)', value: interest })
+  if (nsf !== 0) bookAdjustments.push({ label: 'NSF cheques returned', value: -nsf, note: 'Customer cheque bounced' })
+  if (bookErrors !== 0) bookAdjustments.push({ label: 'Book errors/corrections', value: bookErrors })
+
+  const reconciledAt = goDate(r.reconciled_at)
+  const period = goDate(r.reconciliation_date).slice(0, 7)
+
+  return {
+    id: str(r.id),
+    period,
+    bankAccountName: accountName,
+    bankAccountNumber: accountNumber,
+    currency: str(r.currency) || 'BHD',
+    status: isReconciled ? 'Finalized' : 'Draft',
+    bankBalance: num(r.bank_statement_balance),
+    depositsInTransit,
+    outstandingCheques,
+    bookBalance: num(r.book_balance),
+    bookAdjustments,
+    finalizedAt: reconciledAt || null,
+    finalizedBy: str(r.reconciled_by),
+  }
+}
+
 async function realFetch(): Promise<BookBankReconciliationRow[]> {
-  throw new Error(
-    'INTEG gap: GetBookBankReconciliations + GetDepositsInTransit + GetOutstandingCheques — wires at K5',
-  )
+  // GetBookBankReconciliations is scoped per bank account (no "all accounts"
+  // mode), so the account list drives a fan-out — same shape as
+  // cheque-register.ts's realFetchAll.
+  const accountsRaw = await GetActiveBankAccounts()
+  const accounts = (accountsRaw ?? []).map((r) => mapBankAccountLabel(r as unknown as Record<string, unknown>))
+
+  const perAccount = await Promise.all(accounts.map((a) => GetBookBankReconciliations(a.id)))
+  return perAccount.flatMap((recons, i) => {
+    const account = accounts[i]!
+    return (recons ?? []).map((r) => mapReconciliation(r as unknown as Record<string, unknown>, account.name, account.number))
+  })
 }
 
 async function realFinalize(id: string): Promise<void> {

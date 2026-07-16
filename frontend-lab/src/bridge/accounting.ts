@@ -21,6 +21,7 @@ import {
   GenerateProfitAndLoss,
   GenerateBalanceSheet,
   CreateAccount,
+  UpdateAccount,
   CreateJournalEntry,
   ReviewCashflowEvidenceProposal,
 } from '$wails/go/main/FinanceService'
@@ -915,11 +916,23 @@ async function realCreateAccount(draft: NewAccountDraft): Promise<ChartOfAccount
   const created = await CreateAccount(arg)
   return mapAccount(created as unknown as Record<string, unknown>)
 }
-async function realUpdateAccount(_id: string, _patch: Partial<ChartOfAccountRow>): Promise<void> {
-  // GAP: UpdateAccount(id, Record<string, any>) — the patch arg is an untyped
-  // map; neither the accepted key set nor the camelCase→snake_case contract is
-  // verifiable from the binding signature. Left gapped rather than guess keys.
-  throw new Error('INTEG gap: UpdateAccount — arg2 is an untyped Record<string, any> patch; accepted keys unverifiable from the binding')
+async function realUpdateAccount(id: string, patch: Partial<ChartOfAccountRow>): Promise<void> {
+  // FinanceService.UpdateAccount(id, Record<string, any>) — the server
+  // (app_accounting_inventory.go UpdateAccount) whitelists exactly:
+  // account_code, account_name, account_type, is_active, is_vat_account,
+  // vat_direction, parent_account_id, account_group. `balance` is
+  // deliberately NOT in the whitelist (posting-owned — journal lines only,
+  // Mission I I-12); only the whitelisted keys actually present in the
+  // draft are sent.
+  const arg: Record<string, unknown> = {}
+  if (patch.accountCode !== undefined) arg.account_code = patch.accountCode
+  if (patch.accountName !== undefined) arg.account_name = patch.accountName
+  if (patch.accountType !== undefined) arg.account_type = patch.accountType
+  if (patch.isActive !== undefined) arg.is_active = patch.isActive
+  if (patch.isVatAccount !== undefined) arg.is_vat_account = patch.isVatAccount
+  if (patch.vatDirection !== undefined) arg.vat_direction = patch.vatDirection
+  if (patch.accountGroup !== undefined) arg.account_group = patch.accountGroup
+  await UpdateAccount(id, arg)
 }
 async function realCreateJournalEntry(draft: NewJournalEntryDraft): Promise<JournalEntryRow> {
   // FinanceService.CreateJournalEntry(finance.JournalEntry) → finance.JournalEntry
