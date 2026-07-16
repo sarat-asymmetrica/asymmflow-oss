@@ -12,8 +12,13 @@
  * never inside the real desktop app). Synthetic-only data (SYNTHETIC_IDENTITY.md)
  * — invented Gulf/Latin-mixed names, never real people. */
 import { pick } from './runtime'
-import { goDate, num, str } from './map'
+import { goDate, goTime, num, str } from './map'
+import { actingUserId } from '../stores/session.svelte'
 import {
+  CreateEmployeeAccessLink,
+  CreateEmployeeDocument,
+  CreateEmployeeProfile,
+  DeleteEmployeeDocument,
   GetCurrentEmployeeContext,
   ListEmployeeAccessLinks,
   ListEmployeeContributionSummaries,
@@ -21,18 +26,25 @@ import {
   ListEmployeeProfiles,
   ListEmployeeProjectAssignments,
   ListLicenseKeys,
+  ReassignEmployeeLicenseAccess,
+  ReassignEmployeeManager,
+  RequestEmployeeArchive,
+  ReviewEmployeeArchiveRequest,
+  SetEmployeeEmploymentState,
+  UpdateEmployeeDocument,
+  UpdateEmployeeProfile,
 } from '$wails/go/main/App'
-import { ListRoles, ListUsers } from '$wails/go/main/InfraService'
-/* Only the FETCH bindings above are actually invoked below — mutations are
- * INTEG-gap throws that NAME the real binding without importing it (same
- * convention as bridge/payroll.ts / bridge/expenses.ts: importing a binding
- * this file never calls would just be an unused-import lint trap). Real
- * binding names referenced in the throws: CreateEmployeeProfile,
- * UpdateEmployeeProfile, SetEmployeeEmploymentState, RequestEmployeeArchive,
- * ReviewEmployeeArchiveRequest, ReassignEmployeeManager,
- * CreateEmployeeAccessLink, ReassignEmployeeLicenseAccess,
- * GenerateLicenseKey, CreateUser, CreateEmployeeDocument,
- * UpdateEmployeeDocument, DeleteEmployeeDocument. */
+import { CreateUser, GenerateLicenseKey, ListRoles, ListUsers } from '$wails/go/main/InfraService'
+import type { main } from '$wails/go/models'
+/* R3 (K5): every mutation below is WIRED to its real binding — the K5-era
+ * INTEG-gap throws are gone. Actor fields (RequestEmployeeArchive's requester,
+ * ReviewEmployeeArchiveRequest's reviewer, GenerateLicenseKey's createdBy) are
+ * resolved server-side from the session (GetCurrentEmployeeContext /
+ * getCurrentUserID) EXCEPT GenerateLicenseKey, whose createdBy is a plain
+ * caller-supplied string — sourced from actingUserId() here, never trusted
+ * from the caller (house actor-arg law). CreateUser mints a live login
+ * credential; GenerateLicenseKey mints a live license key — both call straight
+ * through, the server owns the actual secret generation. */
 
 /* ---- types (camelCase; mirror frontend/src/lib/api/collaboration.ts's
  * snake_case shapes 1:1) ---- */
@@ -860,6 +872,17 @@ function mapEmployee(e: Record<string, unknown>): EmployeeProfile {
   }
 }
 
+function mapArchiveApproval(r: Record<string, unknown>): EmployeeArchiveApproval {
+  return {
+    id: str(r.id),
+    employeeId: str(r.employee_id),
+    employeeName: str(r.employee_name),
+    requestedBy: str(r.requested_by_name) || str(r.requested_by),
+    reason: str(r.reason),
+    status: str(r.status),
+  }
+}
+
 function mapAccessLink(l: Record<string, unknown>): EmployeeAccessLink {
   return {
     id: str(l.id),
@@ -1024,51 +1047,134 @@ async function realFetchContext(): Promise<CurrentEmployeeContext | null> {
   }
 }
 
-async function realCreateEmployee(_input: EmployeeCreateInput): Promise<EmployeeProfile> {
-  throw new Error('INTEG gap: CreateEmployeeProfile — wires at K5')
+async function realCreateEmployee(input: EmployeeCreateInput): Promise<EmployeeProfile> {
+  // full_name/employee_code/preferred_name/employment_status/is_active are
+  // server-derived (CreateEmployeeProfile) — send only the operator-entered
+  // fields; the structural cast satisfies the generated model type (map.ts
+  // precedent, same as bridge/bank-accounts.ts's realCreate).
+  const employee = {
+    full_name: input.fullName,
+    department: input.department,
+    job_title: input.jobTitle,
+    email: input.email,
+    phone: input.phone,
+    start_date: goTime(input.startDate),
+    manager_employee_id: input.managerEmployeeId,
+  } as unknown as main.Employee
+  const created = await CreateEmployeeProfile(employee)
+  return mapEmployee(created as unknown as Record<string, unknown>)
 }
-async function realUpdateEmployee(_draft: EmployeeProfileDraft): Promise<EmployeeProfile> {
-  throw new Error('INTEG gap: UpdateEmployeeProfile — wires at K5')
+async function realUpdateEmployee(draft: EmployeeProfileDraft): Promise<EmployeeProfile> {
+  // UpdateEmployeeProfile is a whole-record overwrite (every key in the
+  // updates map is written, including zero values) — mirrors the production
+  // frontend/src/lib/screens/PeopleHub.svelte's handleSaveProfile payload
+  // shape 1:1 (same field set, same is_active/manager_employee_id carry-
+  // through from the draft so neither gets clobbered to its zero value).
+  const employee = {
+    id: draft.id,
+    employee_code: draft.employeeCode,
+    full_name: draft.fullName,
+    preferred_name: draft.preferredName,
+    email: draft.email,
+    phone: draft.phone,
+    department: draft.department,
+    job_title: draft.jobTitle,
+    employment_status: draft.employmentStatus,
+    manager_employee_id: draft.managerEmployeeId,
+    start_date: goTime(draft.startDate),
+    emergency_contact: draft.emergencyContact,
+    notes: draft.notes,
+    is_active: draft.isActive,
+  } as unknown as main.Employee
+  const updated = await UpdateEmployeeProfile(employee)
+  return mapEmployee(updated as unknown as Record<string, unknown>)
 }
-async function realSetEmploymentState(_employeeId: string, _isActive: boolean, _employmentStatus: string): Promise<EmployeeProfile> {
-  throw new Error('INTEG gap: SetEmployeeEmploymentState — wires at K5')
+async function realSetEmploymentState(employeeId: string, isActive: boolean, employmentStatus: string): Promise<EmployeeProfile> {
+  const updated = await SetEmployeeEmploymentState(employeeId, isActive, employmentStatus)
+  return mapEmployee(updated as unknown as Record<string, unknown>)
 }
-async function realRequestArchive(_employeeId: string, _reason: string): Promise<EmployeeArchiveApproval> {
-  throw new Error('INTEG gap: RequestEmployeeArchive — HOT-ZONE (cascades access + project revocation, routes to Approvals), wires at K5')
+async function realRequestArchive(employeeId: string, reason: string): Promise<EmployeeArchiveApproval> {
+  // HOT-ZONE: the requester is resolved server-side from GetCurrentEmployeeContext
+  // (admins cannot archive themselves, cannot self-approve) — no actor arg here.
+  const request = await RequestEmployeeArchive(employeeId, reason)
+  return mapArchiveApproval(request as unknown as Record<string, unknown>)
 }
-async function realReviewArchive(_requestId: string, _decision: 'approve' | 'reject', _notes: string): Promise<EmployeeArchiveApproval> {
-  throw new Error('INTEG gap: ReviewEmployeeArchiveRequest — wires at K5')
+async function realReviewArchive(requestId: string, decision: 'approve' | 'reject', notes: string): Promise<EmployeeArchiveApproval> {
+  // Reviewer is resolved server-side too (same GetCurrentEmployeeContext path).
+  const request = await ReviewEmployeeArchiveRequest(requestId, decision, notes)
+  return mapArchiveApproval(request as unknown as Record<string, unknown>)
 }
-async function realReassignManager(_employeeId: string, _managerEmployeeId: string): Promise<EmployeeProfile> {
-  throw new Error('INTEG gap: ReassignEmployeeManager — wires at K5')
+async function realReassignManager(employeeId: string, managerEmployeeId: string): Promise<EmployeeProfile> {
+  const updated = await ReassignEmployeeManager(employeeId, managerEmployeeId)
+  return mapEmployee(updated as unknown as Record<string, unknown>)
 }
-async function realCreateAccessLink(_link: { employeeId: string; licenseKey: string; userId?: string; accessStatus?: string }): Promise<EmployeeAccessLink> {
-  throw new Error('INTEG gap: CreateEmployeeAccessLink — wires at K5')
+async function realCreateAccessLink(link: { employeeId: string; licenseKey: string; userId?: string; accessStatus?: string }): Promise<EmployeeAccessLink> {
+  const built = {
+    employee_id: link.employeeId,
+    license_key: link.licenseKey,
+    user_id: link.userId || '',
+    access_status: link.accessStatus || '',
+  } as unknown as main.EmployeeAccessLink
+  const created = await CreateEmployeeAccessLink(built)
+  return mapAccessLink(created as unknown as Record<string, unknown>)
 }
-async function realReassignLicense(_employeeId: string, _licenseKey: string): Promise<EmployeeAccessLink> {
-  throw new Error('INTEG gap: ReassignEmployeeLicenseAccess — wires at K5')
+async function realReassignLicense(employeeId: string, licenseKey: string): Promise<EmployeeAccessLink> {
+  // syncDisplayName=true matches the production caller (PeopleHub.svelte's
+  // reassignEmployeeLicenseAccess call) — the license's display_name/notes get
+  // synced to the newly-assigned employee's name.
+  const link = await ReassignEmployeeLicenseAccess(employeeId, licenseKey, true)
+  return mapAccessLink(link as unknown as Record<string, unknown>)
 }
-async function realGenerateLicense(_role: string, _notes: string, _createdBy: string): Promise<string> {
-  throw new Error('INTEG gap: GenerateLicenseKey — mints a live credential, wires at K5')
+async function realGenerateLicense(role: string, notes: string, _createdBy: string): Promise<string> {
+  // createdBy is a plain caller-supplied string on this binding (not session-
+  // resolved server-side) — per the actor-arg law, source it from the session
+  // ourselves rather than trust the caller's value. Mints a live credential;
+  // never logged.
+  return GenerateLicenseKey(role, notes, actingUserId())
 }
-async function realCreateLoginUser(_input: {
+async function realCreateLoginUser(input: {
   username: string
   email: string
+  password: string
   fullName: string
   department: string
   jobTitle: string
   roleId: string
 }): Promise<LoginUserSummary> {
-  throw new Error('INTEG gap: CreateUser — mints a live login credential + temp password, wires at K5')
+  // Mints a live login credential + bcrypt-hashed password server-side; the
+  // plaintext password is sent once over the binding and never echoed back.
+  const user = await CreateUser(input.username, input.email, input.password, input.fullName, input.department, input.jobTitle, input.roleId)
+  return mapLoginUser(user as unknown as Record<string, unknown>)
 }
-async function realCreateDocument(_draft: EmployeeDocumentDraft & { employeeId: string }): Promise<EmployeeComplianceDocument> {
-  throw new Error('INTEG gap: CreateEmployeeDocument — PII hot-zone (field-encrypted doc number), wires at K5')
+async function realCreateDocument(draft: EmployeeDocumentDraft & { employeeId: string }): Promise<EmployeeComplianceDocument> {
+  // PII hot-zone: docNumber travels as a SEPARATE plaintext arg — the server
+  // field-encrypts it (encryptDocumentNumber) before persisting. Never
+  // pre-encrypt client-side, never log the plaintext.
+  const doc = {
+    employee_id: draft.employeeId,
+    doc_type: draft.docType,
+    permit_subtype: draft.permitSubtype,
+    ...(draft.expiresOn ? { expires_on: goTime(draft.expiresOn) } : {}),
+    notes: draft.notes,
+  } as unknown as main.EmployeeDocument
+  const created = await CreateEmployeeDocument(doc, draft.docNumber)
+  return mapDocument(created as unknown as Record<string, unknown>)
 }
-async function realUpdateDocument(_documentId: string, _draft: EmployeeDocumentDraft): Promise<EmployeeComplianceDocument> {
-  throw new Error('INTEG gap: UpdateEmployeeDocument — PII hot-zone, wires at K5')
+async function realUpdateDocument(documentId: string, draft: EmployeeDocumentDraft): Promise<EmployeeComplianceDocument> {
+  // Same PII contract as create. An empty docNumber leaves the stored
+  // (encrypted) value untouched server-side (UpdateEmployeeDocument doc
+  // comment) — lets the composer patch just the expiry/notes.
+  const updates = {
+    doc_type: draft.docType,
+    permit_subtype: draft.permitSubtype,
+    ...(draft.expiresOn ? { expires_on: goTime(draft.expiresOn) } : {}),
+    notes: draft.notes,
+  } as unknown as main.EmployeeDocument
+  const updated = await UpdateEmployeeDocument(documentId, updates, draft.docNumber)
+  return mapDocument(updated as unknown as Record<string, unknown>)
 }
-async function realDeleteDocument(_documentId: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteEmployeeDocument — wires at K5')
+async function realDeleteDocument(documentId: string): Promise<void> {
+  await DeleteEmployeeDocument(documentId)
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

@@ -9,7 +9,7 @@
  * vocabulary is NOT carried forward (Pending has no backing data). */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { ListSuppliers } from '$wails/go/main/CRMService'
+import { ListSuppliers, DeleteSupplier } from '$wails/go/main/CRMService'
 import { GetSupplierFullProfile } from '$wails/go/main/App'
 
 /** The profile-depth fields ListSuppliers' narrow SELECT omits — filled by a
@@ -169,11 +169,11 @@ async function realFetchAll(): Promise<SupplierRow[]> {
   return (rows ?? []).map((x) => mapSupplier(x as unknown as Record<string, unknown>))
 }
 
-async function realDeleteSupplier(_id: string): Promise<void> {
-  throw new Error(
-    'INTEG gap: DeleteSupplier — wires at K5. (Server refuses if the supplier has POs, ' +
-      'invoices, or contacts on file; the descriptor must surface that 4xx honestly, not assume success.)',
-  )
+async function realDeleteSupplier(id: string): Promise<void> {
+  // CRMService.DeleteSupplier(id) → void. Server refuses (4xx) if the
+  // supplier has POs, invoices, or contacts on file — the descriptor
+  // surfaces that error honestly rather than assuming success.
+  await DeleteSupplier(id)
 }
 
 /* ---- secondary profile fetch (INTEG): GetSupplierFullProfile ---- */

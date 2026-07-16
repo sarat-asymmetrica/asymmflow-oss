@@ -10,19 +10,20 @@
  * `frontend-lab/wailsjs/go/main/InfraService.d.ts`); `ExportPilotSupportBundle`
  * is bound on `App` in the old screen (also present on InfraService, but the
  * old screen imports it from App — followed here) and
- * `ReassignEmployeeLicenseAccess` is bound on `SyncServiceBinding`. FETCH
- * bindings are real (each is a single-call, non-aggregating list/get); every
- * mutation is internal-ops-with-real-teeth (sync triggers, bulk retry-storms,
- * license reassignment) and throws an honest INTEG-gap naming the exact real
- * binding — see DeploymentHub.parity.md for the full ledger. Synthetic-only
- * mock data (SYNTHETIC_IDENTITY.md) — invented names, no real employees.
+ * `ReassignEmployeeLicenseAccess` is bound on `SyncServiceBinding` (also
+ * present on App, same "followed here" convention). R3: checklist update,
+ * sync trigger, bulk/single retry, license reassignment, and license
+ * display-name rename are now WIRED — each Go signature maps cleanly onto
+ * this bridge's existing mock contract with no actor arg to smuggle in (the
+ * Go side resolves the acting user internally via `a.getCurrentUserID()`).
+ * `ExportPilotSupportBundle`/`ExportPilotSignoffReport` stay INTEG-gapped —
+ * both are side-effecting file exports (write a bundle/report to disk on the
+ * host machine), deferred rather than fired sight-unseen from a lab wire-up.
+ * Synthetic-only mock data (SYNTHETIC_IDENTITY.md) — invented names, no real
+ * employees.
  */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-/* Only the FETCH bindings are actually invoked below — mutations are
- * INTEG-gap throws that NAME the real binding without importing it (same
- * convention as bridge/payroll.ts: importing a binding this file never calls
- * would just be an unused-import lint trap). */
 import {
   GetDeploymentDataAudit,
   GetPhase7RolloutStatus,
@@ -31,7 +32,13 @@ import {
   ListCollaborativePendingOperations,
   ListLicenseKeys,
   ListPilotReadinessRows,
+  RetryCollaborativePendingOperation,
+  RetryCollaborativePendingOperations,
+  TriggerCollaborativeSyncNow,
+  UpdateLicenseDisplayName,
+  UpdatePilotDeploymentChecklistItem,
 } from '$wails/go/main/InfraService'
+import { ReassignEmployeeLicenseAccess } from '$wails/go/main/SyncServiceBinding'
 
 /* ---- types (camelCase; mirrors main.PilotReadinessRow / main.DeploymentDataAudit / …) ---- */
 
@@ -532,10 +539,10 @@ async function mockUpdateLicenseDisplayName(key: string, displayName: string): P
   return { ...license }
 }
 
-/* ---- real: FETCH is wired (single-call, non-aggregating); every mutation
- * is an internal-ops hot-zone (sync trigger, bulk retry-storm, license
- * reassignment) and throws an honest INTEG-gap naming the exact real
- * binding. ---- */
+/* ---- real: FETCH is wired (single-call, non-aggregating); the checklist/
+ * sync/retry/license mutations below are also wired (each Go signature maps
+ * 1:1 onto this bridge's mock contract); the two file-export mutations stay
+ * INTEG-gapped (side-effecting disk writes, deferred). ---- */
 
 function mapReadinessRow(r: Record<string, unknown>): PilotReadinessRow {
   return {
@@ -675,36 +682,40 @@ async function realFetchQueue(status: string, limit: number): Promise<Collaborat
   return (rows ?? []).map((r) => mapQueueOp(r as unknown as Record<string, unknown>))
 }
 
-async function realUpdateChecklistItem(_id: string, _completed: boolean, _notes: string): Promise<PilotChecklistItem[]> {
-  throw new Error('INTEG gap: UpdatePilotDeploymentChecklistItem — wires at K5')
+async function realUpdateChecklistItem(id: string, completed: boolean, notes: string): Promise<PilotChecklistItem[]> {
+  const rows = await UpdatePilotDeploymentChecklistItem(id, completed, notes)
+  return (rows ?? []).map((r) => mapChecklistItem(r as unknown as Record<string, unknown>))
 }
 
 async function realTriggerSync(): Promise<void> {
-  throw new Error('INTEG gap: TriggerCollaborativeSyncNow — wires at K5')
+  await TriggerCollaborativeSyncNow()
 }
 
-async function realRetryBulk(_status: string, _limit: number): Promise<Phase7ActionResult> {
-  throw new Error('INTEG gap: RetryCollaborativePendingOperations — HOT bulk resync-storm, wires at K5')
+async function realRetryBulk(status: string, limit: number): Promise<Phase7ActionResult> {
+  const r = (await RetryCollaborativePendingOperations(status, limit)) as unknown as Record<string, unknown>
+  return { status: str(r.status), message: str(r.message), processed: num(r.processed) }
 }
 
-async function realRetrySingle(_id: string): Promise<void> {
-  throw new Error('INTEG gap: RetryCollaborativePendingOperation — wires at K5')
+async function realRetrySingle(id: string): Promise<void> {
+  await RetryCollaborativePendingOperation(id)
 }
 
+/* Side-effecting file exports (write a support bundle / sign-off report to
+ * disk) — deferred rather than wired sight-unseen; see file header. */
 async function realExportSupportBundle(): Promise<PilotSupportBundleResult> {
-  throw new Error('INTEG gap: ExportPilotSupportBundle (App) — wires at K5')
+  throw new Error('INTEG gap: ExportPilotSupportBundle (App) — side-effecting export, deferred (wires at K5)')
 }
 
 async function realExportSignoff(): Promise<PilotExportResult> {
-  throw new Error('INTEG gap: ExportPilotSignoffReport — wires at K5')
+  throw new Error('INTEG gap: ExportPilotSignoffReport — side-effecting export, deferred (wires at K5)')
 }
 
-async function realReassignLicense(_employeeId: string, _licenseKey: string, _syncName: boolean): Promise<void> {
-  throw new Error('INTEG gap: ReassignEmployeeLicenseAccess (SyncServiceBinding) — wires at K5')
+async function realReassignLicense(employeeId: string, licenseKey: string, syncName: boolean): Promise<void> {
+  await ReassignEmployeeLicenseAccess(employeeId, licenseKey, syncName)
 }
 
-async function realUpdateLicenseDisplayName(_key: string, _displayName: string): Promise<LicenseKey> {
-  throw new Error('INTEG gap: UpdateLicenseDisplayName — wires at K5')
+async function realUpdateLicenseDisplayName(key: string, displayName: string): Promise<LicenseKey> {
+  return mapLicense((await UpdateLicenseDisplayName(key, displayName)) as unknown as Record<string, unknown>)
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

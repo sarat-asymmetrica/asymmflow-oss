@@ -6,16 +6,30 @@
  * the old 10-tab screen.
  *
  * Real bindings confirmed on App (wailsjs/go/main/App.d.ts):
- * GetSettings/UpdateSettings — but BOTH are generic `Record<string, any>`
- * (no typed Go model exists for "settings"), so the key names below
- * (company_name, base_currency, default_margin_percent, vat_rate_percent,
- * fiscal_year_start_month) are this bridge's ASSUMPTION, not a verified
- * schema — the real Go handler's key vocabulary was not confirmed against
- * this lab. Fetch maps those keys defensively (blank/zero on a miss, same
- * doctrine as suppliers.ts' profile-only fields); UpdateSettings stays
- * INTEG-gapped so a wrong key name can never silently write the wrong
- * field into a FINANCIAL hot-zone record. Synthetic-only data
- * (SYNTHETIC_IDENTITY.md). */
+ * GetSettings/UpdateSettings — both are generic `Record<string, any>` (no
+ * typed Go model exists for "settings"). R3: the key vocabulary is now
+ * CONFIRMED against `app_setup_documents_surface.go`'s GetSettings/
+ * UpdateSettings/saveUserSettings — and it does NOT match what this file
+ * originally assumed:
+ *   - top level: `companyName` (camelCase, not `company_name`), `currency`
+ *     (not `base_currency`), plus `language`/`theme`/`folders`/`apiKeys`/
+ *     `gpu`/`office` — none of which this screen's flat shape carries.
+ *   - margin/VAT are nested one level down: `business.default_margin` /
+ *     `business.vat_rate` (not top-level `default_margin_percent` /
+ *     `vat_rate_percent`).
+ *   - there is no `fiscal_year_start_month` key anywhere in GetSettings —
+ *     that field has nothing real to bind to; it's mock-only until a real
+ *     key exists.
+ * mapSettings below is fixed to the confirmed keys. UpdateSettings stays
+ * INTEG-gapped, but now for a stronger, confirmed reason: `saveUserSettings`
+ * (app_setup_documents_surface.go) does a FULL FILE OVERWRITE of
+ * settings.json with exactly the map it's given — no merge with what's on
+ * disk. Sending this screen's narrow 5-field BusinessSettingsData as-is
+ * would silently WIPE `folders`/`apiKeys` (including the Mistral/AIML keys)
+ * and every other top-level key GetSettings returns. Wiring this mutation
+ * safely means round-tripping the ENTIRE settings object (fetch-merge-write),
+ * which is out of scope for this bridge's narrow shape — deferred to K5.
+ * Synthetic-only data (SYNTHETIC_IDENTITY.md). */
 
 import { pick } from './runtime'
 import { num, str } from './map'
@@ -52,14 +66,16 @@ async function mockUpdate(data: BusinessSettingsData): Promise<void> {
   await sleep(150)
 }
 
-/* ---- real: fetch WIRED (best-effort key mapping, see file header);
- * UpdateSettings mutation INTEG-gapped. ---- */
+/* ---- real: fetch WIRED against the CONFIRMED key schema (see file header);
+ * UpdateSettings mutation INTEG-gapped (confirmed full-file-overwrite risk). ---- */
 function mapSettings(r: Record<string, unknown>): BusinessSettingsData {
+  const business = (r.business as Record<string, unknown> | undefined) ?? {}
   return {
-    companyName: str(r.company_name),
-    baseCurrency: str(r.base_currency) || 'BHD',
-    defaultMarginPercent: num(r.default_margin_percent),
-    vatRatePercent: num(r.vat_rate_percent),
+    companyName: str(r.companyName),
+    baseCurrency: str(r.currency) || 'BHD',
+    defaultMarginPercent: num(business.default_margin),
+    vatRatePercent: num(business.vat_rate),
+    // No fiscal-year-start key exists in Go's GetSettings — nothing to map.
     fiscalYearStartMonth: num(r.fiscal_year_start_month) || 1,
   }
 }
@@ -71,8 +87,9 @@ async function realFetch(): Promise<BusinessSettingsData> {
 
 async function realUpdate(_data: BusinessSettingsData): Promise<void> {
   throw new Error(
-    'INTEG gap: UpdateSettings takes an unverified Record<string, any> key schema — wires at K5 once the ' +
-      'real Go handler\'s key names are confirmed, not guessed against a FINANCIAL hot-zone record.',
+    'INTEG gap: UpdateSettings persists via saveUserSettings, a FULL settings.json overwrite (no merge) — ' +
+      "sending this screen's narrow 5-field shape would wipe folders/apiKeys and every other top-level " +
+      'GetSettings key. Confirmed against app_setup_documents_surface.go; wires at K5 with a fetch-merge-write.',
   )
 }
 

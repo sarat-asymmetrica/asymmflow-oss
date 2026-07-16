@@ -7,18 +7,27 @@
  * current-employee-context) and `App` (`GetEmployeeAllocationSummary`) —
  * verified against `frontend/wailsjs/go/main/{SyncServiceBinding,App}.d.ts`.
  *
- * FETCH bindings are real (single-call, non-aggregating list/get calls) —
- * wired below. Every MUTATION is INTEG-gapped: the real side throws an
- * honest error naming the exact binding without importing it (same
- * convention as bridge/payroll.ts and bridge/expenses.ts — importing a
- * binding this file never calls is an unused-import lint trap). Project
- * archive/shelve/delete carry a mandatory audit reason (HOT-ZONE); task
- * delete is likewise irreversible. Synthetic-only mock data
- * (SYNTHETIC_IDENTITY.md) — invented Gulf names, no real people/companies. */
+ * FETCH bindings are real (single-call, non-aggregating list/get calls), and
+ * (R3) every MUTATION is now wired too — all 14 real* adapters call their
+ * named SyncServiceBinding function directly; every actor (creator/CreatedBy)
+ * is derived server-side from GetCurrentEmployeeContext/getCurrentUserID, so
+ * none of these bindings takes a client-supplied actor arg. Project
+ * archive/shelve/delete carry a mandatory audit reason (HOT-ZONE, threaded
+ * from the caller); task delete is likewise irreversible (no reason param on
+ * that one binding). Synthetic-only mock data (SYNTHETIC_IDENTITY.md) —
+ * invented Gulf names, no real people/companies. */
 
 import { pick } from './runtime'
-import { goDate, num, str } from './map'
+import { goDate, goTime, num, str } from './map'
+import type { main } from '$wails/go/models'
 import {
+  AddCollaborativeProjectMember,
+  AddCollaborativeTaskComment,
+  ArchiveCollaborativeProject,
+  CreateCollaborativeProject,
+  CreateCollaborativeTask,
+  DeleteCollaborativeProject,
+  DeleteCollaborativeTask,
   GetCollaborativeTask,
   GetCurrentEmployeeContext,
   GetProjectTaskCounts,
@@ -31,6 +40,13 @@ import {
   ListCollaborativeTeamTasks,
   ListEmployeeProfiles,
   ListMyCollaborativeTasks,
+  ReassignCollaborativeTask,
+  RefreshCollaborativeWorkspace,
+  ShelveCollaborativeProject,
+  UpdateCollaborativeProject,
+  UpdateCollaborativeTask,
+  UpdateCollaborativeTaskDueDate,
+  UpdateCollaborativeTaskStatus,
 } from '$wails/go/main/SyncServiceBinding'
 import { GetEmployeeAllocationSummary } from '$wails/go/main/App'
 
@@ -803,8 +819,7 @@ async function mockRefreshWorkspace(): Promise<void> {
   await sleep(80)
 }
 
-/* ---- real: FETCH is wired (single-call, non-aggregating); every mutation is
- * an honest INTEG-gap throw naming the exact real binding — project delete/
+/* ---- real: FETCH and MUTATION are both wired (R3) — project delete/
  * archive/shelve carry a mandatory audit reason (financial/PII-adjacent hot
  * zone), task delete is irreversible. ---- */
 
@@ -985,47 +1000,134 @@ async function realFetchAllocationSummary(employeeId: string, excludeProjectId: 
   return mapAllocationSummary(a as unknown as Record<string, unknown>)
 }
 
-async function realCreateProject(_draft: ProjectDraft): Promise<Project> {
-  throw new Error('INTEG gap: CreateCollaborativeProject — wires at K5')
+/** UpdateCollaborativeTaskDueDate's arg2 is a raw string, not a time.Time —
+ * Go treats '' as "clear the due date" (nil) and anything else must be
+ * strict RFC3339. goTime() doesn't fit here: its empty-input branch emits
+ * Go's ZERO time literal ('0001-01-01T00:00:00Z'), which Go would happily
+ * time.Parse as a REAL date and write, instead of clearing — clear and
+ * zero-date are different outcomes for this specific binding, so empty must
+ * stay empty. */
+function dueDateArg(dueDateStr: string): string {
+  const s = (dueDateStr ?? '').trim()
+  if (!s) return ''
+  return s.includes('T') ? s : `${s}T00:00:00Z`
 }
-async function realUpdateProject(_id: string, _patch: ProjectPatch): Promise<Project> {
-  throw new Error('INTEG gap: UpdateCollaborativeProject — wires at K5')
+
+async function realCreateProject(draft: ProjectDraft): Promise<Project> {
+  // CreateCollaborativeProject(main.Project) → main.Project. Only the
+  // user-authored fields are sent; the server assigns id/timestamps and
+  // defaults project_type/status when blank (a.getCurrentUserID() stamps
+  // created_by — no actor arg on this binding).
+  const arg = {
+    name: draft.name,
+    project_type: draft.projectType,
+    description: draft.description,
+    customer_name: draft.customerName,
+    customer_poc_name: draft.customerPocName,
+    customer_poc_email: draft.customerPocEmail,
+    customer_poc_phone: draft.customerPocPhone,
+  } as unknown as main.Project
+  const created = await CreateCollaborativeProject(arg)
+  return mapProject(created as unknown as Record<string, unknown>)
 }
-async function realArchiveProject(_id: string, _reason: string): Promise<Project> {
-  throw new Error('INTEG gap: ArchiveCollaborativeProject — HOT-ZONE (mandatory audit reason), wires at K5')
+async function realUpdateProject(id: string, patch: ProjectPatch): Promise<Project> {
+  // UpdateCollaborativeProject(id, Record<string,any>) — server whitelists the
+  // key set (name/project_type/description/status/customer_*/starts_on/
+  // ends_on) and escalates to projects:delete when status enters a terminal
+  // state; only the keys the caller actually supplied are sent.
+  const updates: Record<string, unknown> = {}
+  if (patch.name !== undefined) updates.name = patch.name
+  if (patch.projectType !== undefined) updates.project_type = patch.projectType
+  if (patch.description !== undefined) updates.description = patch.description
+  if (patch.customerName !== undefined) updates.customer_name = patch.customerName
+  if (patch.customerPocName !== undefined) updates.customer_poc_name = patch.customerPocName
+  if (patch.customerPocEmail !== undefined) updates.customer_poc_email = patch.customerPocEmail
+  if (patch.customerPocPhone !== undefined) updates.customer_poc_phone = patch.customerPocPhone
+  if (patch.status !== undefined) updates.status = patch.status
+  const updated = await UpdateCollaborativeProject(id, updates)
+  return mapProject(updated as unknown as Record<string, unknown>)
 }
-async function realShelveProject(_id: string, _reason: string): Promise<Project> {
-  throw new Error('INTEG gap: ShelveCollaborativeProject — HOT-ZONE (mandatory audit reason), wires at K5')
+async function realArchiveProject(id: string, reason: string): Promise<Project> {
+  // ArchiveCollaborativeProject(id, reason) — HOT-ZONE: flips status to
+  // 'archived' and writes `reason` to the (server-side) audit log.
+  const archived = await ArchiveCollaborativeProject(id, reason)
+  return mapProject(archived as unknown as Record<string, unknown>)
 }
-async function realDeleteProject(_id: string, _reason: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteCollaborativeProject — HOT-ZONE, irreversible (mandatory audit reason), wires at K5')
+async function realShelveProject(id: string, reason: string): Promise<Project> {
+  // ShelveCollaborativeProject(id, reason) — HOT-ZONE, same shape as archive.
+  const shelved = await ShelveCollaborativeProject(id, reason)
+  return mapProject(shelved as unknown as Record<string, unknown>)
 }
-async function realAddProjectMember(_projectId: string, _employeeId: string, _role: string, _allocationPercent: number): Promise<ProjectMember> {
-  throw new Error('INTEG gap: AddCollaborativeProjectMember — wires at K5')
+async function realDeleteProject(id: string, reason: string): Promise<void> {
+  // DeleteCollaborativeProject(id, reason) — HOT-ZONE, irreversible: flips
+  // status to 'deleted' and writes `reason` to the audit log.
+  await DeleteCollaborativeProject(id, reason)
 }
-async function realCreateTask(_draft: TaskDraft): Promise<TaskItem> {
-  throw new Error('INTEG gap: CreateCollaborativeTask — wires at K5')
+async function realAddProjectMember(projectId: string, employeeId: string, role: string, allocationPercent: number): Promise<ProjectMember> {
+  // AddCollaborativeProjectMember upserts on (project_id, employee_id) —
+  // same semantics as the mock's upsert-on-re-add.
+  const member = await AddCollaborativeProjectMember(projectId, employeeId, role, allocationPercent)
+  return mapMember(member as unknown as Record<string, unknown>)
 }
-async function realUpdateTask(_task: Partial<TaskItem> & { id: string }): Promise<TaskItem> {
-  throw new Error('INTEG gap: UpdateCollaborativeTask — wires at K5')
+async function realCreateTask(draft: TaskDraft): Promise<TaskItem> {
+  // CreateCollaborativeTask(main.TaskItem) → main.TaskItem. Creator/status
+  // default server-side (creator from GetCurrentEmployeeContext, status
+  // 'open'). due_date/project_id/assignee_employee_id are OMITTED (not '')
+  // when blank — they're pointer fields server-side, and an empty-string
+  // due_date fails Go's time.Time JSON unmarshal outright.
+  const arg: Record<string, unknown> = {
+    title: draft.title,
+    description: draft.description,
+    priority: draft.priority,
+  }
+  if (draft.projectId) arg.project_id = draft.projectId
+  if (draft.assigneeEmployeeId) arg.assignee_employee_id = draft.assigneeEmployeeId
+  if (draft.dueDate) arg.due_date = goTime(draft.dueDate)
+  const created = await CreateCollaborativeTask(arg as unknown as main.TaskItem)
+  return mapTask(created as unknown as Record<string, unknown>)
 }
-async function realUpdateTaskStatus(_id: string, _status: string, _note: string): Promise<void> {
-  throw new Error('INTEG gap: UpdateCollaborativeTaskStatus — wires at K5')
+async function realUpdateTask(task: Partial<TaskItem> & { id: string }): Promise<TaskItem> {
+  // UpdateCollaborativeTask(main.TaskItem) — the server only applies
+  // title/description/priority/task_type/project_id from the payload (status,
+  // due date, and assignee route through their own dedicated bindings below);
+  // title is required non-empty server-side, matching the caller
+  // (work-vm.svelte.ts saveTaskDetails) which always sends the full set.
+  const arg = {
+    id: task.id,
+    title: task.title ?? '',
+    description: task.description ?? '',
+    priority: task.priority ?? '',
+    task_type: task.taskType ?? '',
+    project_id: task.projectId || undefined,
+  } as unknown as main.TaskItem
+  const updated = await UpdateCollaborativeTask(arg)
+  return mapTask(updated as unknown as Record<string, unknown>)
 }
-async function realReassignTask(_id: string, _assigneeEmployeeId: string): Promise<void> {
-  throw new Error('INTEG gap: ReassignCollaborativeTask — wires at K5')
+async function realUpdateTaskStatus(id: string, status: string, note: string): Promise<void> {
+  // UpdateCollaborativeTaskStatus(id, status, note) — server requires a
+  // non-empty note when status === 'blocked'; surfaces honestly otherwise.
+  await UpdateCollaborativeTaskStatus(id, status, note)
 }
-async function realUpdateTaskDueDate(_id: string, _dueDateIso: string): Promise<void> {
-  throw new Error('INTEG gap: UpdateCollaborativeTaskDueDate — wires at K5')
+async function realReassignTask(id: string, assigneeEmployeeId: string): Promise<void> {
+  // ReassignCollaborativeTask(id, assigneeEmployeeId) — '' clears the
+  // assignee server-side (assigneeEmployeeID == "" ⇒ nil).
+  await ReassignCollaborativeTask(id, assigneeEmployeeId)
 }
-async function realAddTaskComment(_taskId: string, _body: string): Promise<TaskComment> {
-  throw new Error('INTEG gap: AddCollaborativeTaskComment — wires at K5')
+async function realUpdateTaskDueDate(id: string, dueDateIso: string): Promise<void> {
+  await UpdateCollaborativeTaskDueDate(id, dueDateArg(dueDateIso))
 }
-async function realDeleteTask(_id: string): Promise<void> {
-  throw new Error('INTEG gap: DeleteCollaborativeTask — HOT-ZONE, irreversible, wires at K5')
+async function realAddTaskComment(taskId: string, body: string): Promise<TaskComment> {
+  const created = await AddCollaborativeTaskComment(taskId, body)
+  return mapComment(created as unknown as Record<string, unknown>)
+}
+async function realDeleteTask(id: string): Promise<void> {
+  // DeleteCollaborativeTask(id) — HOT-ZONE, irreversible. No reason param on
+  // this binding (unlike the project deletes); the server's own
+  // guardDeleteOrRequest + audit logging cover it.
+  await DeleteCollaborativeTask(id)
 }
 async function realRefreshWorkspace(): Promise<void> {
-  throw new Error('INTEG gap: RefreshCollaborativeWorkspace — wires at K5')
+  await RefreshCollaborativeWorkspace()
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

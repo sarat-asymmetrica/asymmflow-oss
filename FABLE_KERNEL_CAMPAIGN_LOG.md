@@ -173,6 +173,41 @@ kickoff = **71**.
     BOTH employee-archive review paths are covered in employee_archive_service_test.go, so only the
     delete-approval reject was untested. Reject flips pending→rejected, target preserved.
 
+- **★ Wave R3 — non-financial mutation tail DONE (4 Sonnet agents, disjoint bridge files; orchestrator
+  gated + fixed). Gap count 67 → 24 (−43); combined tree green: check 0/0 348, vitest 150, go build clean.**
+  The 24 survivors are all honest DEFERs (side-effecting exports, no-binding cases, AI-authority boundary,
+  data-loss risk, architectural indirection) — not missing features.
+  - **Batch A — People (13/13 wired):** Create/Update/SetState/RequestArchive/ReviewArchive/ReassignManager/
+    CreateAccessLink/ReassignLicense/GenerateLicenseKey/CreateUser/Create-Update-DeleteEmployeeDocument.
+    Verified by orchestrator: no secret leakage (keys/passwords never logged/echoed), `goTime` for date
+    args, `actingUserId()` for GenerateLicenseKey's client-supplied createdBy (the one binding not
+    session-resolved server-side), field-encrypted doc numbers sent plaintext (server encrypts), mocks intact.
+  - **Batch B — Work (14/14 wired):** project + task CRUD; the HOT-ZONE mutations (Archive/Shelve/Delete
+    project) thread the MANDATORY audit `reason` from the caller to the binding; task due-date uses a local
+    RFC3339 string helper (the binding takes `string`, not `time.Time` — `goTime` would be the wrong type;
+    verified the Go side `time.Parse(RFC3339)` + empty-clears). Mocks intact.
+  - **Batch C — Deployment/Butler/Settings (r3-ops):** deployment checklist/sync/retry/reassign/display-name
+    WIRED; the two pilot EXPORTS stay gapped (confirmed side-effecting disk writes). Butler chat/delete/purge
+    WIRED. **`executeButlerAction` correctly GAPPED — AI-authority boundary preserved:** the seam passes only
+    the binding NAME (payload dropped at `butler-actions.ts`), so there's no plumbing to carry drafted data;
+    threading it would need a butler-actions change + per-target human-confirm verification. Never simulated
+    in mock either. **`UpdateSettings` GAPPED with a CONFIRMED data-loss reason (not just "unverified"):**
+    real keys are `companyName`/`currency`/`business.{default_margin,vat_rate}`/`apiKeys`/`folders`/… — the
+    bridge's assumed keys were ALL wrong, and `saveUserSettings` FULL-OVERWRITES settings.json, so wiring the
+    narrow 5-field shape would WIPE `apiKeys` (Mistral/AIML) + `folders` on every save. Agent also FIXED the
+    fetch-side `mapSettings` (was returning blanks in real mode — a real latent bug) to the confirmed keys.
+  - **Batch D — untyped-patch stragglers (r3-patches):** `UpdateAccount`, `UpdateBankStatement`,
+    `CreateBankStatementLine`, `UpdateBankStatementLine` wired to VERIFIED server whitelists (snake_case
+    columns matching each Go `allowedColumns`); `DeleteSupplier` (plain id, server refuses if linked);
+    book-bank-recon reads fanned out over active accounts. **Judgment call endorsed:** for the recon history
+    list, used each record's OWN persisted totals (deposits_in_transit/outstanding_cheques/… columns) rather
+    than `GetDepositsInTransit`/`GetOutstandingCheques` (which return today's LIVE pending set — attaching
+    them to finalized history would misrepresent it).
+  - **Orchestrator-added test:** `integ_residue_r3_test.go` `TestIntegR3_UpdateAccountWhitelist` — proves the
+    Go whitelist drops posting-owned `balance` and refuses an all-non-whitelisted patch (UpdateAccount had no
+    prior coverage). UpdateBankStatement/Line already covered in bank_reconciliation_service_test.go; the
+    People/Work/Deployment/Butler wirings rely on type-gate + existing collaboration/employee service tests.
+
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
 - **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
