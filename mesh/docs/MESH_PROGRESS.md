@@ -162,13 +162,37 @@ The capability layer now sits ABOVE the pipe, enforced INSIDE the reducer
   position in the CANONICAL order — revocation is never retroactive; whether an
   op beats a revocation has exactly one answer on every peer.
 
+### Mission D stage 2 — the ceremony REPL + real-DHT dress rehearsal · ✅ GREEN
+
+`peer.mjs` extended for the two-physical-box ceremony (backward compatible —
+no flags = exact Wave-1 behavior, `wave1:holesail` re-verified):
+
+- **Persistent device identities** — each peer keeps an Ed25519 seed in
+  `DIR-keys/` (a SIBLING dir: **Corestore 7.x silently DELETES foreign files
+  inside its storage dir on init** — found the hard way, seed survived restarts
+  only after moving out). Verified stable across restarts.
+- **Authority mode** — `host --authority` holds the mesh authority keypair and
+  turns enforcement on; joiners pass `--authority-pub` (mesh-genesis config,
+  like url + baseKey). New commands: `grant <pub> [epoch]` / `epoch <n>` /
+  `revoke <pub>` / `whoami`; `append` AUTO-SIGNS with the peer's device key;
+  `append-raw` deliberately doesn't (demo: watch the mesh bounce it).
+- **Ceremony seq/ts** — omitted fields are stamped seq = ts = Date.now() at
+  CREATION (event data, never read in the fold); wall-clock-millis seqs make
+  canonical fold order track live-ceremony real time.
+- **Gate (`npm run missiond:holesail`)**: two OS processes over the REAL DHT
+  run the exact human ceremony — writer-set admit → pre-grant signed op
+  REJECTED both sides ("no grant") → unsigned op REJECTED ("unsigned") →
+  grant → op lands → epoch bump → stale-rejected → re-grant → op lands.
+  Byte-identical views + state; TX-100 == 8; capEpoch == 1 on both.
+
 ## Wave 4+ — Mission E + finale (next)
 
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).
-- **2-physical-box ceremony** — unchanged commands (`npm run wave1:host` /
-  `wave1:join`); first target machine = the owner's household laptop, then the
-  PH office machine. A signed-op (Mission D) variant of the peer REPL is a
-  small residue item if the ceremony should exercise capability enforcement too.
+- **2-physical-box ceremony** — box 1 `npm run missiond:host`, box 2
+  `npm run missiond:join -- --url <hs://…> --base-key <hex> --authority-pub <hex>`,
+  then the command script in `peer.mjs`'s header. First target = the owner's
+  household laptop, then the PH office machine. (The Wave-1 unsigned variant
+  `wave1:host`/`wave1:join` still works for a minimal run.)
 - The `//go:wasmexport` incremental reactor (per MESH-D6) when marshalling
   volume warrants it.
 

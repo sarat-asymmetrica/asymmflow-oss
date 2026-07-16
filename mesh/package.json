@@ -15,6 +15,9 @@
     "missionc:update-golden": "npm run build && node host/missionc-mesh.mjs --update-golden",
     "missiond": "npm run build && node host/missiond-mesh.mjs",
     "missiond:update-golden": "npm run build && node host/missiond-mesh.mjs --update-golden",
+    "missiond:holesail": "npm run build && node host/missiond-holesail.mjs",
+    "missiond:host": "node host/peer.mjs host --storage ./.peer-host-d --authority",
+    "missiond:join": "node host/peer.mjs join --storage ./.peer-join-d",
     "wave1:host": "node host/peer.mjs host --storage ./.peer-host",
     "wave1:join": "node host/peer.mjs join --storage ./.peer-join",
     "test:go": "cd .. && go test ./mesh/..."
