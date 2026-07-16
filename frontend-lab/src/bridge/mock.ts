@@ -143,6 +143,14 @@ export async function markInvoicePaid(id: string): Promise<void> {
   await new Promise((r) => setTimeout(r, 120))
 }
 
+/** Send a Draft invoice (Draft → Sent) — R5. */
+export async function sendInvoice(id: string): Promise<void> {
+  invoices ??= generate()
+  const inv = invoices.find((i) => i.id === id)
+  if (inv) inv.status = 'Sent'
+  await new Promise((r) => setTimeout(r, 120))
+}
+
 /* ---- Customers (EntityMaster pilot) ---- */
 
 export interface CustomerRow {
