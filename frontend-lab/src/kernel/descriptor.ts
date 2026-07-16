@@ -75,9 +75,15 @@ export interface ActionSpec<Row> {
   /** Visibility gate — e.g. only Draft invoices can be edited. */
   visible?: (row: Row | null) => boolean
   /** Declared escalation: a form action opens FormModal (its submit IS the
-   * action); a confirm action gates run() behind ConfirmDialog. One path
-   * for all archetypes via ActionHost. */
+   * action); a confirm action gates run() behind ConfirmDialog; a modal action
+   * ejects (L4) to a bespoke component for flows a flat FormSpec can't express
+   * (e.g. per-line receive quantities via LineItemsEditor). One path for all
+   * archetypes via ActionHost. */
   form?: FormSpec<any>
+  /** L4 ejection at action granularity: a bespoke modal component. It receives
+   * the clicked `row`, `reload` (to refresh the ledger after a mutation), and
+   * `close` (to dismiss). The component owns its own submit — `run` is unused. */
+  modal?: Component<{ row: Row | null; reload: () => Promise<void>; close: () => void }>
   confirm?: (row: Row | null) => string
   run: (ctx: { row: Row | null; reload: () => Promise<void> }) => void | Promise<void>
 }
