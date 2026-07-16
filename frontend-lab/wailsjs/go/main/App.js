@@ -1114,6 +1114,10 @@ export function GenerateVATReturn(arg1, arg2) {
   return window['go']['main']['App']['GenerateVATReturn'](arg1, arg2);
 }
 
+export function GetAIProviderKeyStatus() {
+  return window['go']['main']['App']['GetAIProviderKeyStatus']();
+}
+
 export function GetAPAgingReport() {
   return window['go']['main']['App']['GetAPAgingReport']();
 }
@@ -1442,10 +1446,6 @@ export function GetCustomerFullProfile(arg1) {
   return window['go']['main']['App']['GetCustomerFullProfile'](arg1);
 }
 
-export function GetCustomerWinRates() {
-  return window['go']['main']['App']['GetCustomerWinRates']();
-}
-
 export function GetCustomerGraph(arg1, arg2) {
   return window['go']['main']['App']['GetCustomerGraph'](arg1, arg2);
 }
@@ -1488,6 +1488,10 @@ export function GetCustomerRelatedProducts(arg1) {
 
 export function GetCustomerRelatedSuppliers(arg1) {
   return window['go']['main']['App']['GetCustomerRelatedSuppliers'](arg1);
+}
+
+export function GetCustomerWinRates() {
+  return window['go']['main']['App']['GetCustomerWinRates']();
 }
 
 export function GetCustomersByGrade(arg1) {
@@ -2164,10 +2168,6 @@ export function GetSerialsByProduct(arg1) {
 
 export function GetSerialsForInvoiceItem(arg1, arg2) {
   return window['go']['main']['App']['GetSerialsForInvoiceItem'](arg1, arg2);
-}
-
-export function GetAIProviderKeyStatus() {
-  return window['go']['main']['App']['GetAIProviderKeyStatus']();
 }
 
 export function GetSettings() {

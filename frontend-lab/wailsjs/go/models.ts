@@ -7274,6 +7274,20 @@ export namespace integration {
 
 export namespace main {
 	
+	export class AIProviderKeyStatus {
+	    maskedKey: string;
+	    isSet: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIProviderKeyStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.maskedKey = source["maskedKey"];
+	        this.isSet = source["isSet"];
+	    }
+	}
 	export class ARAgingDetail {
 	    customer_id: string;
 	    customer_name: string;
@@ -9918,30 +9932,6 @@ export namespace main {
 	        this.notes = source["notes"];
 	    }
 	}
-	export class CustomerWinRate {
-	    customer_id: string;
-	    customer_name: string;
-	    offers_won: number;
-	    offers_lost: number;
-	    offers_total: number;
-	    win_rate: number;
-	    won_value_bhd: number;
-
-	    static createFrom(source: any = {}) {
-	        return new CustomerWinRate(source);
-	    }
-
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.customer_id = source["customer_id"];
-	        this.customer_name = source["customer_name"];
-	        this.offers_won = source["offers_won"];
-	        this.offers_lost = source["offers_lost"];
-	        this.offers_total = source["offers_total"];
-	        this.win_rate = source["win_rate"];
-	        this.won_value_bhd = source["won_value_bhd"];
-	    }
-	}
 	export class CustomerRelatedProduct {
 	    product_code: string;
 	    product_name: string;
@@ -10056,6 +10046,30 @@ export namespace main {
 	        this.type = source["type"];
 	        this.label = source["label"];
 	        this.count = source["count"];
+	    }
+	}
+	export class CustomerWinRate {
+	    customer_id: string;
+	    customer_name: string;
+	    offers_won: number;
+	    offers_lost: number;
+	    offers_total: number;
+	    win_rate: number;
+	    won_value_bhd: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CustomerWinRate(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.customer_id = source["customer_id"];
+	        this.customer_name = source["customer_name"];
+	        this.offers_won = source["offers_won"];
+	        this.offers_lost = source["offers_lost"];
+	        this.offers_total = source["offers_total"];
+	        this.win_rate = source["win_rate"];
+	        this.won_value_bhd = source["won_value_bhd"];
 	    }
 	}
 	export class DBSyncResult {

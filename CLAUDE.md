@@ -16,7 +16,7 @@ wails dev                   # hot reload
 wails build -clean          # production build
 ```
 
-> `go build ./...` needs `frontend/dist` (it is `go:embed`-ed by `main.go`). Run a
+> `go build ./...` needs `frontend-lab/dist` (it is `go:embed`-ed by `main.go`). Run a
 > frontend build first, or use `wails build`.
 
 ## Architecture

@@ -24,17 +24,17 @@ tasks:
   clean:
     desc: Remove generated build artifacts.
     cmds:
-      - powershell -NoProfile -Command "Remove-Item -Recurse -Force build/bin, dist, frontend/dist -ErrorAction SilentlyContinue"
+      - powershell -NoProfile -Command "Remove-Item -Recurse -Force build/bin, dist, frontend-lab/dist -ErrorAction SilentlyContinue"
 
   frontend:build:
     desc: Build the frontend bundle.
-    dir: frontend
+    dir: frontend-lab
     cmds:
       - npm run build
 
   frontend:dev:
     desc: Start the frontend dev server.
-    dir: frontend
+    dir: frontend-lab
     cmds:
       - npm run dev
 

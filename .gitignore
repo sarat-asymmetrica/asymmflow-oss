@@ -10,9 +10,6 @@ backups/
 *_BACKUP*.db
 SYNTHETIC_IDENTITY.local.md
 
-# === Deployment brand override (never commit real client identity) ===
-frontend/src/lib/brand.local.ts
-
 # === Build Artifacts ===
 build/
 *.exe
@@ -20,19 +17,19 @@ build/
 
 # Ignore all build-output dist/ directories everywhere...
 dist/
-# ...but keep frontend/dist with a committed placeholder index.html so
-# `go:embed all:frontend/dist` in main.go compiles on a fresh clone before the
+# ...but keep frontend-lab/dist with a committed placeholder index.html so
+# `go:embed all:frontend-lab/dist` in main.go compiles on a fresh clone before the
 # frontend has been built (`npm run build` / `wails build` regenerates the rest).
-!frontend/dist/
-frontend/dist/*
-!frontend/dist/index.html
+!frontend-lab/dist/
+frontend-lab/dist/*
+!frontend-lab/dist/index.html
 *.dylib
 *.so
 *.app
 
 # === Dependencies ===
 node_modules/
-frontend/node_modules/
+frontend-lab/node_modules/
 
 # === Environment & Secrets ===
 .env

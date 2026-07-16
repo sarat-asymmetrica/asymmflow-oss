@@ -16,7 +16,7 @@
     "paths": {
       "$kernel/*": ["./src/kernel/*"],
       "$screens/*": ["./src/screens/*"],
-      "$tokens/*": ["../frontend/src/assets/*"],
+      "$tokens/*": ["./src/assets/*"],
       "$wails/*": ["./wailsjs/*"]
     }
   },

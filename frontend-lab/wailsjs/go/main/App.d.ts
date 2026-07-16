@@ -580,6 +580,8 @@ export function GenerateSupplierInvoicePDF(arg1:string):Promise<string>;
 
 export function GenerateVATReturn(arg1:time.Time,arg2:time.Time):Promise<finance.VATReturn>;
 
+export function GetAIProviderKeyStatus():Promise<main.AIProviderKeyStatus>;
+
 export function GetAPAgingReport():Promise<main.ARAgingReport>;
 
 export function GetARAgingByCustomer(arg1:string):Promise<finance.ARAgingBucket>;
@@ -766,9 +768,9 @@ export function GetCustomerRelatedProducts(arg1:string):Promise<Array<main.Custo
 
 export function GetCustomerRelatedSuppliers(arg1:string):Promise<Array<main.CustomerRelatedSupplier>>;
 
-export function GetCustomersByGrade(arg1:string):Promise<Array<crm.CustomerMaster>>;
-
 export function GetCustomerWinRates():Promise<Array<main.CustomerWinRate>>;
+
+export function GetCustomersByGrade(arg1:string):Promise<Array<crm.CustomerMaster>>;
 
 export function GetDBSyncSettings():Promise<main.DBSyncSettings>;
 
@@ -1105,8 +1107,6 @@ export function GetSerialsByCustomer(arg1:string):Promise<Array<crm.SerialNumber
 export function GetSerialsByProduct(arg1:string):Promise<Array<crm.SerialNumber>>;
 
 export function GetSerialsForInvoiceItem(arg1:string,arg2:string):Promise<Array<crm.SerialNumber>>;
-
-export function GetAIProviderKeyStatus():Promise<Record<string, any>>;
 
 export function GetSettings():Promise<Record<string, any>>;
 

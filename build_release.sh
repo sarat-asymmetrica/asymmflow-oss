@@ -47,7 +47,7 @@ echo ""
 
 # Frontend build
 echo "Building frontend..."
-cd frontend
+cd frontend-lab
 if command -v pnpm >/dev/null 2>&1; then
     pnpm install
 elif command -v npm >/dev/null 2>&1; then

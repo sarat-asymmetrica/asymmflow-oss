@@ -135,7 +135,7 @@ async function realFetchAIKey(): Promise<AIProviderKeyState> {
   // writes to (unlike GetSettings, which reads settings.json), so the save→read
   // round-trip is honest. The server decrypts only to mask — we only ever see
   // '(not set)' | '****' | 'abcd****wxyz', never the plaintext.
-  const r = (await GetAIProviderKeyStatus()) as Record<string, unknown> | null
+  const r = await GetAIProviderKeyStatus()
   const masked = str(r?.maskedKey) || '(not set)'
   return { maskedKey: masked, isSet: Boolean(r?.isSet) }
 }
