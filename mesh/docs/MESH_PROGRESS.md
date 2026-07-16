@@ -185,14 +185,30 @@ no flags = exact Wave-1 behavior, `wave1:holesail` re-verified):
   grant → op lands → epoch bump → stale-rejected → re-grant → op lands.
   Byte-identical views + state; TX-100 == 8; capEpoch == 1 on both.
 
-## Wave 4+ — Mission E + finale (next)
+### 🏁 THE TWO-PHYSICAL-BOX CEREMONY — ✅ COMPLETE (2026-07-16, hand-run)
+
+Owner's desktop (authority) + the household laptop (device), two real machines
+over the public DHT, driven by human hands from the ceremony kit
+(`HOST.cmd`/`JOIN.cmd`). Verified from both machines' logs:
+
+- **Convergence:** THREE checkpoints byte-identical on both boxes —
+  viewLength 5 (`73631357…`/`b0451550…`), 7 (`6f4cb9e3…`/`9327e88f…`),
+  and final 9 (`871c45545…`/`77ca3b0a…`).
+- **Mission D live:** `epoch 1` on the desktop stale-rejected the laptop's
+  next signed append on BOTH machines with the identical kernel reason;
+  pre-revocation stock untouched; laptop kept replicating throughout (pipe
+  open, capability dead); `grant <dev> 1` re-issued and its next write landed
+  (final stock TX-100 == 23 everywhere).
+- Missions A and D finales both closed in the same run. Ceremony lessons fed
+  back as hardening: poison-pill addWriter guard, pasted-key sanitizing, the
+  writable fix-it error (commits `8f3d620`, `357df27`).
+
+Next ladder rung when convergence cutover approaches: the PH office machine
+as the always-on mesh peer (owner ruling 2026-07-15).
+
+## Wave 4+ — Mission E (next)
 
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).
-- **2-physical-box ceremony** — box 1 `npm run missiond:host`, box 2
-  `npm run missiond:join -- --url <hs://…> --base-key <hex> --authority-pub <hex>`,
-  then the command script in `peer.mjs`'s header. First target = the owner's
-  household laptop, then the PH office machine. (The Wave-1 unsigned variant
-  `wave1:host`/`wave1:join` still works for a minimal run.)
 - The `//go:wasmexport` incremental reactor (per MESH-D6) when marshalling
   volume warrants it.
 
