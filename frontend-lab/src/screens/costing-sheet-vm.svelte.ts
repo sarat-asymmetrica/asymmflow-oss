@@ -786,7 +786,19 @@ export class CostingSheetViewModel {
         try {
           const items = JSON.stringify(payload)
           if (this.currentCostingId) {
-            await updateCostingSheet(this.currentCostingId, items, preparedBy)
+            // Assemble the full CostingSheetData refresh (owner standing default,
+            // R1 technique): the new items JSON + the VM's own authoritative
+            // totals, which are the values summarisePersistedCosting derives.
+            const t = this.totals
+            await updateCostingSheet(this.currentCostingId, {
+              items,
+              subtotal: t.totalCost,
+              finalPrice: t.grandTotal,
+              totalMarkup: t.profit,
+              marginPercent: t.profitPercent,
+              customerName: this.header.customerName,
+              rfqId,
+            })
           } else {
             const created = await createCostingSheet(rfqId, items, preparedBy)
             this.currentCostingId = created.id
