@@ -11,6 +11,60 @@ Durable progress tracker for the K1–K6 full-migration campaign
 (`FABLE_CAMPAIGN_FRONTEND_KERNEL.md`). Orchestrator = Opus 4.8; coders = Sonnet 5.
 Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
 
+## GAP-CLOSE PASS (fresh Opus 4.8 orchestrator, from `c51bf14`) — `FABLE_CAMPAIGN_GAPCLOSE.md` — **`INTEG gap:` 23 → 0**
+
+The final stretch: the Residue pass left **23 honest `INTEG gap:` throws**, each named and
+reasoned. This campaign closes all 23 — no survivors, no asterisks. Every mutation is
+Go-proven, every export artifact-proven, and the AI-authority boundary is now mechanically
+tripwired in the frontend too. Gate law held throughout (check 0/0, vitest, build, layout
+detector, `go build`+`go test`). Commits: G1 `941136f`, G2 `e31c72d`, G3 `6e4438c`, G4 `ccf5995`,
+G5 close-out. NOT merged — awaits the owner's review gate.
+
+- **G1 — owner-ruled product changes (4 throws, orchestrator-built):**
+  - **Butler SPLIT (ruling G1.1):** wired the **19 draft/update-class** bindings for real (bridge
+    wrappers call the actual Go handlers; the confirming HUMAN is the actor — the handlers stamp
+    `getCurrentUserID`, never "butler", and none of the 19 kept bindings even takes an actor arg).
+    The **4 approve-class** bindings (`ApprovePurchaseOrder`, `ApproveStockAdjustment`,
+    `ApproveSupplierInvoice`, `ApproveCostingSheet`) are **permanently retired** — never imported
+    into the bridge, redirected to the Approvals Queue at the resolver, with a defense-in-depth guard
+    in `executeButlerAction`. Payload builders ported verbatim from the legacy ButlerScreen. New
+    vitest tripwire (15 cases) proves the 4 names can never resolve to an executable action.
+    **Orchestrator decision flagged for owner:** butler costing-sheet "update status" also redirects —
+    the Go `UpdateCostingSheet` Omits `Status` (approval-gated), so wiring it would be a pretend-persist.
+  - **Settlement receipt-capture modal (G1.2):** replaced the mark-paid stub with `InvoiceReceiptModal`
+    (amount/date/method/reference) recording a REAL customer receipt via `CreateCustomerReceipt`
+    (invoice-bound) — funds a Payment row + advances invoice state atomically, never a status flip.
+    **Deviation of record:** the ruling named `ApplyCustomerReceiptToInvoice`, but a capture modal has
+    no pre-existing receipt id; `CreateCustomerReceipt` IS the create-and-apply path.
+  - **Standalone invoice-create RETIRED (G1.3):** removed the +New Invoice action/form/bridge fn;
+    invoices are raised from an order. Empty state points at Orders.
+  - **Win-rate real aggregation (G1.4):** new read-only `GetCustomerWinRates` Go binding computes
+    per-customer win-rate from real offer Won/Lost history (the old screen HARDCODED the list — that
+    was the bug). Display-only regime derived from real win-rate.
+- **G2 — payroll hot-zone + standing default (3 throws):** `UpsertEmployeeCompensationProfile`
+  (financial+PII, full struct assembled, server owns actor/currency/clobber-guard); payroll employee
+  master list via `ListEmployeeProfiles`; `UpdateCostingSheet` standing default (full CostingSheetData
+  assembled from the VM's authoritative totals — the same values `summarisePersistedCosting` derives;
+  the Go handler Omits approval fields so a refresh can't mass-assign approval state).
+- **G3 — known-technique wiring (6 throws):** `UpdateSettings` fetch-merge-write (preserves
+  folders/apiKeys/language/theme); customer status via `UpdateCustomer` full record; notifications
+  review ×2 (`sourceId` enrichment → `ReviewDelete/EmployeeArchiveRequest`);
+  `SyncCashflowEvidenceProposalReviews` (review sync, never posts); `DeleteRFQWithCascade` standing
+  default (descriptor already RFQ-only; throw reworded to a defensive invariant).
+- **G4 — export tail (10 throws, artifact-proven):** 5 accounting CSV/VAT/evidence + 3 costing
+  (PDF/Excel/OpenFile) + 2 deployment pilot bundles. Costing exports switched to the FLAT
+  CostingExportData. Every export Go-tested against a QUARANTINED temp home: path lands under it +
+  content spot-check (CSV headers, JSON object, xlsx PK magic). `OpenExportedFile` never invoked in
+  tests (the one true OS side-effect).
+- **G5 — close-out:** gap tripwire pinned to 0 (`tests/gap-count-zero.test.ts`, scans all 50 bridge
+  files with comments stripped); scoreboard flipped in `FABLE_WAVE_K6_PARITY.md`; campaign-log entry;
+  full gates. New Go tests this campaign: settlement, win-rate ×3, compensation upsert, costing
+  update, UpdateSettings merge, customer status, cashflow sync, 5 export artifacts. Vitest 148 → **234**
+  (incl. the 15-case butler-authority tripwire + the 50-file gap-count-zero tripwire).
+
+**Still out of scope (unchanged):** the R6 bundle split (owner-parked) · the K6 flip itself · the two
+owner questions surfaced above (butler costing redirect, settlement-binding deviation) for ratification.
+
 ## INTEG EXECUTION (fresh Opus 4.8 orchestrator, from c29e17a-minus-repoint) — `FABLE_CAMPAIGN_INTEG.md`
 
 - **Tooling:** installed the SQLite CLI (winget `SQLite.SQLite` 3.53.3) for scratch-DB

@@ -30,9 +30,10 @@ hand-rolled left-nav. Highest financial hot-zone (GL, journal, VAT, trial balanc
 
 ## Hot-zone / INTEG ledger (10 mutations, all named)
 CreateAccount · UpdateAccount · CreateJournalEntry · SyncCashflowEvidenceProposalReviews ·
-ReviewCashflowEvidenceProposal · ExportCashflowEvidencePack · ExportBalanceSheetCSV ·
-ExportGeneralLedgerCSV · ExportJournalCSV · ExportVATReturnData — each throws
-`INTEG gap: <Binding> — wires at K5`. Mocks are fully interactive so flows are exercisable in the lab.
+ReviewCashflowEvidenceProposal · SyncCashflowEvidenceProposalReviews (G3) · ExportCashflowEvidencePack ·
+ExportBalanceSheetCSV · ExportGeneralLedgerCSV · ExportJournalCSV · ExportVATReturnData — all WIRED
+(G3/G4): the 5 exports return the on-disk path (artifact-proven Go tests) and the sync reconciles the
+review worklist (never posts). Mocks remain as the lab feature.
 FETCH wired real (8/8): GetChartOfAccounts('All'), GetJournalEntries(year,0,null,100),
 GetPostingCoverageReport(), GetTrialBalanceGate(year,0), GetCashflowEvidenceCommandCenter(30),
 ListCashflowEvidenceProposalReviews(30,false), GenerateProfitAndLoss(year), GenerateBalanceSheet(year).

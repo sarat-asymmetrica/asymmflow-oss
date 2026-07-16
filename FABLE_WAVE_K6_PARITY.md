@@ -7,6 +7,17 @@ is **untouched**, no `wails build` has been triggered, and nothing has been push
 app (`frontend-lab/`) reaches parity with the legacy `frontend/`, and to see exactly
 what real-binding wiring (INTEG) remains before graduation.
 
+> ### ★ GAP-CLOSE COMPLETE (2026-07-16) — every real binding is WIRED. `INTEG gap:` count = **0**.
+> The INTEG → Residue → Gap-Close campaigns drove ~160 honest `INTEG gap:` throws to **zero**. Every
+> `mock (INTEG)` mutation cell below is now backed by a real, Go-proven (or artifact-proven) binding
+> — or the affordance was retired by owner ruling. The gap count is pinned mechanically by
+> `frontend-lab/tests/gap-count-zero.test.ts`. The only things left before the K6 flip are the owner's
+> human smoke pass and the parked R6 bundle-split decision. Two decisions are surfaced for owner
+> ratification: the settlement-binding deviation (`CreateCustomerReceipt` vs the ruling's literal
+> `ApplyCustomerReceiptToInvoice`) and the butler costing-sheet "update status" redirect (its Go
+> handler omits `Status`, so wiring it would be a pretend-persist). The per-screen `INTEG-pending`
+> cells below are retained as the historical wiring ledger; treat this banner as the live truth.
+
 This document consolidates the ~42 per-screen parity ledgers under
 `frontend-lab/src/screens/parity/*.md` (+ `frontend-lab/PARITY_INVOICES.md`) plus the
 composition notes in `FABLE_KERNEL_CAMPAIGN_LOG.md` into a single sign-off table. Each
@@ -67,9 +78,9 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | RFQs · `rfqs` | RFQScreen | Ledger | ✅ | real | **wired** | ✅ `UpdateRFQStatus` (writes the col the row reads) + `DeleteRFQ` (I3); `dueDate` phantom noted | ☑ |
 | Offers · `offers` | OffersScreen | Ledger | ✅ | real | read-only | `GenerateOfferPDF`/`OpenExportedFile` (PDF); Won/Lost + create ledgered | ☐ |
 | Opportunities · `opportunities` | OpportunitiesScreen | Ledger | ✅ | **real** | **wired** | ✅ read merge (I2) + `CreateRFQWithReference`+`DeleteRFQ`/`DeleteOpportunity`(by source)+`DeleteRFQWithCascade` 🔥 (I3; cascade Go test deferred) | ☑ |
-| Pricing · `pricing` | PricingScreen | Bespoke | ✅ | real* | `SimulateMargin` wired | `fetchPricingCustomers` (no real customer/win-rate endpoint yet) | ☐ |
+| Pricing · `pricing` | PricingScreen | Bespoke | ✅ | real* | `SimulateMargin` wired | ✅ `fetchPricingCustomers` WIRED (G1.4) — new read-only `GetCustomerWinRates` Go aggregation over real offer Won/Lost history (the old screen HARDCODED this list); regime derived from real win-rate | ☐ |
 | Customer 360 · `customer-360` | Customer360 | Bespoke | ✅ | **real** | read-only | ✅ `GetCustomer360`+`GetCustomer360Graph` — view RESHAPED to backend (owner ruling): dropped mock-invented contact/TRN/credit/regime; connections derived from the graph | ☑ |
-| Costing Sheet · `costing-sheet` | CostingSheet (3026 L) | Bespoke | ✅ | real | **wired** | ✅ `CreateCostingSheet`+`Clone…`+`SetActiveCostingRevision` (I3) + `SaveCostingAsOffer` 🔥 (R1.1; VM assembles flat CostingExportData w/ calcLine-computed lines, create path, integ_costing_hotzone_test.go); still gapped: `UpdateCostingSheet` (struct-arg), PDF/Excel export (side-effecting), in-place offer overwrite (needs offer UUID) | ☐ |
+| Costing Sheet · `costing-sheet` | CostingSheet (3026 L) | Bespoke | ✅ | real | **wired** | ✅ `CreateCostingSheet`+`Clone…`+`SetActiveCostingRevision` (I3) + `SaveCostingAsOffer` 🔥 (R1.1; VM assembles flat CostingExportData w/ calcLine-computed lines, create path, integ_costing_hotzone_test.go); ✅ `UpdateCostingSheet` WIRED (G2, full struct assembled from the VM's authoritative totals) + PDF/Excel export WIRED + artifact-proven (G4, flat CostingExportData); in-place offer overwrite (needs offer UUID) remains DEFER | ☐ |
 | Sales Hub · `sales-hub` | SalesHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes Opportunities/Costing/Offers/Orders (see those rows). `SalesAdminTools` tab DEFER | ☐ |
 | Relationships Hub · `crm-hub` | CRMHub | Bespoke (TabShell) | ✅ | composition | composition | none new — composes crm-customer/crm-supplier/data-quality | ☐ |
 
@@ -78,7 +89,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
 | Finance Overview · `finance-overview` | FinancialDashboard | Hub | ✅ | **real** | read-only | ✅ `GetFinancialDashboardForYear` (I2); `GetCashPosition` already wired (bank-recon), no separate overlay consumer; CCC formula box (SLOT) | ☑ |
-| Invoices · `invoices` | InvoicesScreen (2930 L) | Ledger | ✅ | real | **wired** (send/delete) | ✅ `SendCustomerInvoice` (R5; Draft→Sent, confirm, send_invoice_guard_test.go); `markInvoicePaid` gapped (settlement = customer receipts, architectural); `GenerateInvoicePDF` (side-effecting) + proforma (no binding)/edit/credit-override slots 🔥 | ☐ |
+| Invoices · `invoices` | InvoicesScreen (2930 L) | Ledger | ✅ | real | **wired** (send/delete) | ✅ `SendCustomerInvoice` (R5; Draft→Sent, confirm, send_invoice_guard_test.go); ✅ settlement WIRED (G1.2) as a receipt-capture modal (`CreateCustomerReceipt` invoice-bound — real Payment+allocation, no status flip); standalone create RETIRED (G1.3, raised from Orders); `GenerateInvoicePDF` + proforma/edit/credit-override slots remain SLOT/DEFER (not INTEG throws) 🔥 | ☐ |
 | Payments · `payments` | PaymentsScreen | Ledger | ✅ | real | **wired** | ✅ `ReverseCustomerReceipt` 🔥 (I3; server-gated + audit, receipt_reversal_test.go); `GetAllPayments` History panel deferred (ENGINE) | ☑ |
 | Credit Notes · `credit-notes` | CreditNotes (in Invoices) | Ledger | ✅ | real | **wired** (apply) | ✅ `ApplyCreditNote` 🔥 (I3; reduces AR + auto-Paid + guards, integ_ar_hotzone_test.go); still gapped: `GenerateCreditNotePDF`, Issue form (SLOT) | ☐ |
 | Supplier Invoices · `supplier-invoices` | SupplierInvoicesScreen | Ledger | ✅ | real | **wired** | ✅ `PerformThreeWayMatch`+`ApproveSupplierInvoice`(SoD)+`MarkSupplierInvoicePaid` 🔥 (I3; supplier_ap_gate_test.go) now CONSUMED as descriptor actions (R1.2: 3-way-match/approve/mark-paid w/ confirm+capture form); `CreateSupplierInvoice` gapped (struct-arg) | ☑ |
@@ -88,7 +99,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | AHS Division Finance · `ahs-finance` | AHSDashboard | Hub | ✅ | **real** | read-only | ✅ `GetFinancialDashboardByDivision` with division resolved from registry (`dashboardVariant==='ahs'`, I1.2/I2) | ☑ |
 | FX Revaluation · `fx-revaluation` | FXRevaluationScreen | Ledger | ✅ | real | **wired** | ✅ `PostFXRevaluation`+`ReverseRevaluation` 🔥 (I3; actor from session; fx_revaluation_golden_test.go); Exposure/Rates tabs (ENGINE) | ☑ |
 | Book vs Bank Recon · `book-bank-recon` | BookBankReconciliationScreen | Bespoke | ✅ | **real** | **wired** (finalize) | ✅ `FinalizeBookBankReconciliation` 🔥 (I3 + R2 Go test) + recon-history/deposits/cheques reads wired (R3; record-own-totals, not live pending); Create/Update forms deferred | ☑ |
-| Accounting · `accounting` | AccountingScreen (2098 L) | Bespoke | ✅ | real (8 fetches) | **wired** | ✅ `CreateAccount`+`CreateJournalEntry` 🔥 (I3, integ_accounting_hotzone_test.go)+`ReviewCashflowEvidenceProposal`+`UpdateAccount` (R3; verified whitelist, drops posting-owned balance, integ_residue_r3_test.go); gapped: 5× CSV/VAT export (side-effecting) + Sync proposal reviews | ☐ |
+| Accounting · `accounting` | AccountingScreen (2098 L) | Bespoke | ✅ | real (8 fetches) | **wired** | ✅ `CreateAccount`+`CreateJournalEntry` 🔥 (I3, integ_accounting_hotzone_test.go)+`ReviewCashflowEvidenceProposal`+`UpdateAccount` (R3; verified whitelist, drops posting-owned balance, integ_residue_r3_test.go); ✅ 5× CSV/VAT/evidence export WIRED + artifact-proven (G4) + `SyncCashflowEvidenceProposalReviews` WIRED (G3, review sync never posts) | ☐ |
 | Bank Reconciliation · `bank-reconciliation` | BankReconciliationScreen (2140 L) | Bespoke | ✅ | real (10 fetches) | **wired** | ✅ `FinalizeReconciliation`+`DeleteBankStatement` 🔥 (I3; integ_recon_hotzone_test.go)+`AutoMatch`+`ManualMatch`+`SplitAlloc`+`Unmatch`+two-phase import+line delete + `UpdateBankStatement`+`Create/UpdateBankStatementLine` (R3; verified whitelists, existing bank_reconciliation_service_test.go) | ☑ |
 | Finance Hub · `finance-hub` | FinanceHub (13 tabs) | Bespoke (TabShell) | ✅ | composition | composition | none new — composes overview + 11 finance screens (see those rows). Division selector DEFER | ☐ |
 
@@ -110,7 +121,7 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 
 | Screen · `key` | Old screen | Type | Migr. | Read data | Mutations | INTEG-pending (real bindings) | ☐ |
 |---|---|---|---|---|---|---|---|
-| Payroll · `payroll` | PayrollScreen (1167 L) | Bespoke | ✅ | real (6 fetches) | **wired** | ✅ `GeneratePayrollRun`+`Approve`+`Post` 🔥+`MarkPaid`+`CreatePayrollPeriod` (I3; payroll_golden_test.go); still gapped: `UpsertEmployeeCompensationProfile` (PII), employee picker (cross-domain) | ☐ |
+| Payroll · `payroll` | PayrollScreen (1167 L) | Bespoke | ✅ | real (6 fetches) | **wired** | ✅ `GeneratePayrollRun`+`Approve`+`Post` 🔥+`MarkPaid`+`CreatePayrollPeriod` (I3; payroll_golden_test.go); ✅ `UpsertEmployeeCompensationProfile` WIRED (G2, financial+PII, Go-proven) + employee picker WIRED (`ListEmployeeProfiles`, cross-domain read) | ☐ |
 | People · `people` | PeopleHub (1879 L, PII) | Bespoke (TabShell) | ✅ | real (10 fetches) | **wired** | ✅ all 13 PII/credential mutations (R3; no secret leakage, `actingUserId()` for GenerateLicenseKey, field-encrypted doc numbers sent plaintext; type-gate + existing employee/archive tests) 🔥 | ☑ |
 
 ### System
@@ -121,12 +132,12 @@ many screens) · `SLOT` (needs an L4 ejection component) · `INTEG` (needs real 
 | Approvals Queue · `approvals` | ApprovalsQueueScreen | Ledger | ✅ | **real** | **wired** | ✅ fetch (I2) + `ReviewDeleteApprovalRequest`/`ReviewEmployeeArchiveRequest` 🔥 both kinds (I3; server-derived reviewer; existing app_test/employee_archive_service_test cover) | ☑ |
 | Audit Trail · `audit-trail` | AuditTrailViewer | Ledger | ✅ | **real** | **wired** | ✅ read chain (I2) + `ReverseAction` 🔥 (I3; actor from session, never trusted from row) | ☑ |
 | Data Quality · `data-quality` | DataQualityScreen | Ledger | ✅ | real (preview real) | **wired** | ✅ `ReviewDataQualityIssue` (I3; admin-gated server-side); review-history panel (ENGINE) | ☑ |
-| Notifications · `notifications` | NotificationsScreen | Bespoke | ✅ | **real** | **wired** (fetch/read) | ✅ `ListNotificationFeed`+`MarkNotificationAsRead` (I2); ⚠️ reviews GAPPED — need `source_id`→request-id mapper (reviews fully available via Approvals Queue); live-push DEFER | ☐ |
+| Notifications · `notifications` | NotificationsScreen | Bespoke | ✅ | **real** | **wired** (fetch/read) | ✅ `ListNotificationFeed`+`MarkNotificationAsRead` (I2); ✅ reviews WIRED (G3) — `sourceId` enrichment → `ReviewDeleteApprovalRequest`/`ReviewEmployeeArchiveRequest` by kind (server-derived reviewer); live-push DEFER | ☐ |
 | Bank Accounts · `bank-accounts` | SettingsScreen (split) | Ledger | ✅ | real | **wired** | ✅ `DeleteBankAccount`+`CreateBankAccount`+`UpdateBankAccount` 🔥 (R1.4; PLAINTEXT contract — IBAN/SWIFT stored plaintext by design, encryption was removed & migration strips it; integ_bank_account_hotzone_test.go asserts roundtrip) | ☑ |
 | Currency Rates · `currency-rates` | SettingsScreen (split) | Ledger | ✅ | real | **wired** | ~~`SetExchangeRate`~~ ✅ wired via kernel `map.goTime` date→time.Time bridge (I1.3); Go round-trip + persistence test green | ☑ |
-| Business Settings · `business-settings` | SettingsScreen (split) | Bespoke | ✅ | **real** (keys fixed R3) | **wired** (AI key) | ✅ AI-provider key (R4): `SetAPIKeys` encrypt-at-rest write + new `GetAIProviderKeyStatus` DB-backed masked read (round-trips; GetSettings reads a different store) 🔥, integ_residue_r4_test.go; `UpdateSettings` DELIBERATELY GAPPED (full-overwrite would wipe apiKeys/folders — needs merge-safe path); fetch-side `mapSettings` fixed to real keys (R3) | ☐ |
-| Butler · `butler` | ButlerScreen (2960 L) | Bespoke | ✅ | real (chat) | **wired** (partial) | ✅ `ChatWithButlerPersistent`+`DeleteConversation`+`PurgeAllConversations` (R3); ⚠️ `executeButlerAction` DELIBERATELY GAPPED — AI-authority boundary (seam passes binding name only, payload dropped; wiring needs a human-confirm gate per target) | ☐ |
-| Deployment · `deployment` | DeploymentHub (1093 L) | Bespoke (TabShell) | ✅ | real (7 fetches) | **wired** (partial) | ✅ `UpdatePilotDeploymentChecklistItem`+`TriggerCollaborativeSyncNow`+`RetryCollaborativePendingOperations/Operation` 🔥+`ReassignEmployeeLicenseAccess`+`UpdateLicenseDisplayName` (R3); gapped: export bundle/signoff (side-effecting disk writes) | ☐ |
+| Business Settings · `business-settings` | SettingsScreen (split) | Bespoke | ✅ | **real** (keys fixed R3) | **wired** (AI key) | ✅ AI-provider key (R4): `SetAPIKeys` encrypt-at-rest write + new `GetAIProviderKeyStatus` DB-backed masked read (round-trips; GetSettings reads a different store) 🔥, integ_residue_r4_test.go; ✅ `UpdateSettings` WIRED (G3) via fetch-merge-write — round-trips the full GetSettings object, overlays only the 5 owned fields, preserves apiKeys/folders/language/theme; fetch-side `mapSettings` fixed to real keys (R3) | ☐ |
+| Butler · `butler` | ButlerScreen (2960 L) | Bespoke | ✅ | real (chat) | **wired** (partial) | ✅ `ChatWithButlerPersistent`+`DeleteConversation`+`PurgeAllConversations` (R3); ✅ write-action SPLIT (G1.1): 19 draft/update bindings WIRED (human arms+confirms = the actor), 4 approve-class RETIRED to the Approvals Queue with a 15-case vitest boundary tripwire | ☐ |
+| Deployment · `deployment` | DeploymentHub (1093 L) | Bespoke (TabShell) | ✅ | real (7 fetches) | **wired** (partial) | ✅ `UpdatePilotDeploymentChecklistItem`+`TriggerCollaborativeSyncNow`+`RetryCollaborativePendingOperations/Operation` 🔥+`ReassignEmployeeLicenseAccess`+`UpdateLicenseDisplayName` (R3); ✅ export bundle/signoff WIRED + artifact-proven (G4) | ☐ |
 | OneDrive Import · `onedrive-import` | (unrouted Go service) | Bespoke (Wizard) | ✅ | **real** | **wired** | ✅ `DetectOneDrivePath`+`ValidateOneDrivePath`+`ScanOneDrivePaths`+`ImportOneDriveDeals` 🔥 (I3; server skips deals w/o confirmed customer → slip degrades to skip/error, never a wrong offer) | ☑ |
 
 ### Reports
@@ -154,32 +165,33 @@ flip sign-off is explicit that they are gone by design, not lost in migration.
 | Supplier/User "Pending" status tab | old Suppliers/Users | No backing field server-side (`\|\| 'Active'` fallback) | FIX → honest 2-state from `is_active` |
 | `EcosystemDashboard` | non-Wails dev/research tool | Edge-tab scraping local runtime, never an end-user screen | NOT MIGRATED (dev tool, out of scope) |
 | localStorage draft autosave / sessionStorage cross-screen handoffs | Costing/Work/PO/etc. | Cross-screen handoff pattern replaced by the nav store | DEFER/DROP per screen |
+| Standalone invoice-create (+New Invoice form) | Invoices screen | Invoices are raised from an order (`CreateInvoiceWithOptions`), never conjured standalone | RETIRE (owner ruling G1.3) → Orders |
+| Butler approve-class actions (`ApprovePurchaseOrder`, `ApproveStockAdjustment`, `ApproveSupplierInvoice`, `ApproveCostingSheet`) | Butler action vocabulary | AI-authority boundary — the agent never puts an approval one click away | RETIRE (owner ruling G1.1) → butler replies pointing at the Approvals Queue; mechanically tripwired |
 
 ---
 
-## Consolidated INTEG roster (feeds Task #4 — **owner-gated**)
+## Consolidated INTEG roster — ✅ CLOSED (`INTEG gap:` 0)
 
-Every real binding still throwing `INTEG gap: …` today, grouped by risk. This is the
-wiring backlog for the sovereign-mesh / owner's **local Postgres** runtime — **not** the
-legacy DuckDNS-Postgres and **not** the live PH SQLite at `%APPDATA%\Roaming\AsymmFlow`.
-Per the handoff, INTEG does not start until the owner confirms the Postgres/runtime env.
+This was the wiring backlog. It is now **fully closed** across the INTEG, Residue, and Gap-Close
+campaigns — every binding listed here is wired-and-verified (or the affordance was retired by owner
+ruling). The bridge throws ZERO `INTEG gap:` today, pinned by `tests/gap-count-zero.test.ts`.
 
-- **🔥 Financial / irreversible hot-zones (wire last, with tests):** invoice send/PDF +
-  edit/proforma/credit-override; `ReverseCustomerReceipt`; `ApplyCreditNote`; supplier-invoice
+- **🔥 Financial / irreversible hot-zones** — ALL wired + Go-proven: invoice send + settlement
+  (receipt capture, G1.2); `ReverseCustomerReceipt`; `ApplyCreditNote`; supplier-invoice
   3-way-match/approve/pay; `DeleteSupplierPayment`; `PostFXRevaluation`/`ReverseRevaluation`;
-  `FinalizeBookBankReconciliation`; `FinalizeReconciliation`/`DeleteBankStatement`;
-  `CreateJournalEntry`; PO Receive Items; GRN Receive/Complete; payroll generate/approve/post;
-  `SaveCostingAsOffer`; `DeleteRFQWithCascade`; `ImportOneDriveDeals`; delete-approval reviews.
-- **Reads still on mock (straight `pick()` swap, low risk):** dashboards (main = `GetDashboardStats`
-  + pipeline + AR-aging YTD; CRM customer/supplier; AHS-by-division; finance-overview `GetFinancialDashboardForYear`),
-  Opportunities 2-source fetch, `GetCustomer360`,
-  Serial Trace searches, Audit Trail chain, Approvals/Notifications fetches.
-- **Secondary-fetch depth (blank-till-wired today):** `GetCustomerFullProfile`,
-  `GetSupplierFullProfile`, `GetCashPosition` (live-cash overlay).
-- **Cross-cutting prerequisites (build once, unblocks many):** app-shell **session/currentUser**
-  store (BankRecon uses placeholder `actor='lab-user'`); **divisions registry** store
-  (`GetDivisionRegistry`) for AHS + payment/invoice division scoping; a real **date→`time.Time`**
-  form bridge (`SetExchangeRate`); a secrets-storage decision for AI provider keys (Settings DEFER).
+  `FinalizeBookBankReconciliation`; `FinalizeReconciliation`/`DeleteBankStatement`; `CreateJournalEntry`;
+  PO Receive Items; GRN Receive/Complete; payroll generate/approve/post + `UpsertEmployeeCompensationProfile`
+  (G2); `SaveCostingAsOffer` + `UpdateCostingSheet` (G2); `DeleteRFQWithCascade` (RFQ-only, descriptor-gated,
+  G3); `ImportOneDriveDeals`; delete/archive-approval reviews (Approvals Queue + Notifications cards, G3);
+  the 4 butler approve-class bindings RETIRED (G1.1).
+- **Reads** — all real: dashboards (main/CRM/AHS/finance-overview), Opportunities 2-source, `GetCustomer360`,
+  Serial Trace, Audit Trail, Approvals/Notifications, pricing win-rate (`GetCustomerWinRates`, G1.4).
+- **Secondary-fetch depth** — wired: `GetCustomerFullProfile` / `GetSupplierFullProfile` (profile.enrich),
+  `GetCashPosition`. (List mappers honestly blank profile-depth fields until the profile opens — not a gap.)
+- **Cross-cutting prerequisites** — all built: session/currentUser store (`actingUserId`), divisions registry,
+  date→`time.Time` form bridge (`map.goTime`), AI-provider key encrypted-at-rest (`SetAPIKeys` + masked read).
+- **Exports (G4)** — all 10 wired + artifact-proven (5 CSV/VAT/evidence, 3 costing, 2 pilot bundles).
+- **Settings** — `UpdateSettings` wired via fetch-merge-write (G3).
 
 ---
 
