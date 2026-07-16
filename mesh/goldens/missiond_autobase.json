@@ -1,0 +1,45 @@
+{
+  "viewLength": 9,
+  "viewDigest": "7a3ba4bf60332e72e26cd69aaba359e561b5e83df76b99ea0793cc721b5d4d13",
+  "stateDigest": "06d37b35844e50850f40336a6d19f7fef3179bc596a225c9a911d424a44e129e",
+  "state": {
+    "stock": {
+      "TX-100": 13
+    },
+    "ar": {},
+    "approvals": {},
+    "policies": {},
+    "rejected": [
+      {
+        "seq": 4,
+        "actor": "rogue",
+        "sku": "TX-100",
+        "delta": -3,
+        "reason": "capability: no grant for device d404bc44…"
+      },
+      {
+        "seq": 5,
+        "actor": "rogue",
+        "kind": "cap.grant",
+        "reason": "capability: grants must be signed by the mesh authority (got device d404bc44…)"
+      },
+      {
+        "seq": 7,
+        "actor": "laptop",
+        "sku": "TX-100",
+        "delta": -4,
+        "reason": "capability: grant epoch 0 is stale (current epoch 1) — device 55154f42… was not re-issued"
+      }
+    ],
+    "applied": 6,
+    "digest": "06d37b35844e50850f40336a6d19f7fef3179bc596a225c9a911d424a44e129e",
+    "opsHashed": 9,
+    "capEpoch": 1,
+    "grants": {
+      "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207": {
+        "role": "writer",
+        "epoch": 1
+      }
+    }
+  }
+}

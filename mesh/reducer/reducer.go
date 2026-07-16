@@ -76,6 +76,16 @@ type Op struct {
 	ActorType     string `json:"actorType,omitempty"` // actor.Type token of the acting actor
 	Authority     int    `json:"authority,omitempty"` // actor.Authority level claimed
 	PolicyID      string `json:"policyId,omitempty"`
+
+	// cap.grant / cap.epoch / cap.revoke (Mission D — capability.go)
+	Device string `json:"device,omitempty"` // grantee device public key (hex)
+	Role   string `json:"role,omitempty"`   // granted role; "" defaults to "writer"
+	Epoch  int64  `json:"epoch,omitempty"`  // grant/bump epoch
+
+	// Capability envelope (every op, when enforcement is on): the signing
+	// device's public key + Ed25519 signature over sha256(signable(op)).
+	DevicePub string `json:"devicePub,omitempty"`
+	Sig       string `json:"sig,omitempty"`
 }
 
 // Rejection records an op an invariant refused, so the UX can surface a typed
@@ -130,6 +140,11 @@ type State struct {
 	Applied   int                      `json:"applied"`
 	Digest    string                   `json:"digest"`
 	OpsHashed int                      `json:"opsHashed"`
+
+	// Capability plane (Mission D). Grants is non-nil ONLY when enforcement is
+	// on (Config.AuthorityPub set) — legacy digests stay byte-stable (MESH-D12).
+	CapEpoch int64                 `json:"capEpoch,omitempty"`
+	Grants   map[string]GrantState `json:"grants,omitempty"`
 }
 
 // canonicalLess is the total order Autobase-style linearization must agree on.
@@ -157,19 +172,32 @@ func canonicalLess(a, b Op) bool {
 	if a.PolicyID != b.PolicyID {
 		return a.PolicyID < b.PolicyID
 	}
+	if a.Device != b.Device {
+		return a.Device < b.Device
+	}
 	return a.TS < b.TS
 }
 
 // Apply replays ops through the kernel invariants and returns the converged
 // State. It is a pure function of its input, with no I/O, clock, or randomness.
 // In the mesh this is the Autobase apply() reducer (compiled to wasip1); on the
-// host it is an ordinary testable function.
+// host it is an ordinary testable function. Legacy entrypoint: capability
+// enforcement OFF (Missions A+C behavior, goldens byte-stable).
 func Apply(ops []Op) State {
+	return ApplyWithConfig(Config{}, ops)
+}
+
+// ApplyWithConfig is Apply plus the Mission D capability plane: when
+// cfg.AuthorityPub is set, every op must be Ed25519-signed and its device must
+// hold a current-epoch grant (see capability.go). cfg is mesh-genesis DATA, so
+// the fold stays a pure function of (cfg, ops).
+func ApplyWithConfig(cfg Config, ops []Op) State {
 	// 1. Canonicalize the order (landmine #4). Copy first — never mutate input.
 	sorted := make([]Op, len(ops))
 	copy(sorted, ops)
 	sort.SliceStable(sorted, func(i, j int) bool { return canonicalLess(sorted[i], sorted[j]) })
 
+	enforce := cfg.AuthorityPub != ""
 	st := State{
 		Stock:     make(map[string]int64),
 		AR:        make(map[string]ARAccount),
@@ -177,22 +205,33 @@ func Apply(ops []Op) State {
 		Policies:  make(map[string]PolicyState),
 		Rejected:  make([]Rejection, 0),
 	}
+	if enforce {
+		st.Grants = make(map[string]GrantState)
+	}
 
 	// 2. Fold. Each domain enforces its kernel invariant; a refused op is
 	//    recorded deterministically, never silently dropped or half-applied.
 	for _, op := range sorted {
 		var reason string
-		switch op.Kind {
-		case "", "inventory.move":
-			reason = applyInventory(&st, op)
-		case "ar.limit", "ar.charge", "ar.payment":
-			reason = applyAR(&st, op)
-		case "approval.decide":
-			reason = applyApproval(&st, op)
-		case "policy.violation", "policy.override":
-			reason = applyPolicy(&st, op)
-		default:
-			reason = "unknown op kind " + strconv.Quote(op.Kind)
+		handled := false
+		if enforce {
+			handled, reason = checkCapability(&st, cfg, op)
+		}
+		if !handled && reason == "" {
+			switch op.Kind {
+			case "", "inventory.move":
+				reason = applyInventory(&st, op)
+			case "ar.limit", "ar.charge", "ar.payment":
+				reason = applyAR(&st, op)
+			case "approval.decide":
+				reason = applyApproval(&st, op)
+			case "policy.violation", "policy.override":
+				reason = applyPolicy(&st, op)
+			case "cap.grant", "cap.epoch", "cap.revoke":
+				reason = "capability op in a mesh with no authority configured"
+			default:
+				reason = "unknown op kind " + strconv.Quote(op.Kind)
+			}
 		}
 		if reason != "" {
 			st.Rejected = append(st.Rejected, Rejection{
@@ -252,6 +291,10 @@ func digest(st State) string {
 		PolicyID string      `json:"policyId"`
 		State    PolicyState `json:"state"`
 	}
+	type grantKV struct {
+		Device string     `json:"device"`
+		Grant  GrantState `json:"grant"`
+	}
 	proj := struct {
 		Stock     []skuKV     `json:"stock"`
 		AR        []arKV      `json:"ar"`
@@ -259,6 +302,10 @@ func digest(st State) string {
 		Policies  []polKV     `json:"policies"`
 		Rejected  []Rejection `json:"rejected"`
 		Applied   int         `json:"applied"`
+		// Capability plane: appended ONLY when enforcement is on, so
+		// legacy (no-authority) digests stay byte-stable (MESH-D12).
+		CapEpoch int64     `json:"capEpoch,omitempty"`
+		Grants   []grantKV `json:"grants,omitempty"`
 	}{
 		Stock:     make([]skuKV, 0, len(st.Stock)),
 		AR:        make([]arKV, 0, len(st.AR)),
@@ -278,6 +325,13 @@ func digest(st State) string {
 	}
 	for _, k := range sortedKeys(st.Policies) {
 		proj.Policies = append(proj.Policies, polKV{PolicyID: k, State: st.Policies[k]})
+	}
+	if st.Grants != nil {
+		proj.CapEpoch = st.CapEpoch
+		proj.Grants = make([]grantKV, 0, len(st.Grants))
+		for _, k := range sortedKeys(st.Grants) {
+			proj.Grants = append(proj.Grants, grantKV{Device: k, Grant: st.Grants[k]})
+		}
 	}
 	b, _ := json.Marshal(proj)
 	sum := sha256.Sum256(b)

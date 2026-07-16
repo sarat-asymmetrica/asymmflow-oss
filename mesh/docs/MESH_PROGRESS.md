@@ -128,14 +128,49 @@ wasm) and proven through the real Autobase machinery:
   Wave-0/1 STATE goldens regenerated (MESH-D9). The Wave-1 VIEW digest was
   untouched (`5962c1f9…`) — the op log didn't change, only the projection.
 
-## Wave 3+ — Missions D/E/F (next)
+## Wave 3 — MISSION D, grants-with-epochs (2026-07-16) · ✅ GREEN
 
-- **D** — Ed25519 grant-with-epochs capability layer above the Holesail pipe
-  (transport-auth ≠ capability-auth; transport half already proven in Wave 1).
+The capability layer now sits ABOVE the pipe, enforced INSIDE the reducer
+(MESH-D11..D13). `npm run missiond` is the gate.
+
+- **`mesh/reducer/capability.go`** — every op carries `devicePub` + an Ed25519
+  signature over sha256 of a version-prefixed NETSTRING payload (byte-identical
+  builder mirrored in `mesh/host/capability.mjs`; JSON deliberately avoided).
+  Grant plane = three op kinds folded by the same reducer: `cap.grant`
+  (authority-signed, role + epoch), `cap.epoch` (strictly-increasing bump =
+  revocation wave; grants not re-issued go STALE), `cap.revoke` (targeted).
+  Enforcement is opt-in via `Config.AuthorityPub` (mesh-genesis data);
+  **zero legacy goldens moved** — smoke/wave1/missionc passed unchanged.
+- **`mesh/host/capability.mjs`** — device keypairs (libsodium via
+  hypercore-crypto), `signOp`/`grantOp`/`epochOp`/`revokeOp`. Same seeds →
+  same keys as Go `ed25519.NewKeyFromSeed` (RFC 8032), cross-proven by the gate.
+- **Gate (`missiond-mesh.mjs`)**: 3 peers, ALL in the Autobase writer set,
+  genuine offline fork. THE campaign sentence proven mechanically:
+  **the pipe still opens — the rogue peer replicates the full converged view —
+  while its ops are rejected on every peer** ("no grant for device"). Its
+  self-grant dies too (not authority-signed). The laptop peer is granted at
+  epoch 0, revoked by the epoch-1 bump mid-fork, re-granted at epoch 1: its
+  stale-epoch op is rejected identically everywhere, its re-granted op lands.
+  Byte-identical views + state, goldened (`goldens/missiond_autobase.json`,
+  reproducible across runs).
+- **Tests (`missiond_test.go`)**: grant/epoch lifecycle, unsigned + forged-key +
+  tampered-payload ops rejected, epoch replay/rollback refused, targeted revoke,
+  kernel-law-still-holds-above-capability (a granted device cannot smuggle an
+  agent approval), legacy-mode byte-stability, 500-permutation convergence,
+  input immutability.
+- **Determinism ruling (MESH-D13):** grant validity is evaluated at the op's
+  position in the CANONICAL order — revocation is never retroactive; whether an
+  op beats a revocation has exactly one answer on every peer.
+
+## Wave 4+ — Mission E + finale (next)
+
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).
-- **F** — this mirror + `MESH_DECISIONS.md`, kept honest per wave.
+- **2-physical-box ceremony** — unchanged commands (`npm run wave1:host` /
+  `wave1:join`); first target machine = the owner's household laptop, then the
+  PH office machine. A signed-op (Mission D) variant of the peer REPL is a
+  small residue item if the ceremony should exercise capability enforcement too.
 - The `//go:wasmexport` incremental reactor (per MESH-D6) when marshalling
-  volume warrants it; candidate alongside Mission D.
+  volume warrants it.
 
 ---
 

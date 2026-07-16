@@ -39,12 +39,15 @@ function isOp(v) {
 }
 
 /**
- * createMeshNode({ storage, bootstrap, primaryKey }) -> MeshNode
- *   storage    — corestore storage dir (or RAM factory)
- *   bootstrap  — the autobase key (hex string or Buffer) to join; null to found a new base
- *   primaryKey — optional 32-byte Buffer for deterministic core keys (goldenable runs)
+ * createMeshNode({ storage, bootstrap, primaryKey, authorityPub }) -> MeshNode
+ *   storage      — corestore storage dir (or RAM factory)
+ *   bootstrap    — the autobase key (hex string or Buffer) to join; null to found a new base
+ *   primaryKey   — optional 32-byte Buffer for deterministic core keys (goldenable runs)
+ *   authorityPub — optional hex Ed25519 mesh-authority key: turns ON Mission D
+ *                  capability enforcement in the reducer (signed ops + grants).
+ *                  Mesh-genesis data, distributed like the bootstrap key.
  */
-export async function createMeshNode({ storage, bootstrap = null, primaryKey } = {}) {
+export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub } = {}) {
   // unsafe:true only acknowledges the PINNED primaryKey (test determinism);
   // production nodes omit primaryKey and get random identities.
   const store = new Corestore(storage, primaryKey ? { primaryKey, unsafe: true } : {})
@@ -104,9 +107,10 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey } =
       return createHash('sha256').update(JSON.stringify(entries)).digest('hex')
     },
 
-    /** Materialized state via the Go/WASM kernel reducer. */
+    /** Materialized state via the Go/WASM kernel reducer (capability
+     * enforcement on when the node was created with authorityPub). */
     async state() {
-      return applyViaWasm(await node.ops())
+      return applyViaWasm(await node.ops(), authorityPub ? { authorityPub } : undefined)
     },
 
     /** One replication wire to another in-process node. Returns an unreplicate(). */

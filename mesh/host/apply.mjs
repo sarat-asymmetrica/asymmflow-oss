@@ -34,18 +34,20 @@ function loadModule() {
 }
 
 /**
- * applyViaWasm(ops) -> converged State object.
- * ops: [{ seq, actor, sku, delta, ts }]
- * Returns: { stock, rejected, applied, digest, opsHashed }
+ * applyViaWasm(ops, config?) -> converged State object.
+ * ops: [{ seq, actor, ts, kind?, ...domain fields }]
+ * config: { authorityPub } enables Mission D capability enforcement (signed
+ *         ops + current-epoch grants); omit for legacy (A+C) behavior.
+ * Returns: { stock, ar, approvals, policies, rejected, applied, digest, ... }
  */
-export function applyViaWasm(ops) {
+export function applyViaWasm(ops, config = undefined) {
   const mod = loadModule()
 
   const id = `${process.pid}-${_counter++}`
   const inPath = join(tmpdir(), `mesh-reducer-in-${id}.json`)
   const outPath = join(tmpdir(), `mesh-reducer-out-${id}.json`)
 
-  writeFileSync(inPath, JSON.stringify({ ops }))
+  writeFileSync(inPath, JSON.stringify(config ? { config, ops } : { ops }))
   // Pre-create the output file so we can hand WASI a writable fd for stdout.
   writeFileSync(outPath, '')
 

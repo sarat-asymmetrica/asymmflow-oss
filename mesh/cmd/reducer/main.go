@@ -27,7 +27,8 @@ import (
 )
 
 type input struct {
-	Ops []reducer.Op `json:"ops"`
+	Config reducer.Config `json:"config"` // Mission D: authorityPub enables capability enforcement
+	Ops    []reducer.Op   `json:"ops"`
 }
 
 func main() {
@@ -45,7 +46,7 @@ func main() {
 		}
 	}
 
-	state := reducer.Apply(in.Ops)
+	state := reducer.ApplyWithConfig(in.Config, in.Ops)
 
 	out, err := json.Marshal(state)
 	if err != nil {

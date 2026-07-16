@@ -1,0 +1,177 @@
+// capability.go — Mission D: the Ed25519 grant-with-epochs capability layer,
+// enforced INSIDE the reducer (kernel law), not in the host.
+//
+// Doctrine (campaign §Mission D): transport-auth ≠ capability-auth. A Holesail
+// connection key is a static, non-revocable byte pipe; Autobase's writer set is
+// the replication plane. NEITHER is the permission model. The permission model
+// is here: every op is signed by its device's Ed25519 key, and a device may
+// only mutate state while it holds a GRANT — issued by the mesh authority and
+// tied to the current grant EPOCH. Revocation = the authority bumps the epoch
+// and re-issues grants to the still-trusted; every other grant goes stale at
+// the app layer even though the old pipe still opens and the old writer still
+// replicates. The reducer folds this deterministically, so a revoked device's
+// ops are rejected byte-identically on every honest peer.
+//
+// Why signature verification is allowed in a "pure" reducer: Ed25519 verify is
+// deterministic math over op bytes — no clock, no randomness, no I/O. The four
+// determinism landmines (reducer.go header) are all respected.
+//
+// Enforcement is opt-in per mesh via Config.AuthorityPub (the owner's root
+// public key, distributed with the app config exactly like the Autobase
+// bootstrap key). With no authority configured the reducer behaves exactly as
+// Missions A+C shipped it — legacy goldens stay byte-stable (MESH-D12).
+package reducer
+
+import (
+	"crypto/ed25519"
+	"crypto/sha256"
+	"encoding/hex"
+	"strconv"
+)
+
+// Config carries mesh-wide constants that are part of the fold's law but not
+// of any single op. It is data (distributed at mesh genesis), never ambient.
+type Config struct {
+	// AuthorityPub is the hex Ed25519 public key of the mesh authority (the
+	// owner's root key). Empty = capability enforcement OFF (legacy mode).
+	AuthorityPub string `json:"authorityPub,omitempty"`
+}
+
+// GrantState is the converged capability of one device public key.
+type GrantState struct {
+	Role  string `json:"role"`
+	Epoch int64  `json:"epoch"` // the grant epoch it was issued under
+}
+
+// signable builds the canonical byte payload an op's signature covers:
+// a version tag plus every semantic field (all except Sig itself) as
+// length-prefixed netstrings in FIXED order. Netstrings — not JSON — because
+// JS and Go must produce byte-identical payloads and JSON gives neither stable
+// key order nor identical escaping across the two runtimes.
+// MIRROR: mesh/host/capability.mjs signable() must match this byte-for-byte.
+func signable(op Op) []byte {
+	fields := []string{
+		strconv.FormatInt(op.Seq, 10),
+		op.Actor,
+		strconv.FormatInt(op.TS, 10),
+		op.Kind,
+		op.SKU,
+		strconv.FormatInt(op.Delta, 10),
+		op.Customer,
+		strconv.FormatInt(op.AmountMinor, 10),
+		strconv.FormatInt(op.LimitMinor, 10),
+		op.Currency,
+		op.Subject,
+		op.SubjectType,
+		op.Decision,
+		op.Reason,
+		op.CorrelationID,
+		op.ActorType,
+		strconv.Itoa(op.Authority),
+		op.PolicyID,
+		op.Device,
+		op.Role,
+		strconv.FormatInt(op.Epoch, 10),
+		op.DevicePub,
+	}
+	buf := []byte("meshop.v1")
+	for _, f := range fields {
+		buf = append(buf, strconv.Itoa(len(f))...)
+		buf = append(buf, ':')
+		buf = append(buf, f...)
+		buf = append(buf, ',')
+	}
+	return buf
+}
+
+// verifySig checks op.Sig (hex, Ed25519 detached) over sha256(signable(op))
+// with op.DevicePub. Signing the 32-byte digest keeps the signed message tiny
+// and identical on both sides of the runtime boundary.
+func verifySig(op Op) bool {
+	pub, err := hex.DecodeString(op.DevicePub)
+	if err != nil || len(pub) != ed25519.PublicKeySize {
+		return false
+	}
+	sig, err := hex.DecodeString(op.Sig)
+	if err != nil || len(sig) != ed25519.SignatureSize {
+		return false
+	}
+	digest := sha256.Sum256(signable(op))
+	return ed25519.Verify(ed25519.PublicKey(pub), digest[:], sig)
+}
+
+func shortKey(hexKey string) string {
+	if len(hexKey) > 8 {
+		return hexKey[:8] + "…"
+	}
+	return hexKey
+}
+
+// checkCapability is the gatekeeper run before ANY op is folded when
+// enforcement is on. It returns "" when the op may proceed, else the
+// deterministic rejection reason. Grant-plane ops (cap.*) are additionally
+// applied here (they mutate the grant table / epoch, not business state).
+// Validity is evaluated at the op's position in the CANONICAL order — so
+// whether an op beats a revocation is decided by the same total order every
+// peer already agrees on, never by wall-clock or arrival time (MESH-D13).
+func checkCapability(st *State, cfg Config, op Op) (handled bool, reason string) {
+	// 1. Every op must carry a valid signature from its claimed device key.
+	if op.DevicePub == "" || op.Sig == "" {
+		return false, "capability: unsigned op (devicePub+sig required when an authority is configured)"
+	}
+	if !verifySig(op) {
+		return false, "capability: signature verification failed for device " + shortKey(op.DevicePub)
+	}
+
+	isAuthority := op.DevicePub == cfg.AuthorityPub
+
+	switch op.Kind {
+	case "cap.grant":
+		if !isAuthority {
+			return true, "capability: grants must be signed by the mesh authority (got device " + shortKey(op.DevicePub) + ")"
+		}
+		if op.Device == "" {
+			return true, "capability: grant missing device key"
+		}
+		role := op.Role
+		if role == "" {
+			role = "writer"
+		}
+		st.Grants[op.Device] = GrantState{Role: role, Epoch: op.Epoch}
+		return true, ""
+
+	case "cap.epoch":
+		if !isAuthority {
+			return true, "capability: epoch bumps must be signed by the mesh authority"
+		}
+		if op.Epoch <= st.CapEpoch {
+			return true, "capability: epoch must increase (have " +
+				strconv.FormatInt(st.CapEpoch, 10) + ", got " + strconv.FormatInt(op.Epoch, 10) + ")"
+		}
+		st.CapEpoch = op.Epoch
+		return true, ""
+
+	case "cap.revoke":
+		if !isAuthority {
+			return true, "capability: revocations must be signed by the mesh authority"
+		}
+		delete(st.Grants, op.Device)
+		return true, ""
+	}
+
+	// 2. Domain ops: the authority is implicitly granted; everyone else needs
+	//    a grant issued under the CURRENT epoch.
+	if isAuthority {
+		return false, ""
+	}
+	grant, ok := st.Grants[op.DevicePub]
+	if !ok {
+		return false, "capability: no grant for device " + shortKey(op.DevicePub)
+	}
+	if grant.Epoch != st.CapEpoch {
+		return false, "capability: grant epoch " + strconv.FormatInt(grant.Epoch, 10) +
+			" is stale (current epoch " + strconv.FormatInt(st.CapEpoch, 10) +
+			") — device " + shortKey(op.DevicePub) + " was not re-issued"
+	}
+	return false, ""
+}

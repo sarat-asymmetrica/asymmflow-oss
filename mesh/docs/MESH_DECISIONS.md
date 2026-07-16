@@ -7,6 +7,48 @@ auto-decided.
 
 ---
 
+### MESH-D13 — Grant validity is evaluated at the op's position in the CANONICAL order
+Whether an op beats a revocation is decided by the total order every peer already
+agrees on — never by wall-clock or arrival time.
+**[Mirror]** Revocation during a network partition is the nasty case: the revoked
+device keeps writing offline, and "did those writes count?" must have exactly one
+answer on every peer. Any answer keyed to receipt time diverges; the canonical
+(Seq, Actor, Kind, …) order is the only clock all peers share. Consequence worth
+saying out loud: ops folded BEFORE the epoch bump remain applied (revocation is
+not retroactive) — retroactive revocation would rewrite converged history, which
+is the one thing an append-only mesh must never do. Also decided here: `cap.epoch`
+must strictly increase (replays and rollbacks are rejected), and the authority key
+is implicitly granted (it cannot lock itself out).
+
+### MESH-D12 — Capability enforcement is opt-in via Config.AuthorityPub; legacy digests stay byte-stable
+`ApplyWithConfig(Config{AuthorityPub}, ops)`; empty config == the Missions A+C
+reducer exactly, and the digest projection appends the capability plane ONLY when
+enforcement is on.
+**[Mirror]** Mission C's schema bump (MESH-D9) forced a golden regeneration; this
+time zero goldens moved — smoke/wave1/missionc all passed unchanged against their
+pinned digests, which is itself a gate that the capability plane leaks nothing
+into legacy folds. The authority public key is mesh-genesis DATA (distributed
+like the Autobase bootstrap key), so the fold stays a pure function of
+(config, ops). Signed payload = version-prefixed NETSTRINGS, not JSON — Go and JS
+disagree on JSON key order and escaping, and the signature must cover
+byte-identical payloads in both runtimes (`capability.go signable()` ↔
+`capability.mjs signable()`, cross-proven by the missiond gate: JS signs with
+libsodium, Go/WASM verifies with crypto/ed25519, same RFC 8032 seeds → same keys).
+
+### MESH-D11 — The capability layer is enforced INSIDE the reducer (kernel law), not in the host
+Every op carries devicePub + an Ed25519 signature over sha256(signable(op));
+grants/epochs/revocations are ops folded by the same reducer.
+**[Mirror]** Mission D doctrine: transport-auth ≠ capability-auth. A Holesail key
+is a static, non-revocable byte pipe, and Autobase writer-set membership is the
+replication plane — if the HOST enforced grants, a modified host would simply
+skip the check. Enforced in the reducer, a revoked device's ops are rejected by
+every honest peer's own fold — the same "distributed law" property Mission C
+proved for the AI-authority boundary now covers WHO MAY WRITE AT ALL. Ed25519
+verification is deterministic math (no clock/rand/IO), so it is legal inside a
+pure reducer. Two independent laws now stack: capability says the DEVICE may
+write; the kernel says what the claimed ACTOR may do (a granted device still
+cannot smuggle an agent approval — TestMissionD_KernelLawStillHoldsAboveCapability).
+
 ### MESH-D10 — Mission C authority rules: deciding approved/rejected/superseded requires CanApprove; needs_input/pending requires CanPropose
 The reducer layers an explicit authority floor on top of the kernel state machine.
 **[Mirror]** `approval.NewRecord` only hard-blocks the agent-APPROVES case; a human with
