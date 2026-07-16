@@ -20,20 +20,17 @@
  *   - there is no `fiscal_year_start_month` key anywhere in GetSettings —
  *     that field has nothing real to bind to; it's mock-only until a real
  *     key exists.
- * mapSettings below is fixed to the confirmed keys. UpdateSettings stays
- * INTEG-gapped, but now for a stronger, confirmed reason: `saveUserSettings`
- * (app_setup_documents_surface.go) does a FULL FILE OVERWRITE of
- * settings.json with exactly the map it's given — no merge with what's on
- * disk. Sending this screen's narrow 5-field BusinessSettingsData as-is
- * would silently WIPE `folders`/`apiKeys` (including the Mistral/AIML keys)
- * and every other top-level key GetSettings returns. Wiring this mutation
- * safely means round-tripping the ENTIRE settings object (fetch-merge-write),
- * which is out of scope for this bridge's narrow shape — deferred to K5.
- * Synthetic-only data (SYNTHETIC_IDENTITY.md). */
+ * mapSettings below is fixed to the confirmed keys. UpdateSettings is now WIRED
+ * (G3) with the required FETCH-MERGE-WRITE: `saveUserSettings`
+ * (app_setup_documents_surface.go) does a FULL FILE OVERWRITE of settings.json
+ * with exactly the map it's given — no merge with what's on disk. So realUpdate
+ * round-trips the ENTIRE GetSettings object and overlays ONLY this screen's 5
+ * fields, leaving `folders`/`apiKeys` (incl. Mistral/AIML keys) and every other
+ * top-level key intact. Synthetic-only data (SYNTHETIC_IDENTITY.md). */
 
 import { pick } from './runtime'
 import { num, str } from './map'
-import { GetAIProviderKeyStatus, GetSettings, SetAPIKeys } from '$wails/go/main/App'
+import { GetAIProviderKeyStatus, GetSettings, SetAPIKeys, UpdateSettings } from '$wails/go/main/App'
 
 export interface BusinessSettingsData {
   companyName: string
@@ -113,12 +110,24 @@ async function realFetch(): Promise<BusinessSettingsData> {
   return mapSettings((r ?? {}) as Record<string, unknown>)
 }
 
-async function realUpdate(_data: BusinessSettingsData): Promise<void> {
-  throw new Error(
-    'INTEG gap: UpdateSettings persists via saveUserSettings, a FULL settings.json overwrite (no merge) — ' +
-      "sending this screen's narrow 5-field shape would wipe folders/apiKeys and every other top-level " +
-      'GetSettings key. Confirmed against app_setup_documents_surface.go; wires at K5 with a fetch-merge-write.',
-  )
+async function realUpdate(data: BusinessSettingsData): Promise<void> {
+  // FETCH-MERGE-WRITE (G3). saveUserSettings does a FULL settings.json overwrite,
+  // so sending this screen's narrow 5-field shape alone would wipe folders/apiKeys
+  // and every other top-level key. We round-trip the ENTIRE GetSettings object and
+  // overlay ONLY the fields this screen owns; everything else survives untouched.
+  // (GetSettings returns apiKeys MASKED; the server ignores masked keys on write,
+  // so echoing them back is a safe no-op — never a plaintext wipe.)
+  const full = ((await GetSettings()) ?? {}) as Record<string, unknown>
+  full.companyName = data.companyName
+  full.currency = data.baseCurrency
+  const business = (full.business as Record<string, unknown> | undefined) ?? {}
+  business.default_margin = data.defaultMarginPercent
+  business.vat_rate = data.vatRatePercent
+  full.business = business
+  // fiscalYearStartMonth is deliberately NOT merged: GetSettings has no such key
+  // (ledgered mock-only), so writing it would never read back — it stays a no-op
+  // in real mode rather than a phantom key. The other 4 fields persist for real.
+  await UpdateSettings(full as unknown as Parameters<typeof UpdateSettings>[0])
 }
 
 async function realFetchAIKey(): Promise<AIProviderKeyState> {

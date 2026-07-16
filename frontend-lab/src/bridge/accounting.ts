@@ -24,6 +24,7 @@ import {
   UpdateAccount,
   CreateJournalEntry,
   ReviewCashflowEvidenceProposal,
+  SyncCashflowEvidenceProposalReviews,
 } from '$wails/go/main/FinanceService'
 
 /* ---- types (camelCase mirrors of the Go models named in BUILD_CONTEXT) ---- */
@@ -961,8 +962,12 @@ async function realCreateJournalEntry(draft: NewJournalEntryDraft): Promise<Jour
   const created = await CreateJournalEntry(arg)
   return mapJournalEntry(created as unknown as Record<string, unknown>)
 }
-async function realSyncProposalReviews(_days: number): Promise<CashflowProposalReviewRow[]> {
-  throw new Error('INTEG gap: SyncCashflowEvidenceProposalReviews — wires at K5')
+async function realSyncProposalReviews(days: number): Promise<CashflowProposalReviewRow[]> {
+  // SyncCashflowEvidenceProposalReviews(days) refreshes the review rows from the
+  // evidence proposals and returns them — NOT a GL posting; it reconciles the
+  // review worklist. Same row shape as the list fetch, so it maps identically.
+  const rows = await SyncCashflowEvidenceProposalReviews(days)
+  return (rows ?? []).map((x) => mapProposalReview(x as unknown as Record<string, unknown>))
 }
 async function realReviewProposal(id: string, status: string, note: string): Promise<CashflowProposalReviewRow> {
   // FinanceService.ReviewCashflowEvidenceProposal(id, status, note) →

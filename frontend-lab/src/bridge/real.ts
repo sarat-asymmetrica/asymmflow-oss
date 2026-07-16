@@ -5,7 +5,7 @@
  * surface the error inline instead of pretending. */
 
 import { DeleteCustomerInvoice, ListCustomerInvoices, SendCustomerInvoice } from '$wails/go/main/FinanceService'
-import { ListCustomers } from '$wails/go/main/CRMService'
+import { GetCustomer, ListCustomers, UpdateCustomer } from '$wails/go/main/CRMService'
 import { CreateCustomerReceipt, GetCustomerFullProfile } from '$wails/go/main/App'
 import type { main } from '$wails/go/models'
 import type { CustomerProfilePatch, CustomerRow, InvoiceReceiptInput, InvoiceRow } from './mock'
@@ -115,8 +115,16 @@ export async function fetchCustomers(): Promise<CustomerRow[]> {
   return (rows ?? []).map((r) => mapCustomer(r as unknown as Record<string, unknown>))
 }
 
-export async function setCustomerStatus(_id: string, _status: string): Promise<void> {
-  throw new Error('INTEG gap: customer status changes go through UpdateCustomer (full record)')
+export async function setCustomerStatus(id: string, status: string): Promise<void> {
+  // FETCH-MERGE-WRITE (G3). UpdateCustomer merges the payload onto the stored row
+  // but applies EVERY user-editable field — including blanks (MergeCustomerUpdate:
+  // "blanking an editable field remains a legitimate edit"). So a sparse {id,status}
+  // would wipe name/city/email/etc. We fetch the FULL record, override only status,
+  // and send it back; server-owned columns (order totals, AR risk, grade) are
+  // preserved server-side regardless.
+  const existing = (await GetCustomer(id)) as unknown as Record<string, unknown>
+  const merged = { ...existing, status }
+  await UpdateCustomer(merged as unknown as Parameters<typeof UpdateCustomer>[0])
 }
 
 /** Secondary profile fetch: GetCustomerFullProfile fills the depth ListCustomers

@@ -10,7 +10,7 @@
 
 import { pick } from './runtime'
 import { goDate, str } from './map'
-import { ListNotificationFeed, MarkNotificationAsRead } from '$wails/go/main/App'
+import { ListNotificationFeed, MarkNotificationAsRead, ReviewDeleteApprovalRequest, ReviewEmployeeArchiveRequest } from '$wails/go/main/App'
 import type { Tone } from '../kernel/tones'
 
 export interface NotificationRow {
@@ -27,6 +27,9 @@ export interface NotificationRow {
   reviewStatus: string
   requestedBy: string
   reason: string
+  /** The UNDERLYING delete/archive request id (notification.source_id) — the id
+   * the Review* bindings act on. Empty for plain task items. */
+  sourceId: string
 }
 
 /* ---- mock: adversarial + deterministic (see bridge/mock.ts pattern) ---- */
@@ -102,6 +105,7 @@ function generate(): NotificationRow[] {
         reviewStatus: '',
         requestedBy: ASSIGNERS[i % ASSIGNERS.length]!,
         reason: '',
+        sourceId: '',
       })
       continue
     }
@@ -121,6 +125,8 @@ function generate(): NotificationRow[] {
       reviewStatus: decided,
       requestedBy: ASSIGNERS[i % ASSIGNERS.length]!,
       reason: REASONS[i % REASONS.length]!,
+      // Mock request id (source_id) the review card would act on.
+      sourceId: `req-${i}`,
     })
   }
   return rows
@@ -187,12 +193,13 @@ function mapNotification(raw: unknown): NotificationRow {
     read,
     tone: read ? 'neutral' : kind === 'archive-approval' ? 'warning' : 'info',
     // The notification record does not carry the approval decision, requester, or
-    // reason — those live on the underlying delete/archive request (source_id).
-    // Honest blanks here; the review card's status/requester enrich when the
-    // review mutations wire (I3), not faked now. Live-push (EventsOn) stays DEFER.
+    // reason — those live on the underlying delete/archive request. Honest blanks
+    // here (still enriched from the request when that read lands). Live-push
+    // (EventsOn) stays DEFER. source_id IS the request id the Review* bindings act on.
     reviewStatus: '',
     requestedBy: '',
     reason: '',
+    sourceId: str(r.source_id),
   }
 }
 
@@ -206,37 +213,28 @@ async function realMarkRead(id: string): Promise<void> {
   await MarkNotificationAsRead(id)
 }
 
-// GAP (kept honest — a wrong wire is worse than an honest gap): the real
-// bindings ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest take the
-// underlying *request* id (requestID), but NotificationRow.id is the
-// notification record's OWN id. The request id lives on the notification's
-// `source_id` — verified: delete_approval / employee_archive_approval
-// notifications set SourceID = request.ID (delete_approval_service.go:187,
-// employee_archive_service.go:344). That field is NOT carried on NotificationRow,
-// and this task's brief scopes the fetch mapper as already-wired ("leave it"),
-// so enriching mapNotification with source_id is out of scope here. Calling
-// Review*(row.id, …) would target the wrong record. The SAME review actions ARE
-// fully wired from the Approvals Queue (bridge/approvals.ts), where the row id
-// IS the request id — so no review capability is lost, only this shortcut.
-async function realApprove(_row: NotificationRow): Promise<void> {
-  void _row
-  throw new Error(
-    'INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="approve") — ' +
-      'NotificationRow carries the notification id, not the underlying request id (source_id); ' +
-      'correct wiring needs source_id enrichment in the fetch mapper (out of scope for this pass). ' +
-      'Review from the Approvals Queue, which is wired.',
-  )
+// WIRED (G3): the Review* bindings act on the underlying *request* id, which is
+// the notification's source_id (delete_approval notifications set SourceID =
+// request.ID, delete_approval_service.go; employee_archive likewise). The mapper
+// now carries `sourceId`, so the review card acts on the correct record. The
+// bindings take (requestID, decision, notes) — NO actor arg; the reviewer is
+// derived server-side from the session (same shape as the Approvals Queue path,
+// bridge/approvals.ts, and covered by the R2 persistence tests). A review card
+// only ever renders for the two approval kinds, so `sourceId` is always present.
+async function realApprove(row: NotificationRow): Promise<void> {
+  if (row.kind === 'archive-approval') {
+    await ReviewEmployeeArchiveRequest(row.sourceId, 'approve', '')
+  } else {
+    await ReviewDeleteApprovalRequest(row.sourceId, 'approve', '')
+  }
 }
 
-async function realReject(_row: NotificationRow, _reason: string): Promise<void> {
-  void _row
-  void _reason
-  throw new Error(
-    'INTEG gap: ReviewDeleteApprovalRequest / ReviewEmployeeArchiveRequest (decision="reject") — ' +
-      'NotificationRow carries the notification id, not the underlying request id (source_id); ' +
-      'correct wiring needs source_id enrichment in the fetch mapper (out of scope for this pass). ' +
-      'Review from the Approvals Queue, which is wired.',
-  )
+async function realReject(row: NotificationRow, reason: string): Promise<void> {
+  if (row.kind === 'archive-approval') {
+    await ReviewEmployeeArchiveRequest(row.sourceId, 'reject', reason)
+  } else {
+    await ReviewDeleteApprovalRequest(row.sourceId, 'reject', reason)
+  }
 }
 
 /* ---- public switched API (screen/viewmodel imports THESE) ---- */
