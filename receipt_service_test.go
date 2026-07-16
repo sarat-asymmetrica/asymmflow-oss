@@ -110,6 +110,59 @@ func TestCreateCustomerReceipt_AppliedToInvoiceFull(t *testing.T) {
 	require.Equal(t, 300.0, allocs[0].AllocatedAmountBHD)
 }
 
+// TestSettlementReceiptCapture_BridgeContract pins the exact input the kernel
+// Invoices "Record Receipt" modal sends (frontend-lab bridge real.ts
+// recordCustomerReceipt): a Bank Transfer receipt with an explicit calendar-date
+// string, a reference, and BLANK customer_id/customer_name/division — all derived
+// server-side from the bound invoice. This is the deviation-of-record for owner
+// ruling G1.2: the ruling named ApplyCustomerReceiptToInvoice, but a capture modal
+// has no pre-existing receipt id, so CreateCustomerReceipt(invoice-bound) is the
+// correct create-and-apply path. Asserts honest settlement — a real Payment +
+// allocation and an invoice advanced to Paid — NOT a status flip.
+func TestSettlementReceiptCapture_BridgeContract(t *testing.T) {
+	app := setupTestApp(t)
+	receiptTestModels(t, app)
+	seedOpenInvoice(t, app, "inv-1", "INV-1", "cust-1", 300.000)
+
+	receipt, err := app.CreateCustomerReceipt(CustomerReceiptInput{
+		// Exactly what the bridge sends: customer + division blank (derived from
+		// the invoice), receipt_date as a 'YYYY-MM-DD' string.
+		CustomerID:    "",
+		CustomerName:  "",
+		Division:      "",
+		InvoiceID:     "inv-1",
+		AmountBHD:     300.000,
+		ReceiptDate:   time.Now().Format("2006-01-02"),
+		PaymentMethod: "Bank Transfer",
+		Reference:     "TRF-2026-001",
+		Notes:         "Settled via Invoices ledger",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "cust-1", receipt.CustomerID, "customer derived from invoice")
+	require.Equal(t, "Acme Instrumentation", receipt.CustomerName)
+	// Division is inherited from the invoice then overlay-normalized; the blank
+	// input never produces an empty division on the receipt.
+	require.NotEmpty(t, receipt.Division, "division derived from invoice, never blank")
+
+	// Honest settlement: invoice advanced to Paid with a real Payment + allocation,
+	// never a bare status flip.
+	var inv Invoice
+	require.NoError(t, app.db.First(&inv, "id = ?", "inv-1").Error)
+	require.Equal(t, "Paid", inv.Status)
+	require.Equal(t, 0.0, inv.OutstandingBHD)
+
+	var pay Payment
+	require.NoError(t, app.db.First(&pay, "invoice_id = ?", "inv-1").Error)
+	require.NotNil(t, pay.ReceiptID)
+	require.Equal(t, receipt.ID, *pay.ReceiptID)
+	require.Equal(t, "TRF-2026-001", pay.Reference)
+
+	var allocs []CustomerReceiptAllocation
+	require.NoError(t, app.db.Where("receipt_id = ?", receipt.ID).Find(&allocs).Error)
+	require.Len(t, allocs, 1)
+	require.Equal(t, 300.0, allocs[0].AllocatedAmountBHD)
+}
+
 func TestApplyCustomerReceiptToInvoice_PartialThenFull(t *testing.T) {
 	app := setupTestApp(t)
 	receiptTestModels(t, app)

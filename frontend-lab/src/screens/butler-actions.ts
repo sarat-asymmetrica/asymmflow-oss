@@ -14,7 +14,25 @@
  * duplicate/unreachable switch cases in the old resolveActionTarget. */
 
 import {
-  executeButlerActionBinding,
+  butlerCreateOfferDraft,
+  butlerCreateFollowUp,
+  butlerCreateOrder,
+  butlerCreateRFQ,
+  butlerAddCustomerContact,
+  butlerAddSupplierContact,
+  butlerCreateStockAdjustment,
+  butlerCreateCustomer,
+  butlerCreateSupplier,
+  butlerUpdatePOStatus,
+  butlerUpdateOpportunityStage,
+  butlerUpdateOpportunityDetails,
+  butlerUpdateOrderStage,
+  butlerUpdateRFQStage,
+  butlerUpdateOfferStatus,
+  butlerMarkOfferWon,
+  butlerMarkOfferLost,
+  butlerDisputeSupplierInvoice,
+  butlerRejectCostingSheet,
   fetchCustomerLookup,
   fetchSupplierLookup,
   resolveCustomerName,
@@ -740,11 +758,21 @@ export async function resolveActionSupplierIdentity(action: { data: unknown }): 
   return { supplierId: toActionIdValue(supplierId), supplierName }
 }
 
-/* ---- execution: resolve which of the 23 bindings, then call the always-throwing seam ----
+/* ---- execution: resolve which binding an armed+confirmed action maps to,
+ * ASSEMBLE its real payload, and return an execute thunk (owner ruling G1.1 —
+ * the butler SPLIT). The 19 draft/update-class bindings are wired for real; the
+ * confirming HUMAN is the acting actor (the Go handlers stamp getCurrentUserID(),
+ * never "butler" — none of the 19 kept bindings takes an actor arg). The 4
+ * APPROVE-class bindings are RETIRED: their targets redirect to the Approvals
+ * Queue, never resolving to an executable action.
+ *
  * PRESERVED VERBATIM refuse-over-guess guards from the old screen:
  *  - MarkOfferWon refuses if customer_po is missing (never substitutes a literal).
- *  - stock_adjustment "update" supports ONLY the approval transition; every
- *    other status is explicitly refused, not silently attempted. */
+ *  - stock_adjustment "update" supported ONLY the approval transition — now that
+ *    approval is retired from butler, that path redirects to the Approvals Queue.
+ * Payload builders are ported faithfully from the legacy ButlerScreen so the Go
+ * json-tag shapes match exactly (dual snake/Pascal keys preserved where the
+ * legacy emitted them). */
 
 export interface ExecutionOutcome {
   message: string
@@ -756,6 +784,211 @@ interface Refusal {
 interface Resolved {
   bindingName: string
   verb: string
+  /** Assembled, validated call into the bridge write-binding wrapper. */
+  execute: () => Promise<void>
+}
+
+/** The 4 approve-class binding names retired from butler's vocabulary (owner
+ * ruling G1.1). Exported + kept as a named set so the AI-authority boundary is
+ * MECHANICALLY testable: no resolver may ever return a Resolved carrying one of
+ * these, and executeButlerAction guards on it as defense-in-depth. */
+export const RETIRED_APPROVE_BINDINGS = [
+  'ApprovePurchaseOrder',
+  'ApproveStockAdjustment',
+  'ApproveSupplierInvoice',
+  'ApproveCostingSheet',
+] as const
+
+function approvalsQueueRedirect(verb: string): Refusal {
+  return {
+    refusal: `That is an approval — I can't ${verb} on your behalf. Approvals live in the Approvals Queue; open it there to review and decide.`,
+  }
+}
+
+/* ---- legacy-ported payload builders (verbatim field maps — see ButlerScreen).
+ * Some emit BOTH snake_case and Pascal/camelCase keys for one value: preserved
+ * so the Go binding binds regardless of json-tag casing. ---- */
+
+/** First primitive-coercible non-empty string among the candidates — mirrors the
+ * legacy `a || b || ''` fallthrough (empty string falls through, unlike `??`). */
+function firstStr(...vals: unknown[]): string {
+  for (const v of vals) {
+    const s = normalizeToPlainText(v)
+    if (s) return s
+  }
+  return ''
+}
+
+/** Legacy normalizeDueDate: blank/unparseable → fallback; else `YYYY-MM-DD`. */
+function normalizeDueDate(value: unknown, fallback = ''): string {
+  const raw = normalizeToPlainText(value).trim()
+  if (!raw) return fallback
+  const asDate = new Date(raw)
+  if (Number.isNaN(asDate.getTime())) return fallback
+  return asDate.toISOString().split('T')[0]!
+}
+
+function todayIso(): string {
+  return new Date().toISOString().split('T')[0]!
+}
+
+function buildOfferDraftPayload(action: ResolvedButlerAction): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  const rawLineItems = Array.isArray(data.line_items)
+    ? data.line_items
+    : Array.isArray(data.lineItems)
+      ? data.lineItems
+      : Array.isArray(data.items)
+        ? data.items
+        : []
+  const line_items = (rawLineItems as unknown[]).map((raw) => {
+    const item = (raw ?? {}) as Record<string, unknown>
+    return {
+      equipment: firstStr(item.equipment, item.description),
+      description: firstStr(item.description, item.equipment),
+      model: firstStr(item.model),
+      specification: firstStr(item.specification),
+      quantity: parseInt(String(item.quantity ?? item.qty ?? 1), 10) || 1,
+      unit_price_bhd: parseNumeric(item.unit_price_bhd ?? item.unit_price ?? item.unitPrice ?? item.unitPriceBHD, 0),
+      optional: item.optional === true,
+    }
+  })
+  return {
+    customer_id: firstStr(data.customer_id, data.customerId),
+    customer_name: firstStr(data.customer_name, data.customerName, data.customer, action.target),
+    quote_type: firstStr(data.quote_type, data.quoteType) || 'Quotation',
+    // `??` (not ||) so an explicit 0 survives, matching the legacy builder.
+    vat_rate: parseNumeric(data.vat_rate ?? data.vatRate ?? 10, 10),
+    payment_terms: firstStr(data.payment_terms, data.paymentTerms),
+    delivery_terms: firstStr(data.delivery_terms, data.deliveryTerms),
+    est_delivery: firstStr(data.est_delivery, data.estDelivery),
+    contact_person: firstStr(data.contact_person, data.contactPerson),
+    rfq_reference: firstStr(data.rfq_reference, data.rfqReference),
+    prepared_by: firstStr(data.prepared_by, data.preparedBy),
+    country_of_origin: firstStr(data.country_of_origin, data.countryOfOrigin),
+    division: firstStr(data.division),
+    line_items,
+  }
+}
+
+function buildFollowUpPayload(action: ResolvedButlerAction): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  const target = String(action.target ?? '').trim()
+  const dueDateRaw = firstStr(data.due_date, data.dueDate).trim()
+  const normalizedPriority = firstStr(data.priority, 'medium').toLowerCase().trim()
+  const priority = ['low', 'medium', 'high', 'urgent'].includes(normalizedPriority) ? normalizedPriority : 'medium'
+  const customerId = toActionIdValue(data.customer_id ?? data.customerId ?? data.customer_id_text ?? data.customerId_text ?? data.customer)
+  const due = dueDateRaw || todayIso()
+  return {
+    customer_id: customerId,
+    customerId,
+    title: firstStr(data.title, data.subject) || `Butler follow-up${target ? `: ${target}` : ''}`,
+    description: firstStr(data.description, data.notes, data.message),
+    notes: firstStr(data.notes, data.description),
+    contact: firstStr(data.contact, data.contactPerson, data.person),
+    due_date: due,
+    dueDate: due,
+    priority,
+    status: 'pending',
+    type: firstStr(data.type) || 'Follow-up',
+    source: 'Butler',
+  }
+}
+
+function buildStockAdjustmentPayload(action: ResolvedButlerAction): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  const systemQuantity = parseNumeric(data.system_quantity, NaN)
+  const physicalQuantity = parseNumeric(data.physical_quantity, NaN)
+  const variance = parseNumeric(data.variance, NaN)
+  const itemId = toActionIdValue(data.inventory_item_id ?? data.item_id ?? data.itemId ?? data.inventoryItemId ?? data.item_code)
+  const computedVariance = Number.isFinite(variance)
+    ? variance
+    : Number.isFinite(systemQuantity) && Number.isFinite(physicalQuantity)
+      ? physicalQuantity - systemQuantity
+      : 0
+  const type = firstStr(data.adjustment_type, data.adjustmentType) || 'physical_count'
+  const reason = firstStr(data.reason, data.note)
+  const sysQ = Number.isFinite(systemQuantity) ? systemQuantity : 0
+  const physQ = Number.isFinite(physicalQuantity) ? physicalQuantity : 0
+  const unitCost = parseNumeric(data.unit_cost, 0)
+  return {
+    InventoryItemID: itemId,
+    inventory_item_id: itemId,
+    adjustment_type: type,
+    AdjustmentType: type,
+    reason,
+    Reason: reason,
+    variance: computedVariance,
+    Variance: computedVariance,
+    system_quantity: sysQ,
+    physical_quantity: physQ,
+    SystemQuantity: sysQ,
+    PhysicalQuantity: physQ,
+    unit_cost: unitCost,
+    unitCost,
+    notes: firstStr(data.notes, data.note),
+    source: 'Butler',
+  }
+}
+
+function buildCustomerContactPayload(action: ResolvedButlerAction, customerId: string): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  return {
+    customer_id: customerId,
+    contact_name: firstStr(data.contact_name, data.name, data.person, data.primary_contact),
+    job_title: firstStr(data.job_title, data.jobTitle, data.title),
+    email: firstStr(data.email, data.primary_email),
+    phone: firstStr(data.phone, data.primary_phone),
+    address: firstStr(data.address, data.address_line1),
+    is_primary_contact: toBoolean(data.is_primary_contact ?? data.isPrimaryContact),
+  }
+}
+
+function buildSupplierContactPayload(action: ResolvedButlerAction, supplierId: string): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  return {
+    supplier_id: supplierId,
+    contact_name: firstStr(data.contact_name, data.name, data.person, data.primary_contact),
+    job_title: firstStr(data.job_title, data.jobTitle, data.title),
+    email: firstStr(data.email),
+    phone: firstStr(data.phone, data.mobile),
+    address: firstStr(data.address, data.address_line1),
+    is_primary_contact: toBoolean(data.is_primary_contact ?? data.isPrimaryContact),
+  }
+}
+
+function buildCustomerPayload(action: ResolvedButlerAction): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  return {
+    business_name: firstStr(data.business_name, data.businessName, data.customer_name, data.name),
+    customer_type: firstStr(data.customer_type, data.customerType) || 'Corporate',
+    payment_grade: firstStr(data.payment_grade, data.paymentGrade) || 'B',
+    city: firstStr(data.city),
+    country: firstStr(data.country) || 'Bahrain',
+    primary_contact: firstStr(data.primary_contact, data.contact),
+    primary_email: firstStr(data.primary_email, data.email),
+    primary_phone: firstStr(data.primary_phone, data.phone),
+    mobile_number: firstStr(data.mobile_number, data.mobileNumber),
+    industry: firstStr(data.industry),
+    address_line1: firstStr(data.address_line1, data.address),
+    trn: firstStr(data.trn),
+  }
+}
+
+function buildSupplierPayload(action: ResolvedButlerAction): Record<string, unknown> {
+  const data = getActionDataObject(action)
+  return {
+    supplier_name: firstStr(data.supplier_name, data.supplierName, data.name),
+    supplier_type: firstStr(data.supplier_type, data.supplierType) || 'Manufacturer',
+    country: firstStr(data.country) || 'Bahrain',
+    primary_contact: firstStr(data.primary_contact, data.contact),
+    email: firstStr(data.email),
+    phone: firstStr(data.phone),
+    address: firstStr(data.address),
+    tax_id: firstStr(data.tax_id, data.taxId, data.trn),
+    brands_handled: firstStr(data.brands_handled, data.brandsHandled, data.brands),
+    lead_time_days: parseNumeric(data.lead_time_days ?? data.leadTimeDays, 0),
+  }
 }
 
 async function resolveCreateAction(action: ResolvedButlerAction): Promise<Refusal | Resolved> {
@@ -765,12 +998,14 @@ async function resolveCreateAction(action: ResolvedButlerAction): Promise<Refusa
   if (target === 'follow_up') {
     const v = validateActionPayload(action, 'create_follow_up')
     if (v.missing.length) return { refusal: `I can create this follow-up only with: ${v.missing.join(', ')}.` }
-    return { bindingName: 'CreateFollowUp', verb: 'create the follow-up' }
+    const payload = buildFollowUpPayload(action)
+    return { bindingName: 'CreateFollowUp', verb: 'create the follow-up', execute: () => butlerCreateFollowUp(payload) }
   }
   if (target === 'offer' || target === 'offer_draft' || target === 'quotation') {
     const v = validateActionPayload(action, 'create_offer_draft')
     if (v.missing.length) return { refusal: `I can create this offer draft only with: ${v.missing.join(', ')}.` }
-    return { bindingName: 'CreateOfferDraftFromButler', verb: 'create the offer draft' }
+    const payload = buildOfferDraftPayload(action)
+    return { bindingName: 'CreateOfferDraftFromButler', verb: 'create the offer draft', execute: () => butlerCreateOfferDraft(payload) }
   }
   if (target === 'order' || target === 'orders') {
     const identity = await resolveActionCustomerIdentity(action)
@@ -779,7 +1014,18 @@ async function resolveCreateAction(action: ResolvedButlerAction): Promise<Refusa
     if (!orderNumber || Number.isNaN(amount) || amount <= 0 || (!identity.customerName && !identity.customerId)) {
       return { refusal: 'I can create this order only with an order number, amount and customer (name or id). Please add missing fields and run the action again.' }
     }
-    return { bindingName: 'CreateOrder', verb: 'create that order' }
+    const customerName = identity.customerName || (identity.customerId ? await resolveCustomerName(identity.customerId) : '')
+    if (identity.customerId && !customerName) {
+      return { refusal: 'I found a customer id but could not resolve the customer name. Please refresh customer context and regenerate the action so this order links correctly.' }
+    }
+    const finalName = customerName || identity.customerName || `Customer ${identity.customerId}`
+    const orderDate = normalizeDueDate(data.order_date ?? data.orderDate, '')
+    const status = firstStr(data.status) || 'Pending'
+    return {
+      bindingName: 'CreateOrder',
+      verb: 'create that order',
+      execute: () => butlerCreateOrder(orderNumber, finalName, amount, orderDate, status),
+    }
   }
   if (target === 'opportunity' || target === 'opportunities') {
     const identity = await resolveActionCustomerIdentity(action)
@@ -788,10 +1034,15 @@ async function resolveCreateAction(action: ResolvedButlerAction): Promise<Refusa
     if (!customerName || !project) {
       return { refusal: 'I can create this opportunity only with a customer and project/title. Please provide the missing details.' }
     }
-    // Old screen calls CheckDuplicateOpportunity first, then creates via CreateRFQ
-    // (legacy naming — opportunities ARE RFQs pre-offer). Both are INTEG-gapped;
-    // CreateRFQ is the binding actually named per Butler.parity.md.
-    return { bindingName: 'CreateRFQ', verb: 'create that opportunity' }
+    // Legacy naming — opportunities ARE RFQs pre-offer. Wave 9.6 gave CreateRFQ a
+    // 5th productDetails arg; butler has no structured line items, so pass ''.
+    const value = parseNumeric(data.amount ?? data.total_amount ?? data.totalAmount ?? data.amount_bhd ?? data.value, 0)
+    const notes = firstStr(data.notes, data.comment, data.description)
+    return {
+      bindingName: 'CreateRFQ',
+      verb: 'create that opportunity',
+      execute: () => butlerCreateRFQ(customerName, project, value, notes, ''),
+    }
   }
   if (target === 'customer_contact' || target === 'contact') {
     const hasSupplierHint = toActionIdValue(data.supplier_id ?? data.supplierId ?? data.supplier_name ?? data.supplier ?? data.vendor)
@@ -799,35 +1050,41 @@ async function resolveCreateAction(action: ResolvedButlerAction): Promise<Refusa
       const identity = await resolveActionSupplierIdentity(action)
       if (!identity.supplierId && !identity.supplierName) return { refusal: 'I need the supplier record before I can add this contact. Please specify the supplier.' }
       if (!toActionIdValue(data.contact_name ?? data.name ?? data.person ?? data.primary_contact)) return { refusal: 'I need the contact name before I can create this supplier contact.' }
-      return { bindingName: 'AddSupplierContact', verb: 'create the supplier contact' }
+      const payload = buildSupplierContactPayload(action, identity.supplierId)
+      return { bindingName: 'AddSupplierContact', verb: 'create the supplier contact', execute: () => butlerAddSupplierContact(payload) }
     }
     const identity = await resolveActionCustomerIdentity(action)
     if (!identity.customerId && !identity.customerName) return { refusal: 'I need the customer record before I can add this contact. Please specify the customer.' }
     if (!toActionIdValue(data.contact_name ?? data.name ?? data.person ?? data.primary_contact)) return { refusal: 'I need the contact name before I can create this customer contact.' }
-    return { bindingName: 'AddCustomerContact', verb: 'create the customer contact' }
+    const payload = buildCustomerContactPayload(action, identity.customerId)
+    return { bindingName: 'AddCustomerContact', verb: 'create the customer contact', execute: () => butlerAddCustomerContact(payload) }
   }
   if (target === 'supplier_contact') {
     const identity = await resolveActionSupplierIdentity(action)
     if (!identity.supplierId && !identity.supplierName) return { refusal: 'I need the supplier record before I can add this contact. Please specify the supplier.' }
     if (!toActionIdValue(data.contact_name ?? data.name ?? data.person ?? data.primary_contact)) return { refusal: 'I need the contact name before I can create this supplier contact.' }
-    return { bindingName: 'AddSupplierContact', verb: 'create the supplier contact' }
+    const payload = buildSupplierContactPayload(action, identity.supplierId)
+    return { bindingName: 'AddSupplierContact', verb: 'create the supplier contact', execute: () => butlerAddSupplierContact(payload) }
   }
   if (target === 'stock_adjustment') {
     const v = validateActionPayload(action, 'create_stock_adjustment')
     if (v.missing.length) return { refusal: `I can create this stock adjustment only with: ${v.missing.join(', ')}.` }
-    return { bindingName: 'CreateStockAdjustment', verb: 'create the stock adjustment' }
+    const payload = buildStockAdjustmentPayload(action)
+    return { bindingName: 'CreateStockAdjustment', verb: 'create the stock adjustment', execute: () => butlerCreateStockAdjustment(payload) }
   }
   if (target === 'customer' || target === 'customers') {
     if (!String(data.business_name ?? data.businessName ?? data.customer_name ?? data.name ?? '').trim()) {
       return { refusal: 'I need a business name to create a customer. Please provide the company name.' }
     }
-    return { bindingName: 'CreateCustomerFromButler', verb: 'create the customer' }
+    const payload = buildCustomerPayload(action)
+    return { bindingName: 'CreateCustomerFromButler', verb: 'create the customer', execute: () => butlerCreateCustomer(payload) }
   }
   if (target === 'supplier' || target === 'suppliers') {
     if (!String(data.supplier_name ?? data.supplierName ?? data.name ?? '').trim()) {
       return { refusal: 'I need a supplier name to create a supplier. Please provide the company name.' }
     }
-    return { bindingName: 'CreateSupplierFromButler', verb: 'create the supplier' }
+    const payload = buildSupplierPayload(action)
+    return { bindingName: 'CreateSupplierFromButler', verb: 'create the supplier', execute: () => butlerCreateSupplier(payload) }
   }
   return { refusal: 'I can create offer drafts, follow-ups, orders, opportunities, contacts, stock adjustments, customers, and suppliers from Butler actions. Please refine this action with the required details.' }
 }
@@ -841,43 +1098,65 @@ async function resolveUpdateAction(action: ResolvedButlerAction): Promise<Refusa
 
   if (target === 'purchase_order') {
     if (!statusValue) return { refusal: `I need a status or stage value to update purchase_order ${id}.` }
-    return { bindingName: 'UpdatePOStatus', verb: 'update that purchase order' }
+    return { bindingName: 'UpdatePOStatus', verb: 'update that purchase order', execute: () => butlerUpdatePOStatus(String(id), statusValue) }
   }
   if (target === 'opportunity') {
     const data = getActionDataObject(action)
     const comment = String(data.comment ?? data.notes ?? data.description ?? '').trim()
     const ownerNotes = String(data.owner_notes ?? data.ownerNotes ?? '').trim()
     if (!statusValue && !comment && !ownerNotes) return { refusal: `I need a stage/status or note update to modify opportunity ${id}.` }
-    return { bindingName: statusValue ? 'UpdateOpportunityStage + UpdateOpportunityDetails' : 'UpdateOpportunityDetails', verb: 'update that opportunity' }
+    return {
+      bindingName: statusValue ? 'UpdateOpportunityStage + UpdateOpportunityDetails' : 'UpdateOpportunityDetails',
+      verb: 'update that opportunity',
+      // Fire both, matching the legacy screen: stage first (if any), then the
+      // free-text comment/owner-notes update (if any).
+      execute: async () => {
+        if (statusValue) await butlerUpdateOpportunityStage(String(id), statusValue)
+        if (comment || ownerNotes) await butlerUpdateOpportunityDetails(String(id), comment, ownerNotes)
+      },
+    }
   }
   if (target === 'order') {
     if (!statusValue) return { refusal: `I need a status or stage value to update order ${id}.` }
     if (toNumericId(id) === null) return { refusal: 'Order id must be numeric.' }
-    return { bindingName: 'UpdateOrderStage', verb: 'update that order' }
+    // UpdateOrderStage's Go signature takes a STRING id (legacy passed numeric).
+    return { bindingName: 'UpdateOrderStage', verb: 'update that order', execute: () => butlerUpdateOrderStage(id, statusValue) }
   }
   if (target === 'rfq') {
     if (!statusValue) return { refusal: `I need a status or stage value to update rfq ${id}.` }
-    if (toNumericId(id) === null) return { refusal: 'RFQ id must be numeric.' }
-    return { bindingName: 'UpdateRFQStage', verb: 'update that RFQ' }
+    const rfqId = toNumericId(id)
+    if (rfqId === null) return { refusal: 'RFQ id must be numeric.' }
+    return { bindingName: 'UpdateRFQStage', verb: 'update that RFQ', execute: () => butlerUpdateRFQStage(rfqId, statusValue) }
   }
   if (target === 'costing_sheet') {
     if (!statusValue) return { refusal: `I need a status or stage value to update costing_sheet ${id}.` }
     if (toNumericId(id) === null) return { refusal: 'Costing sheet id must be numeric.' }
-    return { bindingName: 'UpdateCostingSheet', verb: 'update that costing sheet' }
+    // ORCHESTRATOR DECISION (G1.1 extension): a butler costing_sheet "update"
+    // only ever carries a status, but the Go UpdateCostingSheet handler OMITS
+    // Status (approval-gated — changed only via ApproveCostingSheet, which
+    // enforces margin rules). Wiring it would be a pretend-persist (claims to
+    // update, changes nothing). The only real costing status transitions are
+    // approve (RETIRED from butler) and reject (RejectCostingSheet, via the
+    // reject action). So this path redirects to the approval workflow rather
+    // than silently no-op'ing. Flagged for owner ratification.
+    return approvalsQueueRedirect('change a costing sheet’s approval status')
   }
   if (target === 'offer' || target === 'quotation') {
     if (!statusValue) return { refusal: `I need a status or stage value to update ${target} ${id}.` }
-    if (toNumericId(id) === null) return { refusal: 'Offer id must be numeric.' }
-    return { bindingName: 'UpdateOfferStatus', verb: `update that ${target}` }
+    const offerId = toNumericId(id)
+    if (offerId === null) return { refusal: 'Offer id must be numeric.' }
+    return { bindingName: 'UpdateOfferStatus', verb: `update that ${target}`, execute: () => butlerUpdateOfferStatus(offerId, statusValue) }
   }
   if (target === 'stock_adjustment') {
     if (toNumericId(id) === null) return { refusal: 'Stock adjustment id must be numeric.' }
-    // PRESERVED VERBATIM: stock-adjustment "update" supports ONLY approval —
-    // every other status transition is explicitly refused, not attempted.
+    // PRESERVED VERBATIM: stock-adjustment "update" supported ONLY the approval
+    // transition. Approval is now RETIRED from butler (owner ruling G1.1), so the
+    // approved case redirects to the Approvals Queue; every other status stays
+    // explicitly refused, never attempted.
     if (statusValue.toLowerCase() !== 'approved') {
       return { refusal: `Stock adjustment update only supports approval action for now. This status change to "${statusValue}" is not supported.` }
     }
-    return { bindingName: 'ApproveStockAdjustment', verb: 'approve that stock adjustment' }
+    return approvalsQueueRedirect('approve that stock adjustment')
   }
   return { refusal: `No update execution path is configured for target '${target}'.` }
 }
@@ -891,42 +1170,58 @@ async function resolveApprovalAction(action: ResolvedButlerAction): Promise<Refu
   if (v.missing.length > 0) return { refusal: `I need: ${v.missing.join(', ')} to execute this ${actionType} action.` }
 
   if (target === 'purchase_order') {
-    return actionType === 'approve'
-      ? { bindingName: 'ApprovePurchaseOrder', verb: 'approve that purchase order' }
-      : { bindingName: 'UpdatePOStatus', verb: 'update that purchase order' }
+    // approve → RETIRED (ApprovePurchaseOrder): redirect to the Approvals Queue.
+    // reject is a plain status update, not an approval — wired.
+    if (actionType === 'approve') return approvalsQueueRedirect('approve that purchase order')
+    const status = parseStatusPayload(action) || 'Cancelled'
+    return { bindingName: 'UpdatePOStatus', verb: 'update that purchase order', execute: () => butlerUpdatePOStatus(String(id), status) }
   }
   if (target === 'order') {
-    return { bindingName: 'UpdateOrderStage', verb: `${actionType} that order` }
+    // Order approve/reject is a lifecycle STATUS move (Confirmed/Cancelled), not
+    // an approval-queue gate — wired. Go UpdateOrderStage takes a string id.
+    const stage = actionType === 'approve' ? 'Confirmed' : 'Cancelled'
+    return { bindingName: 'UpdateOrderStage', verb: `${actionType} that order`, execute: () => butlerUpdateOrderStage(id, stage) }
   }
   if (target === 'offer') {
     if (actionType === 'approve') {
       // PRESERVED VERBATIM: MarkOfferWon's 2nd arg is the customer PO number
       // (persisted onto the Order, part of its idempotency key) — NOT an
-      // approver name. Refuse rather than write a placeholder literal.
+      // approver name. Refuse rather than write a placeholder literal. Won/Lost
+      // is a sales OUTCOME, not an approval-queue gate — wired.
       const customerPO = String(v.data.customer_po ?? v.data.customerPO ?? '').trim()
       if (!customerPO) return { refusal: `I need the customer PO number to mark offer #${id} as won.` }
-      return { bindingName: 'MarkOfferWon', verb: 'mark that offer as won' }
+      return { bindingName: 'MarkOfferWon', verb: 'mark that offer as won', execute: () => butlerMarkOfferWon(id, customerPO) }
     }
-    return { bindingName: 'MarkOfferLost', verb: 'mark that offer as lost' }
+    const reason = v.reason || 'Lost from Butler action'
+    return { bindingName: 'MarkOfferLost', verb: 'mark that offer as lost', execute: () => butlerMarkOfferLost(id, reason) }
   }
   if (target === 'supplier_invoice') {
-    return actionType === 'approve'
-      ? { bindingName: 'ApproveSupplierInvoice', verb: 'approve that supplier invoice' }
-      : { bindingName: 'DisputeSupplierInvoice', verb: 'dispute that supplier invoice' }
+    // approve → RETIRED (ApproveSupplierInvoice): redirect. Dispute is not an
+    // approval — wired.
+    if (actionType === 'approve') return approvalsQueueRedirect('approve that supplier invoice')
+    const reason = v.reason || 'Disputed from Butler'
+    return { bindingName: 'DisputeSupplierInvoice', verb: 'dispute that supplier invoice', execute: () => butlerDisputeSupplierInvoice(id, reason) }
   }
   if (target === 'rfq') {
-    return { bindingName: 'UpdateRFQStage', verb: `${actionType} that RFQ` }
+    const rfqId = toNumericId(id)
+    if (rfqId === null) return { refusal: 'I need a valid RFQ id.' }
+    const stage = actionType === 'approve' ? 'Closed (Payment)' : 'Closed (Lost)'
+    return { bindingName: 'UpdateRFQStage', verb: `${actionType} that RFQ`, execute: () => butlerUpdateRFQStage(rfqId, stage) }
   }
   if (target === 'stock_adjustment') {
     if (actionType !== 'approve') return { refusal: 'Stock adjustment rejection is not supported yet. Re-map to a supported status update.' }
     if (toNumericId(id) === null) return { refusal: 'I need a valid stock adjustment id to approve.' }
-    return { bindingName: 'ApproveStockAdjustment', verb: 'approve that stock adjustment' }
+    // approve → RETIRED (ApproveStockAdjustment): redirect to the Approvals Queue.
+    return approvalsQueueRedirect('approve that stock adjustment')
   }
   if (target === 'costing_sheet') {
-    if (toNumericId(id) === null) return { refusal: 'Invalid costing sheet id.' }
-    return actionType === 'approve'
-      ? { bindingName: 'ApproveCostingSheet', verb: 'approve that costing sheet' }
-      : { bindingName: 'RejectCostingSheet', verb: 'reject that costing sheet' }
+    const csId = toNumericId(id)
+    if (csId === null) return { refusal: 'Invalid costing sheet id.' }
+    // approve → RETIRED (ApproveCostingSheet): redirect. Reject is wired
+    // (RejectCostingSheet just sets status=rejected — no approval authority).
+    if (actionType === 'approve') return approvalsQueueRedirect('approve that costing sheet')
+    const reason = v.reason || 'Rejected from Butler'
+    return { bindingName: 'RejectCostingSheet', verb: 'reject that costing sheet', execute: () => butlerRejectCostingSheet(csId, reason) }
   }
   return { refusal: `This Butler action is recognized, but the execution path is not mapped for target '${target}'.` }
 }
@@ -946,8 +1241,16 @@ export async function executeButlerAction(action: ResolvedButlerAction): Promise
 
   if ('refusal' in resolved) return { message: resolved.refusal }
 
+  // Defense-in-depth boundary tripwire (AI-authority, owner ruling G1.1): a
+  // resolver must NEVER return an approve-class binding. If one ever did, refuse
+  // hard rather than execute — approvals belong to the human in the Approvals
+  // Queue. This should be unreachable; it exists so the boundary is mechanical.
+  if ((RETIRED_APPROVE_BINDINGS as readonly string[]).includes(resolved.bindingName)) {
+    return { message: `That is an approval and stays in the Approvals Queue — the assistant can't ${resolved.verb} on your behalf.` }
+  }
+
   try {
-    await executeButlerActionBinding(resolved.bindingName)
+    await resolved.execute()
     return { message: `Done — ${resolved.verb}.` }
   } catch (err) {
     return { message: `I couldn't ${resolved.verb}: ${err instanceof Error ? err.message : String(err)}` }

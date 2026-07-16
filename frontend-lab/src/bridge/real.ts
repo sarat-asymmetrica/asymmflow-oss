@@ -6,8 +6,9 @@
 
 import { DeleteCustomerInvoice, ListCustomerInvoices, SendCustomerInvoice } from '$wails/go/main/FinanceService'
 import { ListCustomers } from '$wails/go/main/CRMService'
-import { GetCustomerFullProfile } from '$wails/go/main/App'
-import type { CustomerProfilePatch, CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
+import { CreateCustomerReceipt, GetCustomerFullProfile } from '$wails/go/main/App'
+import type { main } from '$wails/go/models'
+import type { CustomerProfilePatch, CustomerRow, InvoiceReceiptInput, InvoiceRow } from './mock'
 import { goDate, num, str } from './map'
 
 /* ---- Invoices ---- */
@@ -39,10 +40,30 @@ export async function deleteInvoice(id: string): Promise<void> {
   await DeleteCustomerInvoice(id)
 }
 
-export async function markInvoicePaid(_id: string): Promise<void> {
-  throw new Error(
-    'INTEG gap: settlement flows through customer receipts (ApplyCustomerReceiptToInvoice), not a status flip',
-  )
+/** Settlement = receipt capture (owner ruling G1.2), NOT a status flip. We call
+ * CreateCustomerReceipt with the invoice bound: the server derives customer +
+ * division from the invoice, creates the receipt, and applies it in ONE
+ * transaction — funding a Payment row and advancing invoice payment state
+ * (receipt_service.go). Deviation-of-record from the ruling's literal
+ * `ApplyCustomerReceiptToInvoice`: that binding needs a pre-existing receipt id,
+ * which a capture modal does not have; CreateCustomerReceipt(invoice-bound) IS
+ * the create-and-apply path (it calls the same applyCustomerReceiptToInvoiceTx).
+ * customer_id/name/division are left blank on purpose — the server fills them
+ * from the invoice; sending client-side guesses would risk a cross-customer
+ * mis-post. The receipt_date string is parsed server-side (no time.Time bridge). */
+export async function recordCustomerReceipt(input: InvoiceReceiptInput): Promise<void> {
+  const payload = {
+    customer_id: '',
+    customer_name: '',
+    invoice_id: input.invoiceId,
+    amount_bhd: input.amount,
+    receipt_date: input.date,
+    payment_method: input.method,
+    reference: input.reference,
+    division: '',
+    notes: input.notes,
+  }
+  await CreateCustomerReceipt(payload as unknown as main.CustomerReceiptInput)
 }
 
 export async function sendInvoice(id: string): Promise<void> {
@@ -51,9 +72,9 @@ export async function sendInvoice(id: string): Promise<void> {
   await SendCustomerInvoice(id)
 }
 
-export async function createInvoice(_draft: NewInvoiceDraft): Promise<void> {
-  throw new Error('INTEG gap: real invoices are raised from an order (CreateInvoiceWithOptions)')
-}
+// Standalone invoice-create is RETIRED (owner ruling G1.3): invoices are raised
+// from an order (Orders → Create Invoice via CreateInvoiceWithOptions), never
+// conjured on this ledger. No createInvoice bridge fn exists any more.
 
 /* ---- Customers ---- */
 

@@ -10,6 +10,7 @@
 
 import { pick } from './runtime'
 import { SimulateMargin } from '$wails/go/main/InfraService'
+import { GetCustomerWinRates } from '$wails/go/main/App'
 
 export type Regime = 'Premium' | 'PriceSensitive' | 'ValueBalanced'
 
@@ -112,13 +113,36 @@ async function mockSimulate(customerName: string, proposedMargin: number): Promi
   }
 }
 
-/* ---- real: customer list is INTEG-gapped (never real on the old screen);
- * SimulateMargin is genuinely real — wired straight through. ---- */
+/* ---- real: win-rate list now comes from GetCustomerWinRates (owner ruling
+ * G1.4) — a read-only aggregation over the real offer won/lost history. The old
+ * screen HARDCODED this list; that literal was the bug. SimulateMargin is
+ * genuinely real — wired straight through. ---- */
+
+/** Pricing REGIME is a display-only strategy tag (badge + guidance). The backend
+ * has no regime concept — the legacy screen hardcoded it. We derive it from the
+ * customer's REAL win-rate instead of inventing a table: readily-won customers
+ * are the least price-sensitive (Premium), rarely-won the most (PriceSensitive).
+ * Presentation policy lives here, not in the pure Go aggregation. */
+function deriveRegime(winRate: number): Regime {
+  if (winRate >= 0.6) return 'Premium'
+  if (winRate <= 0.3) return 'PriceSensitive'
+  return 'ValueBalanced'
+}
 
 async function realFetchCustomers(): Promise<PricingCustomerRow[]> {
-  throw new Error(
-    'INTEG gap: no real customer/win-rate endpoint exists — the old screen hardcoded this list (overallStats.customers); wire a real source before K5',
-  )
+  const rows = await GetCustomerWinRates()
+  return (rows ?? []).map((r) => {
+    const rec = r as unknown as Record<string, unknown>
+    const id = String(rec.customer_id ?? '') || `name:${String(rec.customer_name ?? '')}`
+    const winRate = Number(rec.win_rate ?? 0)
+    return {
+      id,
+      name: String(rec.customer_name ?? ''),
+      regime: deriveRegime(winRate),
+      currentWinRate: Number.isFinite(winRate) ? winRate : 0,
+      revenue: Number(rec.won_value_bhd ?? 0),
+    }
+  })
 }
 
 async function realSimulate(customerName: string, proposedMargin: number): Promise<MarginSimulationResult> {
