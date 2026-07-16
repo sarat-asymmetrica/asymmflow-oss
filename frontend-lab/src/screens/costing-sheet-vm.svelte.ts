@@ -39,6 +39,8 @@ import {
   type CostingSettings,
   type CostingHeaderDraft,
   type CostingExportPayload,
+  type CostingExportData,
+  type CostingExportLineItem,
 } from '../bridge/costing-sheet'
 
 /* ---- pure numeric helpers (verbatim toFiniteNumber / nonNegativeNumber) ---- */
@@ -344,6 +346,51 @@ export function sheetTotals(
   return { subtotal, effectiveDiscount, effectiveHiddenCharges, effectiveVatRate, netAmount, vat, grandTotal, totalCost, profit, profitPercent }
 }
 
+/** Map one input CostingLineRow → the FLAT CostingExportLineItem the real
+ * SaveCostingAsOffer binding takes, folding in the sacred waterfall's computed
+ * outputs (calcLine). Extracted as a pure function — same split as
+ * sheetTotals/sheetSubtotal — so buildCostingExportData and the unit tests
+ * exercise the SAME mapping. The suggestedPrice/totalPrice pair is what the
+ * backend uses to build the offer's line items; the rest is detailed-costing
+ * persistence. markupPercent is 0 so the offer item takes the line's
+ * marginPercent (buildOfferItemsFromCostingData's markup-else-margin rule). */
+export function costingExportLine(line: CostingLineRow, index: number): CostingExportLineItem {
+  const c = calcLine(line)
+  return {
+    slNo: index + 1,
+    supplier: '',
+    equipment: line.equipment,
+    model: line.model,
+    serialNumber: '',
+    longCode: line.longCode,
+    specification: '',
+    detailedDescription: line.detailedDescription,
+    currency: line.currency,
+    quantity: c.quantity,
+    fob: nonNegativeNumber(line.fobForeign),
+    freight: c.freightForeign,
+    freightPercent: nonNegativeNumber(line.freightPercent),
+    totalCost: c.totalCost,
+    marginPercent: nonNegativeNumber(line.marginPercent),
+    markupPercent: 0,
+    suggestedPrice: c.effectivePrice,
+    totalPrice: c.totalSuggestedPrice,
+    exchangeRate: c.exchangeRate,
+    fobBHD: c.fobBHD,
+    freightBHD: c.freightBHD,
+    insurance: nonNegativeNumber(line.insurance),
+    customsPercent: nonNegativeNumber(line.customsPercent, 5),
+    customsBHD: c.customsBHD,
+    handlingPercent: nonNegativeNumber(line.handlingPercent, 4),
+    handlingBHD: c.handlingBHD,
+    financePercent: nonNegativeNumber(line.financePercent, 1),
+    financeBHD: c.financeBHD,
+    otherCosts: nonNegativeNumber(line.otherCosts),
+    userPrice: nonNegativeNumber(line.userPrice),
+    userPriceSet: line.userPriceSet,
+  }
+}
+
 export class CostingSheetViewModel {
   // ---- picker mode ----
   loading = $state(true)
@@ -601,6 +648,66 @@ export class CostingSheetViewModel {
     }
   }
 
+  /** Assemble the FLAT main.CostingExportData the real SaveCostingAsOffer
+   * binding takes. Unlike buildExportPayload (the nested lab payload kept for
+   * the costing-history JSON + PDF/Excel exports), this carries per-line
+   * COMPUTED values from calcLine — the sacred waterfall's outputs — so the
+   * server can build the offer's line items and persist the detailed cost
+   * breakdown. Header + sheet totals come straight from state/`totals`; the
+   * effective (defaulted, clamped) percents are the SAME expressions calcLine
+   * uses internally, so each exported percent stays consistent with its
+   * computed BHD amount. offerId is '' ⇒ the server CREATE path (see bridge). */
+  private buildCostingExportData(): CostingExportData {
+    const h = this.header
+    const t = this.totals
+    const lineItems: CostingExportLineItem[] = this.validLines.map((l, i) => costingExportLine(l, i))
+    return {
+      division: h.division,
+      source: this.selectedOpportunity?.source ?? '',
+      offerId: '',
+      offerNumber: '',
+      date: h.date,
+      preparedBy: h.preparedBy,
+      customerId: h.customerId,
+      customerName: h.customerName,
+      contactPerson: h.contactPerson,
+      rfqReference: h.rfqReference,
+      folderNumber: h.folderNumber,
+      costingId: h.costingId,
+      subject: h.subject,
+      estDelivery: h.estDelivery,
+      deliveryTerms: h.deliveryTerms,
+      paymentTerms: h.paymentTerms,
+      orderType: h.orderType,
+      countryOfOrigin: h.countryOfOrigin,
+      cocCoo: h.cocCoo,
+      testCertificate: h.testCertificate,
+      installation: h.installation,
+      commissioning: h.commissioning,
+      testing: h.testing,
+      quoteType: h.quoteType,
+      vatRate: t.effectiveVatRate,
+      hiddenCharges: t.effectiveHiddenCharges,
+      placeOfSupply: h.placeOfSupply,
+      taxCategory: h.taxCategory,
+      customerTRN: h.customerTRN,
+      body: this.quotationBody,
+      lineItems,
+      subtotal: t.subtotal,
+      discount: t.effectiveDiscount,
+      netAmount: t.netAmount,
+      vat: t.vat,
+      grandTotal: t.grandTotal,
+      totalCost: t.totalCost,
+      profit: t.profit,
+      profitPercent: t.profitPercent,
+      opportunityId: this.isRFQOpportunity && this.selectedOpportunity ? Number(this.selectedOpportunity.id) : 0,
+      opportunityRecordId: this.selectedOpportunity?.source === 'pipeline' ? this.selectedOpportunity.id : '',
+      projectName: this.selectedOpportunity?.project ?? '',
+      termsAndConditions: this.termsAndConditions,
+    }
+  }
+
   /** "Save Costing" — create-or-clone-as-revision, same logic the old
    * screen's "+ New Revision" / standalone Save Costing button both used. */
   async saveCosting(): Promise<void> {
@@ -668,6 +775,7 @@ export class CostingSheetViewModel {
     this.saveError = null
     try {
       const payload = this.buildExportPayload()
+      const exportData = this.buildCostingExportData()
 
       // Non-blocking costing-history save (mirrors the old screen's
       // handleSaveAsOffer): refresh the underlying costing record so its
@@ -688,7 +796,7 @@ export class CostingSheetViewModel {
         }
       }
 
-      const offer = await saveCostingAsOffer(payload)
+      const offer = await saveCostingAsOffer(exportData)
       this.lastSavedOfferNumber = offer.offerNumber
       this.linkedOfferNumber = offer.offerNumber
       this.recentSheets = await fetchRecentCostingSheets(8).catch(() => this.recentSheets)

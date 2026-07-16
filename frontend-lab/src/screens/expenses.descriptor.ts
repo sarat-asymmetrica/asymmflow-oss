@@ -193,8 +193,10 @@ export const expensesDescriptor: LedgerDescriptor<ExpenseEntryRow> = {
       kind: 'row',
       visible: (r) => r != null && nextStates(r.status, EXPENSE_STATUS_TRANSITIONS).includes('posted'),
       // FIX, don't preserve: old screen fired this with NO confirmation,
-      // despite posting to the GL.
-      confirm: (r) => `Post ${r ? r.entryNumber : 'this entry'} to the ledger?`,
+      // despite posting to the GL. The confirm now names the GL effect
+      // explicitly (R1.3) — this creates a general-ledger journal entry.
+      confirm: (r) =>
+        `Post ${r ? r.entryNumber : 'this entry'} to the general ledger? This creates a GL journal entry and cannot be undone from here.`,
       run: async ({ row, reload }) => {
         if (!row) return
         await postExpenseEntry(row.id)

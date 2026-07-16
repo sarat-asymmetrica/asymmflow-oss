@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   calcLine,
+  costingExportLine,
   createBlankLine,
   isValidLine,
   parseSeedLineItems,
@@ -208,5 +209,55 @@ describe('findMatchingCustomer', () => {
 
   it('returns null when nothing matches', () => {
     expect(findMatchingCustomer(customers, 'Totally Unrelated Entity')).toBeNull()
+  })
+})
+
+describe('costingExportLine — flat CostingExportData line mapping (R1.1)', () => {
+  it("maps calcLine's computed outputs into the SaveCostingAsOffer line item", () => {
+    const l = line({
+      equipment: 'Coriolis Flow Meter',
+      model: 'CFM-2200',
+      currency: 'BHD',
+      quantity: 2,
+      fobForeign: 1000,
+      freightPercent: 10,
+      customsPercent: 5,
+      handlingPercent: 4,
+      financePercent: 1,
+      insurance: 20,
+      otherCosts: 5,
+      marginPercent: 20,
+    })
+    const c = calcLine(l)
+    const item = costingExportLine(l, 0)
+
+    // slNo is 1-based; the offer-building fields come straight from the waterfall.
+    expect(item.slNo).toBe(1)
+    expect(item.equipment).toBe('Coriolis Flow Meter')
+    expect(item.quantity).toBe(c.quantity)
+    // suggestedPrice/totalPrice are what the backend uses to build offer items.
+    expect(item.suggestedPrice).toBe(c.effectivePrice)
+    expect(item.totalPrice).toBe(c.totalSuggestedPrice)
+    // markupPercent is 0 so the offer item inherits the line's marginPercent.
+    expect(item.markupPercent).toBe(0)
+    expect(item.marginPercent).toBe(20)
+    // detailed-costing persistence fields mirror calcLine.
+    expect(item.fobBHD).toBe(c.fobBHD)
+    expect(item.freightBHD).toBe(c.freightBHD)
+    expect(item.customsBHD).toBe(c.customsBHD)
+    expect(item.handlingBHD).toBe(c.handlingBHD)
+    expect(item.financeBHD).toBe(c.financeBHD)
+    expect(item.totalCost).toBe(c.totalCost)
+    expect(item.exchangeRate).toBe(c.exchangeRate)
+  })
+
+  it('honors a user price override in suggestedPrice/totalPrice', () => {
+    const l = line({ equipment: 'X', fobForeign: 500, quantity: 3, userPriceSet: true, userPrice: 999 })
+    const item = costingExportLine(l, 4)
+    expect(item.slNo).toBe(5)
+    expect(item.suggestedPrice).toBe(999) // effectivePrice = user override
+    expect(item.totalPrice).toBe(999 * 3)
+    expect(item.userPriceSet).toBe(true)
+    expect(item.userPrice).toBe(999)
   })
 })

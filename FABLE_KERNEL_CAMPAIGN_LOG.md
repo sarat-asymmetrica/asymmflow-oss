@@ -121,6 +121,58 @@ Branch `exp/frontend-kernel` (LOCAL-ONLY). Updated as waves land.
     write, expenses-Post, notifications-review mapper, the non-financial people/work/deployment/butler
     mutations, AI-key encrypted settings, and the deferred Go tests). K6 flip remains owner-gated (Task #5).
 
+## RESIDUE & TECH-DEBT PASS (fresh Opus 4.8 orchestrator, from `6223d6d`) — `FABLE_CAMPAIGN_RESIDUE.md`
+
+Closes the INTEG residue ledger (§A–E) + pays ledgered tech debt. Same model:
+Sonnet 5 agents code the parallelizable tail (R3/R5), orchestrator owns the hot
+zones (R1/R2), gates every wave, fixes what agents miss. `INTEG gap:` count at
+kickoff = **71**.
+
+- **★ Wave R1 — orchestrator-owned hot items DONE (green: check 0/0 348, vitest 150, build clean,
+  layout gate 3/3 on touched screens, `go test` R1 suite green). Gap count 71 → 67.**
+  - **R1.1 `SaveCostingAsOffer`:** the VM now assembles the FLAT `main.CostingExportData` (header +
+    per-line COMPUTED values from the sacred `calcLine` waterfall) that the binding takes — the previous
+    orchestrator correctly refused to guess when only the input-only `CostingLineRow` was on hand. New
+    bridge types `CostingExportData`/`CostingExportLineItem` mirror the model field-for-field; the per-line
+    mapping is extracted as the pure `costingExportLine()` (testable like `sheetTotals`). Wired to the
+    CREATE path (`offerId=''`); the server's duplicate/uniqueness guards surface honestly. **In-place
+    offer overwrite (update path) needs the offer UUID the costing VM doesn't carry — ledgered, not
+    guessed.** `integ_costing_hotzone_test.go`: a costing export creates an Offer with correct totals
+    (value/margin/discount/VAT) + line items, persisted. +2 vitest on `costingExportLine`.
+  - **R1.2 supplier-invoice descriptor actions:** the wired bridge fns were unreachable; added per-status
+    actions to `supplier-invoices.descriptor.ts` — **3-Way Match** (re-verify + persist match status,
+    reload surfaces it, no toast), **Approve** (gated on `matchStatus==='Matched'`, SoD approver from
+    session server-side, confirm dialog), **Mark Paid** (capture form: method + reference, gated on
+    `status==='Approved'`). Bridge fns already Go-tested in I3 (`supplier_ap_gate_test.go`).
+  - **R1.3 Expenses Post (owner default ratified):** wired `expenses.ts realPost` → `PostExpenseEntry`;
+    the descriptor confirm now NAMES the GL effect ("creates a GL journal entry"). `PostExpenseEntry`
+    posts a real balanced journal entry, not a status flip. `integ_expense_hotzone_test.go`: approved
+    entry posts → status `posted` + linked balanced JE (2 lines) + idempotent re-post (no dup JE).
+  - **R1.4 Bank Accounts Create/Update — FINDING, contract corrected:** the handoff assumed encrypted
+    IBAN/SWIFT, but `CompanyBankAccount` stores them **PLAINTEXT by deliberate design** —
+    `migrateBankAccountEncryption` strips leftover ciphertext back to plaintext and
+    `TestBankAccount_UpdatePreservesEncryption` asserts the plaintext roundtrip. So the correct contract
+    is plaintext struct/patch (no client-side crypto, no server FieldCrypto to feed); wired
+    `realCreate`→`CreateBankAccount(struct)`, `realUpdate`→`UpdateBankAccount(id, whitelisted patch)`.
+    `integ_bank_account_hotzone_test.go` asserts the plaintext ROUNDTRIP (create→read-back, update→re-read),
+    NOT ciphertext≠plaintext (which would be false). The spec's ciphertext assertion was based on the
+    outdated premise — surfaced here, implemented correctly.
+
+- **★ Wave R2 — deferred Go persistence tests DONE (full `go test .` green, no regressions).**
+  New file `integ_residue_r2_test.go`, house style:
+  - **FinalizeBookBankReconciliation:** zero-difference recon finalizes (is_reconciled + session
+    reviewer + timestamp); already-reconciled and non-zero-difference are refused, and a refused
+    finalize writes nothing.
+  - **DeleteRFQWithCascade:** cascade=false with links → error + nothing deleted; cascade=true removes
+    the RFQ + linked costings + offers + offer items. (Offer needs a valid `Stage` — CHECK constraint.)
+  - **BankStatement import two-phase:** Preview stages nothing; Confirm persists once then consumes the
+    preview (second Confirm errors); Discard drops the preview so a later Confirm writes nothing.
+    Driven via the package-level preview store (the dialog half of Preview can't run headlessly; the
+    persistence guarantee lives entirely in Confirm/Discard).
+  - **ReviewDeleteApprovalRequest reject:** fills the one gap — approve is covered in app_test.go, and
+    BOTH employee-archive review paths are covered in employee_archive_service_test.go, so only the
+    delete-approval reject was untested. Reject flips pending→rejected, target preserved.
+
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
 - **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
