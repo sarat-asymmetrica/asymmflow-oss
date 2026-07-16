@@ -228,6 +228,48 @@ kickoff = **71**.
     encrypted (no plaintext) and `GetAIProviderKeyStatus` returns the masked last-4, never the plaintext.
     (Existing `TestSetAPIKeys_EncryptsToDatabase`/`_SkipsMaskedValues` cover encrypt + masked-skip write.)
 
+- **★ Wave R5 — capture-form SLOT items DONE (green throughout: check 0/0 351, vitest 166, build clean,
+  layout gates on every touched screen). Delivered in parts:**
+  - **Delivery Notes (R5.1):** replaced the fictional generic status-advance with the REAL two-step flow —
+    Dispatch (driver/vehicle capture form) + Confirm Delivery (POD-signatory form). The mock `InTransit`
+    state had no backend binding (`DispatchDeliveryNote`/`ConfirmDeliveryNote` are strictly
+    Prepared→Dispatched→Delivered) and was retired from transitions.
+  - **GRNs (R5.1):** built QC Review (verdict select + notes; qcBy from session) + Complete (confirm) from
+    scratch (bridge was read-only).
+  - **Invoice Send (R5.2):** `SendCustomerInvoice` Draft→Sent row action (existing send_invoice_guard_test.go).
+  - **★ Engine seam:** added `ActionSpec.modal?` (L4 ejection at action granularity) — ActionHost renders a
+    bespoke component `{row, reload, close}` for flows a flat FormSpec can't express. Pre-approved engine work;
+    no behavior change for existing screens.
+  - **PO Receive-Items (R5.3, Sonnet agent on the seam + orchestrator gate):** a per-line receive/reject
+    capture MODAL on the Purchase Orders ledger → `ReceiveAgainstPO` creates the GRN. `GetPurchaseOrderByID`
+    loads the PO's items; the VM's `validateRow` MIRRORS the server over-receive guard
+    (alreadyReceived+receiving ≤ ordered, rejected ≤ received, non-negative) so bad lines are caught before
+    the round-trip; `buildReceiveItems` assembles `GRNItem[]` (server computes accepted). Built on Modal +
+    LineItemsEditor (L1/L5-clean); 13 new vitest + full suite 166. Orchestrator gate: reviewed the financial
+    assembly + validation (correct), ruled NO extra ConfirmDialog (the modal's quantity-entry + "Receive
+    Items" button IS the intent, unlike a one-click row action), confirmed existing Go coverage
+    (grn_receive_and_complete_test.go). GRN "Receive-from-PO" now lives here (same binding).
+
+## CAMPAIGN CLOSE-OUT (Residue & Tech-Debt Pass R1–R5) — `INTEG gap:` 71 → 24, all survivors named
+
+R1–R5 complete. Every mutation wired-and-verified or honestly gapped. The 24 remaining `INTEG gap:` throws
+are all owner-accepted-by-category survivors, NOT missing features:
+- **~11 side-effecting file exports** (accounting 5× CSV/VAT + evidence pack, costing PDF/Excel/OpenFile,
+  deployment 2 pilot bundles) — the lab defers all disk-writing exports as a class.
+- **1 AI-authority boundary** — `executeButlerAction` (seam passes binding name only; wiring needs a
+  per-target human-confirm gate).
+- **~6 architectural/data-loss** — `UpdateSettings` (full-overwrite would wipe apiKeys/folders; needs
+  merge-safe path), invoice `markInvoicePaid` (settlement = customer receipts), `createInvoice`
+  (raised-from-order), customer status (via UpdateCustomer full record), `UpdateCostingSheet` (struct-arg).
+- **~6 no-binding / no-endpoint** — pipeline `DeleteRFQWithCascade` (RFQ-only binding), pricing win-rate,
+  payroll cross-domain employee list + `UpsertEmployeeCompensationProfile` (PII hot-zone), notification
+  review-mapper (§E; reviews live on Approvals Queue).
+Two findings surfaced and resolved: bank-account IBAN/SWIFT are plaintext-by-design (R1.4); `UpdateSettings`
+full-overwrite data-loss + a latent real-mode blank-read bug (R3, fixed). One owner decision taken: the
+R4 AI-key read-back binding. New Go tests this campaign: costing/expense/bank-account hot-zones (R1),
+residue R2 (4), R3 UpdateAccount whitelist, R4 AI-key masked read. Kernel-flip readiness: unchanged owner-gated
+Task #5 — this campaign closes the wiring residue so only the human smoke pass + flip remain.
+
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
 - **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
