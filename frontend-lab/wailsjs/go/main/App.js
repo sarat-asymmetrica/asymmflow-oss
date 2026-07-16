@@ -2162,6 +2162,10 @@ export function GetSerialsForInvoiceItem(arg1, arg2) {
   return window['go']['main']['App']['GetSerialsForInvoiceItem'](arg1, arg2);
 }
 
+export function GetAIProviderKeyStatus() {
+  return window['go']['main']['App']['GetAIProviderKeyStatus']();
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }

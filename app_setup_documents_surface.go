@@ -700,6 +700,38 @@ func (a *App) SetAPIKeys(apiKeys map[string]string) error {
 	return nil
 }
 
+// AIProviderKeyStatus is the MASKED status of the Butler/Mistral provider key.
+// It never carries the plaintext — only maskSecret's last-4 representation.
+type AIProviderKeyStatus struct {
+	// '(not set)' | '****' | 'abcd****wxyz' — the same mask GetSettings applies.
+	MaskedKey string `json:"maskedKey"`
+	IsSet     bool   `json:"isSet"`
+}
+
+// GetAIProviderKeyStatus returns the Butler/Mistral provider key MASKED, read
+// from the SAME encrypted settings store SetAPIKeys writes to (the Setting DB
+// table via SettingsService), so the write→read round-trip is honest — unlike
+// GetSettings, which reads settings.json. The plaintext is decrypted only long
+// enough to compute the mask and is NEVER returned, logged, or echoed. A
+// missing key is reported as "(not set)", not an error.
+func (a *App) GetAIProviderKeyStatus() (AIProviderKeyStatus, error) {
+	if err := a.requirePermission("settings:view"); err != nil {
+		return AIProviderKeyStatus{}, err
+	}
+	if a.settingsService == nil {
+		return AIProviderKeyStatus{MaskedKey: "(not set)"}, nil
+	}
+	plain, err := a.settingsService.GetSetting("apiKeys.mistral_key")
+	if err != nil {
+		// Not-found (or an unreadable value) is an honest "(not set)".
+		return AIProviderKeyStatus{MaskedKey: "(not set)"}, nil
+	}
+	return AIProviderKeyStatus{
+		MaskedKey: maskSecret(plain),
+		IsSet:     strings.TrimSpace(plain) != "",
+	}, nil
+}
+
 // RotateEncryptionKey rotates the field-level encryption key.
 // All encrypted settings and bank account fields are re-encrypted with the new key version.
 // Old key versions are kept in memory for decryption of any values missed during rotation.

@@ -84,6 +84,48 @@
         </Row>
       </Stack>
     </Card>
+
+    <!-- R4: AI provider (Butler) key. Encrypted at rest server-side; only the
+         server-masked last-4 is ever shown — the plaintext is write-only. -->
+    <Card padding="lg">
+      <Stack gap="md">
+        <span class="k-field-label">AI Provider Key (Butler)</span>
+        <span class="bs-message">
+          Used by the Butler assistant. Stored encrypted on this device; only the last 4
+          characters are ever shown, and the key is never displayed in full again.
+        </span>
+
+        <FormGrid columns={2}>
+          <label class="k-field">
+            <span class="k-field-label">Current Key</span>
+            <input class="k-input" type="text" value={vm.aiKey.maskedKey} readonly />
+          </label>
+
+          <label class="k-field">
+            <span class="k-field-label">{vm.aiKey.isSet ? 'Replace Key' : 'Set Key'}</span>
+            <input
+              class="k-input"
+              type="password"
+              autocomplete="off"
+              placeholder="Paste the provider API key"
+              bind:value={vm.aiKeyInput}
+            />
+          </label>
+        </FormGrid>
+
+        {#if vm.aiKeyError}
+          <span class="bs-message bs-error">Could not save key: {vm.aiKeyError}</span>
+        {:else if vm.aiKeySaved}
+          <span class="bs-message bs-saved">API key saved (encrypted).</span>
+        {/if}
+
+        <Row justify="end">
+          <Button variant="primary" onclick={() => vm.saveAIKey()} disabled={vm.aiKeySaving}>
+            {vm.aiKeySaving ? 'Saving…' : 'Save Key'}
+          </Button>
+        </Row>
+      </Stack>
+    </Card>
   {/if}
 </PageShell>
 

@@ -1104,6 +1104,8 @@ export function GetSerialsByProduct(arg1:string):Promise<Array<crm.SerialNumber>
 
 export function GetSerialsForInvoiceItem(arg1:string,arg2:string):Promise<Array<crm.SerialNumber>>;
 
+export function GetAIProviderKeyStatus():Promise<Record<string, any>>;
+
 export function GetSettings():Promise<Record<string, any>>;
 
 export function GetStaleCheques(arg1:string):Promise<Array<finance.OutstandingCheque>>;

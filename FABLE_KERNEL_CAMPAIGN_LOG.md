@@ -208,6 +208,26 @@ kickoff = **71**.
     prior coverage). UpdateBankStatement/Line already covered in bank_reconciliation_service_test.go; the
     People/Work/Deployment/Butler wirings rely on type-gate + existing collaboration/employee service tests.
 
+- **★ Wave R4 — AI-provider key encrypted at rest DONE (green: check 0/0 348, L1 tripwire, build clean,
+  layout gate 1/1 Business Settings, Go test green). Owner-ratified read-back approach.**
+  Unblocks the previously-DEFERred AI-key surface (Settings.parity.md) now that §D ratifies encrypted-in-app.
+  - **Write:** the Butler/Mistral key persists via `SetAPIKeys` → `SetSetting(encrypt=true)` (HKDF +
+    AES-256-GCM in the settings DB). Plaintext crosses the wire (server encrypts); NEVER logged/echoed; the
+    field is write-only in the VM (`aiKeyInput` cleared on submit).
+  - **★ FINDING + owner ruling:** the spec's "load back masked via GetSettings" does NOT round-trip —
+    `SetAPIKeys` writes the settings **DB table**, but `GetSettings` reads **settings.json** (a different
+    store), and there was no bound single-setting DB read. Surfaced to the owner (crypto stop-and-ask); ruling
+    (2026-07-16): **add a DB-backed masked read binding.** Added `App.GetAIProviderKeyStatus()` → reads the
+    same encrypted store, decrypts only to compute `maskSecret` (last-4), returns `{maskedKey, isSet}` —
+    plaintext never returned. Hand-added the thin wails wrapper (App auto-binds at runtime). Now the
+    save→read round-trip is honest.
+  - **UI:** an "AI Provider Key (Butler)" Card on Business Settings (bespoke-on-primitives, L1/L2-safe,
+    reuses `k-field`/`bs-message`); shows the masked current key + a password input; "(not set)"/masked, no
+    plaintext ever displayed.
+  - **Go test:** `integ_residue_r4_test.go` — not-set → "(not set)"; after `SetAPIKeys`, the Setting row is
+    encrypted (no plaintext) and `GetAIProviderKeyStatus` returns the masked last-4, never the plaintext.
+    (Existing `TestSetAPIKeys_EncryptsToDatabase`/`_SkipsMaskedValues` cover encrypt + masked-skip write.)
+
 ## INTEG campaign staged (2026-07-15, post-Sprint-3; Fable + owner)
 
 - **Merged to main `c29e17a`** (pushed) — K1–K6 flip-prep + mesh Wave 0, **minus the
