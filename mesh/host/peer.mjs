@@ -162,6 +162,20 @@ const requireAuthority = (cmd) => {
 }
 const actorName = () => (isAuthority ? 'authority' : 'device')
 
+// Appending needs WRITER-SET membership (Autobase-level, distinct from the
+// capability grant). "Not writable" raw from Autobase reads like a crash to a
+// first-timer — turn it into instructions they can act on without help.
+const requireWritable = () => {
+  if (node.writable) return
+  throw new Error(
+    `this peer is not in the writer set yet — wait for {"event":"writable"}. ` +
+    `On the HOST, run: add-writer ${node.writerKey} ` +
+    `(this peer's CURRENT writerKey — it changes whenever the storage folder is recreated, ` +
+    `so re-run add-writer after any fresh start). If it never arrives, the url/baseKey pasted at ` +
+    `join may be from an older host session — restart JOIN with the values the host is printing NOW.`,
+  )
+}
+
 // Humans paste keys wrapped in <>, quotes, or with stray whitespace — strip
 // the decoration, then insist on bare 64-hex with a message a human can act on.
 const cleanKey = (cmd, raw) => {
@@ -197,10 +211,12 @@ rl.on('line', async (line) => {
       await node.append(revokeOp(stamp({ actor: actorName(), device }), keys))
       out({ event: 'ok', cmd, device })
     } else if (cmd === 'append') {
+      requireWritable()
       const op = stamp(JSON.parse(arg))
       await node.append(capability ? signOp(op, keys) : op)
       out({ event: 'ok', cmd, signed: capability, seq: op.seq })
     } else if (cmd === 'append-raw') {
+      requireWritable()
       const op = stamp(JSON.parse(arg)) // deliberately unsigned — the reducer will reject it
       await node.append(op)
       out({ event: 'ok', cmd, signed: false, seq: op.seq })
