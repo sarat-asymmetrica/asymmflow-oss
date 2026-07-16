@@ -7,19 +7,17 @@ import * as mock from './mock'
 import * as real from './real'
 import { pick, usingWails } from './runtime'
 
-export type { CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
+export type { CustomerRow, InvoiceRow, InvoiceReceiptInput } from './mock'
 export { usingWails }
 
 export const fetchInvoices = (): ReturnType<typeof mock.fetchInvoices> =>
   pick(real.fetchInvoices, mock.fetchInvoices)()
 export const fetchInvoicesPage = (l: number, o: number): ReturnType<typeof mock.fetchInvoicesPage> =>
   pick(real.fetchInvoicesPage, mock.fetchInvoicesPage)(l, o)
-export const markInvoicePaid = (id: string): Promise<void> =>
-  pick(real.markInvoicePaid, mock.markInvoicePaid)(id)
+export const recordCustomerReceipt = (input: mock.InvoiceReceiptInput): Promise<void> =>
+  pick(real.recordCustomerReceipt, mock.recordCustomerReceipt)(input)
 export const sendInvoice = (id: string): Promise<void> =>
   pick(real.sendInvoice, mock.sendInvoice)(id)
-export const createInvoice = (d: mock.NewInvoiceDraft): Promise<void> =>
-  pick(real.createInvoice, mock.createInvoice)(d)
 export const deleteInvoice = (id: string): Promise<void> =>
   pick(real.deleteInvoice, mock.deleteInvoice)(id)
 export const customerOptions = (): ReturnType<typeof mock.customerOptions> =>

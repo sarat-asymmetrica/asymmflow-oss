@@ -95,33 +95,19 @@ export async function fetchInvoicesPage(limit: number, offset: number): Promise<
   return invoices.slice(offset, offset + limit)
 }
 
-export interface NewInvoiceDraft {
-  customer: string
-  division: string
-  issueDate: string
-  dueDate: string
-  amount: number | null
-  currency: string
+/** Receipt-capture input (owner ruling G1.2): a settlement is a real customer
+ * receipt recorded against an invoice, never a status flip. Mirrors the fields
+ * the InvoiceReceiptModal captures; the real bridge feeds them to
+ * CreateCustomerReceipt (invoice-bound). */
+export interface InvoiceReceiptInput {
+  invoiceId: string
+  amount: number
+  /** 'YYYY-MM-DD'; blank ⇒ server (and this mock) treat as today. */
+  date: string
+  /** Cash | Cheque | Bank Transfer | Credit Card | LC | PDC | Other */
+  method: string
+  reference: string
   notes: string
-}
-
-let createdCount = 0
-
-export async function createInvoice(draft: NewInvoiceDraft): Promise<void> {
-  invoices ??= generate()
-  createdCount++
-  invoices.unshift({
-    id: `inv-new-${createdCount}`,
-    number: `INV-2026-N${pad(createdCount, 3)}`,
-    customer: draft.customer,
-    division: draft.division,
-    status: 'Draft',
-    issueDate: draft.issueDate,
-    dueDate: draft.dueDate,
-    amount: draft.amount ?? 0,
-    currency: draft.currency,
-  })
-  await new Promise((r) => setTimeout(r, 150))
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
@@ -136,10 +122,14 @@ export async function customerOptions(): Promise<{ value: string; label: string 
   return CUSTOMERS.filter((c) => c).map((c) => ({ value: c, label: c }))
 }
 
-export async function markInvoicePaid(id: string): Promise<void> {
+/** Record a customer receipt against an invoice. The real path funds a Payment
+ * row + advances invoice state atomically (CreateCustomerReceipt); the mock has
+ * no outstanding-balance model, so it flips to Paid only when the receipt fully
+ * covers the invoice total, else leaves the status (an honest partial receipt). */
+export async function recordCustomerReceipt(input: InvoiceReceiptInput): Promise<void> {
   invoices ??= generate()
-  const inv = invoices.find((i) => i.id === id)
-  if (inv) inv.status = 'Paid'
+  const inv = invoices.find((i) => i.id === input.invoiceId)
+  if (inv && input.amount + 0.001 >= inv.amount) inv.status = 'Paid'
   await new Promise((r) => setTimeout(r, 120))
 }
 

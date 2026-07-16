@@ -24,6 +24,12 @@ import {
   UpdateAccount,
   CreateJournalEntry,
   ReviewCashflowEvidenceProposal,
+  SyncCashflowEvidenceProposalReviews,
+  ExportBalanceSheetCSV,
+  ExportGeneralLedgerCSV,
+  ExportJournalCSV,
+  ExportVATReturnData,
+  ExportCashflowEvidencePack,
 } from '$wails/go/main/FinanceService'
 
 /* ---- types (camelCase mirrors of the Go models named in BUILD_CONTEXT) ---- */
@@ -961,8 +967,12 @@ async function realCreateJournalEntry(draft: NewJournalEntryDraft): Promise<Jour
   const created = await CreateJournalEntry(arg)
   return mapJournalEntry(created as unknown as Record<string, unknown>)
 }
-async function realSyncProposalReviews(_days: number): Promise<CashflowProposalReviewRow[]> {
-  throw new Error('INTEG gap: SyncCashflowEvidenceProposalReviews — wires at K5')
+async function realSyncProposalReviews(days: number): Promise<CashflowProposalReviewRow[]> {
+  // SyncCashflowEvidenceProposalReviews(days) refreshes the review rows from the
+  // evidence proposals and returns them — NOT a GL posting; it reconciles the
+  // review worklist. Same row shape as the list fetch, so it maps identically.
+  const rows = await SyncCashflowEvidenceProposalReviews(days)
+  return (rows ?? []).map((x) => mapProposalReview(x as unknown as Record<string, unknown>))
 }
 async function realReviewProposal(id: string, status: string, note: string): Promise<CashflowProposalReviewRow> {
   // FinanceService.ReviewCashflowEvidenceProposal(id, status, note) →
@@ -970,20 +980,22 @@ async function realReviewProposal(id: string, status: string, note: string): Pro
   const reviewed = await ReviewCashflowEvidenceProposal(id, status, note)
   return mapProposalReview(reviewed as unknown as Record<string, unknown>)
 }
-async function realExportCashflowEvidencePack(_days: number): Promise<string> {
-  throw new Error('INTEG gap: ExportCashflowEvidencePack — wires at K5')
+// Export bindings return the ABSOLUTE PATH of the file they wrote to disk (under
+// the server's export dir). The screen surfaces the path and offers OpenExportedFile.
+async function realExportCashflowEvidencePack(days: number): Promise<string> {
+  return ExportCashflowEvidencePack(days)
 }
-async function realExportBalanceSheetCSV(_year: number): Promise<string> {
-  throw new Error('INTEG gap: ExportBalanceSheetCSV — wires at K5')
+async function realExportBalanceSheetCSV(year: number): Promise<string> {
+  return ExportBalanceSheetCSV(year)
 }
-async function realExportGeneralLedgerCSV(_year: number): Promise<string> {
-  throw new Error('INTEG gap: ExportGeneralLedgerCSV — wires at K5')
+async function realExportGeneralLedgerCSV(year: number): Promise<string> {
+  return ExportGeneralLedgerCSV(year)
 }
-async function realExportJournalCSV(_year: number): Promise<string> {
-  throw new Error('INTEG gap: ExportJournalCSV — wires at K5')
+async function realExportJournalCSV(year: number): Promise<string> {
+  return ExportJournalCSV(year)
 }
-async function realExportVATReturnData(_year: number, _quarter: number): Promise<string> {
-  throw new Error('INTEG gap: ExportVATReturnData — wires at K5')
+async function realExportVATReturnData(year: number, quarter: number): Promise<string> {
+  return ExportVATReturnData(year, quarter)
 }
 
 /* ---- public switched API (viewmodel imports THESE) ---- */

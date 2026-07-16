@@ -35,7 +35,7 @@ Owner ruled full retirement mid-build (surveillance-adjacent, out of scope for t
 ## INTEG / hot-zone ledger (8 mutations, all named)
 UpdatePilotDeploymentChecklistItem · TriggerCollaborativeSyncNow · **RetryCollaborativePendingOperations** (HOT bulk,
 now confirm-gated) · RetryCollaborativePendingOperation · ExportPilotSupportBundle · ExportPilotSignoffReport ·
-ReassignEmployeeLicenseAccess · UpdateLicenseDisplayName — each throws `INTEG gap: <Binding> — wires at K5`; mock performs it.
+ReassignEmployeeLicenseAccess · UpdateLicenseDisplayName — all WIRED (R3; the two pilot exports wired + artifact-proven in G4, returning the on-disk path); mock remains as the lab feature.
 FETCH wired real (7): GetPilotReadinessSummary, ListPilotReadinessRows, GetPhase7RolloutStatus, GetPilotDeploymentChecklist,
 ListLicenseKeys, GetDeploymentDataAudit, ListCollaborativePendingOperations.
 

@@ -1442,6 +1442,10 @@ export function GetCustomerFullProfile(arg1) {
   return window['go']['main']['App']['GetCustomerFullProfile'](arg1);
 }
 
+export function GetCustomerWinRates() {
+  return window['go']['main']['App']['GetCustomerWinRates']();
+}
+
 export function GetCustomerGraph(arg1, arg2) {
   return window['go']['main']['App']['GetCustomerGraph'](arg1, arg2);
 }

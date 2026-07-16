@@ -17,8 +17,8 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { getDivisionOptions, getDefaultDivisionKey } from '../stores/divisions.svelte'
-import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions, SaveCostingAsOffer } from '$wails/go/main/App'
-import { GetCostingSheets, GetCostingsByRFQ, CreateCostingSheet, CloneCostingAsNewRevision, SetActiveCostingRevision } from '$wails/go/main/CRMService'
+import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions, SaveCostingAsOffer, ExportCostingToPDF, ExportCostingToExcel, OpenExportedFile } from '$wails/go/main/App'
+import { GetCostingSheets, GetCostingsByRFQ, CreateCostingSheet, CloneCostingAsNewRevision, SetActiveCostingRevision, UpdateCostingSheet } from '$wails/go/main/CRMService'
 import { GetSettings } from '$wails/go/main/DocumentsService'
 import type { main } from '$wails/go/models'
 
@@ -602,7 +602,24 @@ async function mockCreateCostingSheet(_rfqId: number, _items: string, _preparedB
   mockRevisionSeq += 1
   return { id: mockRevisionSeq, revisionNumber: 1 }
 }
-async function mockUpdateCostingSheet(id: number, _items: string, _preparedBy: string): Promise<void> {
+/** The refresh payload the costing VM assembles for UpdateCostingSheet (owner
+ * standing default: full CostingSheetData struct assembled in the VM, R1
+ * technique — no narrower Go binding). The 4 totals are the VM's OWN authoritative
+ * `totals` values (totalCost/grandTotal/profit/profitPercent) — the SAME values
+ * the server's summarisePersistedCosting derives from the items JSON, so there is
+ * no formula divergence. Status/created_by/approval fields are NOT sent: the Go
+ * handler Omits them (approval-gated / server-owned). */
+export interface CostingSheetUpdate {
+  items: string
+  subtotal: number
+  finalPrice: number
+  totalMarkup: number
+  marginPercent: number
+  customerName: string
+  rfqId: number
+}
+
+async function mockUpdateCostingSheet(id: number, _data: CostingSheetUpdate): Promise<void> {
   await sleep(200)
   void id
 }
@@ -620,11 +637,11 @@ async function mockSaveCostingAsOffer(_data: CostingExportData): Promise<{ offer
   mockOfferSeq += 1
   return { offerNumber: `OFR-${pad(mockOfferSeq, 4)}` }
 }
-async function mockExportCostingToPDF(_payload: CostingExportPayload): Promise<string> {
+async function mockExportCostingToPDF(_data: CostingExportData): Promise<string> {
   await sleep(300)
   return 'C:\\Exports\\costing-mock.pdf'
 }
-async function mockExportCostingToExcel(_payload: CostingExportPayload): Promise<string> {
+async function mockExportCostingToExcel(_data: CostingExportData): Promise<string> {
   await sleep(300)
   return 'C:\\Exports\\costing-mock.xlsx'
 }
@@ -784,12 +801,24 @@ async function realCreateCostingSheet(rfqId: number, items: string, preparedBy: 
   const result = (await CreateCostingSheet(rfqId, items, preparedBy)) as unknown as Record<string, unknown>
   return { id: num(result.id), revisionNumber: num(result.revision_number) }
 }
-async function realUpdateCostingSheet(_id: number, _items: string, _preparedBy: string): Promise<void> {
-  // GAP: binding is UpdateCostingSheet(id number, data main.CostingSheetData) -> CostingSheetData.
-  // arg2 is a FULL CostingSheetData struct (rfq_id, final_price, subtotal, margin_percent, …),
-  // but this call only carries (items, preparedBy) — cannot assemble the struct without guessing
-  // required pricing/linkage fields. A wrong wire is worse than an honest gap.
-  throw new Error('INTEG gap: UpdateCostingSheet — binding takes (id, CostingSheetData struct); this call only carries (items, preparedBy), which cannot assemble a full CostingSheetData')
+async function realUpdateCostingSheet(id: number, data: CostingSheetUpdate): Promise<void> {
+  // Owner standing default: assemble the full CostingSheetData in the VM (R1
+  // technique). The Go handler preserves ID/timestamps and Omits Status/
+  // ApprovedBy/ApprovalRequired/RevisionNumber/ParentCostingID/IsActive, so a
+  // client payload can never mass-assign approval state. We send the refreshed
+  // items JSON + the 4 totals (mapped 1:1 from the VM's authoritative `totals`,
+  // consistent with summarisePersistedCosting) + provenance customer/rfq — the
+  // fields a re-costing legitimately changes.
+  const payload = {
+    rfq_id: data.rfqId,
+    items: data.items,
+    subtotal: data.subtotal,
+    final_price: data.finalPrice,
+    total_markup: data.totalMarkup,
+    margin_percent: data.marginPercent,
+    customer_name: data.customerName,
+  }
+  await UpdateCostingSheet(id, payload as unknown as Parameters<typeof UpdateCostingSheet>[1])
 }
 async function realCloneCostingAsNewRevision(sourceId: number, preparedBy: string): Promise<{ id: number; revisionNumber: number }> {
   // CRMService.CloneCostingAsNewRevision(sourceId number, preparedBy string) -> CostingSheetData
@@ -812,14 +841,20 @@ async function realSaveCostingAsOffer(data: CostingExportData): Promise<{ offerN
   const rec = offer as unknown as Record<string, unknown>
   return { offerNumber: str(rec.offer_number) }
 }
-async function realExportCostingToPDF(_payload: CostingExportPayload): Promise<string> {
-  throw new Error('INTEG gap: ExportCostingToPDF — wires at K5')
+// The export bindings take the FLAT main.CostingExportData (same shape
+// SaveCostingAsOffer uses, assembled by the VM's buildCostingExportData) and
+// return the absolute path of the file they wrote. The VM then hands that path to
+// OpenExportedFile behind the existing confirm/try flow.
+async function realExportCostingToPDF(data: CostingExportData): Promise<string> {
+  return ExportCostingToPDF(data as unknown as main.CostingExportData)
 }
-async function realExportCostingToExcel(_payload: CostingExportPayload): Promise<string> {
-  throw new Error('INTEG gap: ExportCostingToExcel — wires at K5')
+async function realExportCostingToExcel(data: CostingExportData): Promise<string> {
+  return ExportCostingToExcel(data as unknown as main.CostingExportData)
 }
-async function realOpenExportedFile(_path: string): Promise<void> {
-  throw new Error('INTEG gap: OpenExportedFile — wires at K5 (side-effecting: opens a file on disk)')
+async function realOpenExportedFile(path: string): Promise<void> {
+  // The ONE true side-effect in this file: shells out to the OS to open the file.
+  // Called only after a successful export produced a real path.
+  await OpenExportedFile(path)
 }
 
 /* ---- public switched API (VM imports THESE) ---- */
@@ -841,17 +876,17 @@ export const fetchRecentCostingSheets = (limit: number): Promise<CostingSheetSum
 
 export const createCostingSheet = (rfqId: number, items: string, preparedBy: string): Promise<{ id: number; revisionNumber: number }> =>
   pick(realCreateCostingSheet, mockCreateCostingSheet)(rfqId, items, preparedBy)
-export const updateCostingSheet = (id: number, items: string, preparedBy: string): Promise<void> =>
-  pick(realUpdateCostingSheet, mockUpdateCostingSheet)(id, items, preparedBy)
+export const updateCostingSheet = (id: number, data: CostingSheetUpdate): Promise<void> =>
+  pick(realUpdateCostingSheet, mockUpdateCostingSheet)(id, data)
 export const cloneCostingAsNewRevision = (sourceId: number, preparedBy: string): Promise<{ id: number; revisionNumber: number }> =>
   pick(realCloneCostingAsNewRevision, mockCloneCostingAsNewRevision)(sourceId, preparedBy)
 export const setActiveCostingRevision = (id: number): Promise<void> =>
   pick(realSetActiveCostingRevision, mockSetActiveCostingRevision)(id)
 export const saveCostingAsOffer = (data: CostingExportData): Promise<{ offerNumber: string }> =>
   pick(realSaveCostingAsOffer, mockSaveCostingAsOffer)(data)
-export const exportCostingToPDF = (payload: CostingExportPayload): Promise<string> =>
-  pick(realExportCostingToPDF, mockExportCostingToPDF)(payload)
-export const exportCostingToExcel = (payload: CostingExportPayload): Promise<string> =>
-  pick(realExportCostingToExcel, mockExportCostingToExcel)(payload)
+export const exportCostingToPDF = (data: CostingExportData): Promise<string> =>
+  pick(realExportCostingToPDF, mockExportCostingToPDF)(data)
+export const exportCostingToExcel = (data: CostingExportData): Promise<string> =>
+  pick(realExportCostingToExcel, mockExportCostingToExcel)(data)
 export const openExportedFile = (path: string): Promise<void> =>
   pick(realOpenExportedFile, mockOpenExportedFile)(path)

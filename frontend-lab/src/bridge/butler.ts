@@ -11,25 +11,50 @@
  *    housekeeping (send a chat turn, remove a thread) gated by
  *    `intelligence:chat` / `*` permission on the Go side, the same
  *    human-in-the-loop shape as any other chat UI.
- *  - executeButlerActionBinding stays INTEG-gapped by design, confirmed on
- *    review: there is no single Go `ExecuteButlerAction` — the 23 write
- *    actions are 23 distinct `(a *App)` methods (CreateOfferDraftFromButler,
- *    ApprovePurchaseOrder, ...). Wiring this seam for real would need the
- *    resolved action's DATA payload, but `executeButlerAction` in
- *    butler-actions.ts only ever passes `resolved.bindingName` through to
- *    this function — the payload is validated there and then dropped, never
- *    threaded to the bridge. Carrying it through is a butler-actions.ts
- *    change (outside this file's ownership) and, per the AI-authority
- *    boundary, would also require re-checking EACH of the 23 targets for
- *    whether the Go handler itself demands a separate human confirm/approval
- *    step or would let an armed chat action post/approve/delete a financial
- *    record on its own say-so. Gap-if-uncertain: left throwing, never
- *    simulated even in mock mode (see below), so this boundary is never
- *    silently papered over. */
+ *  - The write-action seam is now WIRED (owner ruling G1.1, the butler SPLIT).
+ *    butler-actions.ts assembles each armed+confirmed action's real payload and
+ *    calls the matching typed wrapper below; the wrapper calls the actual Go
+ *    binding (real runtime) or simulates success (mock). The AI-authority
+ *    boundary is preserved two ways: (1) the human ARMS + CONFIRMS every chip,
+ *    so the acting actor is the session user — the Go handlers stamp
+ *    getCurrentUserID()/updated_by, never "butler" (none of the 19 kept bindings
+ *    even takes an actor arg); (2) the 4 APPROVE-class bindings are PERMANENTLY
+ *    RETIRED from the vocabulary — never imported here, redirected to the
+ *    Approvals Queue at the resolver — so the agent can never put an approval
+ *    one click away. Mirrors the mesh's distributed law (MESH-D10). */
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { ChatWithButlerPersistent, DeleteConversation, GetConversationMessages, ListConversations, PurgeAllConversations } from '$wails/go/main/ButlerService'
 import { ListCustomers, GetCustomer, ListSuppliers, GetSupplier } from '$wails/go/main/CRMService'
+// The 19 draft/update-class write bindings the butler split wires for real
+// (owner ruling G1.1). Note what is DELIBERATELY ABSENT: the 4 approve-class
+// bindings (ApprovePurchaseOrder, ApproveStockAdjustment, ApproveSupplierInvoice,
+// ApproveCostingSheet) are NEVER imported here — they are retired from butler's
+// vocabulary at the resolver, so they are not even reachable from this module.
+// UpdateCostingSheet is also absent: its Go handler omits Status (approval-gated),
+// so a butler status-only payload would be a pretend-persist — that path redirects
+// to the Approvals Queue instead (see butler-actions.ts).
+import {
+  CreateOfferDraftFromButler,
+  CreateFollowUp,
+  CreateOrder,
+  CreateRFQ,
+  AddCustomerContact,
+  AddSupplierContact,
+  CreateStockAdjustment,
+  CreateCustomerFromButler,
+  CreateSupplierFromButler,
+  UpdatePOStatus,
+  UpdateOpportunityStage,
+  UpdateOpportunityDetails,
+  UpdateOrderStage,
+  UpdateRFQStage,
+  UpdateOfferStatus,
+  MarkOfferWon,
+  MarkOfferLost,
+  DisputeSupplierInvoice,
+  RejectCostingSheet,
+} from '$wails/go/main/App'
 
 export interface ButlerConversationRow {
   id: string
@@ -643,18 +668,61 @@ async function realPurgeAllConversations(): Promise<void> {
   await PurgeAllConversations()
 }
 
-/** The single seam behind all 23 write-action bindings (CreateOfferDraftFromButler,
- * CreateFollowUp, CreateOrder, CreateRFQ, AddCustomerContact, AddSupplierContact,
- * CreateStockAdjustment, CreateCustomerFromButler, CreateSupplierFromButler,
- * ApprovePurchaseOrder, UpdatePOStatus, UpdateOpportunityStage, UpdateOpportunityDetails,
- * UpdateOrderStage, UpdateRFQStage, UpdateCostingSheet, UpdateOfferStatus,
- * ApproveStockAdjustment, MarkOfferWon, MarkOfferLost, ApproveSupplierInvoice,
- * DisputeSupplierInvoice, ApproveCostingSheet, RejectCostingSheet). butler-actions.ts
- * resolves which binding an armed+confirmed action maps to and calls this with its
- * name; it always throws — deliberately never simulated, mock or real (see file header). */
-export async function executeButlerActionBinding(bindingName: string): Promise<never> {
-  throw new Error(`INTEG gap: ${bindingName} — wires at K5`)
+/* ---- write-action seam: the 19 kept draft/update-class bindings (owner ruling
+ * G1.1). Each is real+mock+pick-switched. Object-arg payloads are assembled by
+ * butler-actions.ts's ported builders (verbatim from the legacy ButlerScreen, so
+ * the Go json-tag shapes match) and cast to the binding's own arg type via
+ * `Parameters<typeof Fn>[0]` — no `$wails/go/models` import leaks into this file.
+ * The mock simulates success (the lab's butler chat runs on mock seeds); real
+ * calls the Go handler. Return values are discarded — the chat only needs
+ * success/failure. ---- */
+
+const mockButlerWrite = async (): Promise<void> => {
+  await sleep(160)
 }
+
+// Object-arg creates (field-named payloads — no arg-order hazard).
+export const butlerCreateOfferDraft = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await CreateOfferDraftFromButler(payload as unknown as Parameters<typeof CreateOfferDraftFromButler>[0])), mockButlerWrite)()
+export const butlerCreateFollowUp = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await CreateFollowUp(payload as unknown as Parameters<typeof CreateFollowUp>[0])), mockButlerWrite)()
+export const butlerCreateStockAdjustment = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await CreateStockAdjustment(payload as unknown as Parameters<typeof CreateStockAdjustment>[0])), mockButlerWrite)()
+export const butlerAddCustomerContact = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await AddCustomerContact(payload as unknown as Parameters<typeof AddCustomerContact>[0])), mockButlerWrite)()
+export const butlerAddSupplierContact = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await AddSupplierContact(payload as unknown as Parameters<typeof AddSupplierContact>[0])), mockButlerWrite)()
+export const butlerCreateCustomer = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await CreateCustomerFromButler(payload as unknown as Parameters<typeof CreateCustomerFromButler>[0])), mockButlerWrite)()
+export const butlerCreateSupplier = (payload: Record<string, unknown>): Promise<void> =>
+  pick(async () => void (await CreateSupplierFromButler(payload as unknown as Parameters<typeof CreateSupplierFromButler>[0])), mockButlerWrite)()
+
+// Scalar-arg creates/updates/outcomes — typed explicitly so arg ORDER is
+// compiler-checked (MarkOfferWon's 2nd arg is a customer PO, NOT an approver).
+export const butlerCreateOrder = (orderNumber: string, customerName: string, amount: number, orderDate: string, status: string): Promise<void> =>
+  pick(async () => void (await CreateOrder(orderNumber, customerName, amount, orderDate, status)), mockButlerWrite)()
+export const butlerCreateRFQ = (client: string, project: string, value: number, notes: string, productDetails: string): Promise<void> =>
+  pick(async () => void (await CreateRFQ(client, project, value, notes, productDetails)), mockButlerWrite)()
+export const butlerUpdatePOStatus = (id: string, status: string): Promise<void> =>
+  pick(async () => void (await UpdatePOStatus(id, status)), mockButlerWrite)()
+export const butlerUpdateOpportunityStage = (id: string, stage: string): Promise<void> =>
+  pick(async () => void (await UpdateOpportunityStage(id, stage)), mockButlerWrite)()
+export const butlerUpdateOpportunityDetails = (id: string, comment: string, ownerNotes: string): Promise<void> =>
+  pick(async () => void (await UpdateOpportunityDetails(id, comment, ownerNotes)), mockButlerWrite)()
+export const butlerUpdateOrderStage = (id: string, stage: string): Promise<void> =>
+  pick(async () => void (await UpdateOrderStage(id, stage)), mockButlerWrite)()
+export const butlerUpdateRFQStage = (id: number, stage: string): Promise<void> =>
+  pick(async () => void (await UpdateRFQStage(id, stage)), mockButlerWrite)()
+export const butlerUpdateOfferStatus = (id: number, status: string): Promise<void> =>
+  pick(async () => void (await UpdateOfferStatus(id, status)), mockButlerWrite)()
+export const butlerMarkOfferWon = (offerId: string, customerPO: string): Promise<void> =>
+  pick(async () => void (await MarkOfferWon(offerId, customerPO)), mockButlerWrite)()
+export const butlerMarkOfferLost = (offerId: string, reason: string): Promise<void> =>
+  pick(async () => void (await MarkOfferLost(offerId, reason)), mockButlerWrite)()
+export const butlerDisputeSupplierInvoice = (id: string, reason: string): Promise<void> =>
+  pick(async () => void (await DisputeSupplierInvoice(id, reason)), mockButlerWrite)()
+export const butlerRejectCostingSheet = (id: number, reason: string): Promise<void> =>
+  pick(async () => void (await RejectCostingSheet(id, reason)), mockButlerWrite)()
 
 /* ---- public switched API (butler-actions.ts / butler-vm.svelte.ts import THESE) ---- */
 export const fetchButlerConversations = (): Promise<ButlerConversationRow[]> =>

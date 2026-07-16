@@ -5,9 +5,10 @@
  * surface the error inline instead of pretending. */
 
 import { DeleteCustomerInvoice, ListCustomerInvoices, SendCustomerInvoice } from '$wails/go/main/FinanceService'
-import { ListCustomers } from '$wails/go/main/CRMService'
-import { GetCustomerFullProfile } from '$wails/go/main/App'
-import type { CustomerProfilePatch, CustomerRow, InvoiceRow, NewInvoiceDraft } from './mock'
+import { GetCustomer, ListCustomers, UpdateCustomer } from '$wails/go/main/CRMService'
+import { CreateCustomerReceipt, GetCustomerFullProfile } from '$wails/go/main/App'
+import type { main } from '$wails/go/models'
+import type { CustomerProfilePatch, CustomerRow, InvoiceReceiptInput, InvoiceRow } from './mock'
 import { goDate, num, str } from './map'
 
 /* ---- Invoices ---- */
@@ -39,10 +40,30 @@ export async function deleteInvoice(id: string): Promise<void> {
   await DeleteCustomerInvoice(id)
 }
 
-export async function markInvoicePaid(_id: string): Promise<void> {
-  throw new Error(
-    'INTEG gap: settlement flows through customer receipts (ApplyCustomerReceiptToInvoice), not a status flip',
-  )
+/** Settlement = receipt capture (owner ruling G1.2), NOT a status flip. We call
+ * CreateCustomerReceipt with the invoice bound: the server derives customer +
+ * division from the invoice, creates the receipt, and applies it in ONE
+ * transaction — funding a Payment row and advancing invoice payment state
+ * (receipt_service.go). Deviation-of-record from the ruling's literal
+ * `ApplyCustomerReceiptToInvoice`: that binding needs a pre-existing receipt id,
+ * which a capture modal does not have; CreateCustomerReceipt(invoice-bound) IS
+ * the create-and-apply path (it calls the same applyCustomerReceiptToInvoiceTx).
+ * customer_id/name/division are left blank on purpose — the server fills them
+ * from the invoice; sending client-side guesses would risk a cross-customer
+ * mis-post. The receipt_date string is parsed server-side (no time.Time bridge). */
+export async function recordCustomerReceipt(input: InvoiceReceiptInput): Promise<void> {
+  const payload = {
+    customer_id: '',
+    customer_name: '',
+    invoice_id: input.invoiceId,
+    amount_bhd: input.amount,
+    receipt_date: input.date,
+    payment_method: input.method,
+    reference: input.reference,
+    division: '',
+    notes: input.notes,
+  }
+  await CreateCustomerReceipt(payload as unknown as main.CustomerReceiptInput)
 }
 
 export async function sendInvoice(id: string): Promise<void> {
@@ -51,9 +72,9 @@ export async function sendInvoice(id: string): Promise<void> {
   await SendCustomerInvoice(id)
 }
 
-export async function createInvoice(_draft: NewInvoiceDraft): Promise<void> {
-  throw new Error('INTEG gap: real invoices are raised from an order (CreateInvoiceWithOptions)')
-}
+// Standalone invoice-create is RETIRED (owner ruling G1.3): invoices are raised
+// from an order (Orders → Create Invoice via CreateInvoiceWithOptions), never
+// conjured on this ledger. No createInvoice bridge fn exists any more.
 
 /* ---- Customers ---- */
 
@@ -71,9 +92,10 @@ function mapCustomer(c: Record<string, unknown>): CustomerRow {
     balance: num(c.outstanding_bhd ?? c.balance_bhd),
     openOrders: num(c.open_orders),
     lastOrderDate: goDate(c.last_order_date),
-    // CustomerFullProfile fields — blank/zero here (INTEG gap: ListCustomers
-    // does not return them; GetCustomerFullProfile is a second fetch this
-    // bridge does not wire). Mock generates full values. See Customers.parity.md.
+    // CustomerFullProfile fields — blank/zero in the LIST mapper: ListCustomers
+    // does not return them. They are filled by the wired secondary fetch
+    // fetchCustomerProfile (GetCustomerFullProfile) when a profile opens — honest
+    // list-vs-profile depth, not a gap. See Customers.parity.md.
     trn: '',
     industry: '',
     relationYears: 0,
@@ -94,8 +116,16 @@ export async function fetchCustomers(): Promise<CustomerRow[]> {
   return (rows ?? []).map((r) => mapCustomer(r as unknown as Record<string, unknown>))
 }
 
-export async function setCustomerStatus(_id: string, _status: string): Promise<void> {
-  throw new Error('INTEG gap: customer status changes go through UpdateCustomer (full record)')
+export async function setCustomerStatus(id: string, status: string): Promise<void> {
+  // FETCH-MERGE-WRITE (G3). UpdateCustomer merges the payload onto the stored row
+  // but applies EVERY user-editable field — including blanks (MergeCustomerUpdate:
+  // "blanking an editable field remains a legitimate edit"). So a sparse {id,status}
+  // would wipe name/city/email/etc. We fetch the FULL record, override only status,
+  // and send it back; server-owned columns (order totals, AR risk, grade) are
+  // preserved server-side regardless.
+  const existing = (await GetCustomer(id)) as unknown as Record<string, unknown>
+  const merged = { ...existing, status }
+  await UpdateCustomer(merged as unknown as Parameters<typeof UpdateCustomer>[0])
 }
 
 /** Secondary profile fetch: GetCustomerFullProfile fills the depth ListCustomers

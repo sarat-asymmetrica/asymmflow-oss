@@ -25,6 +25,8 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import {
+  ExportPilotSignoffReport,
+  ExportPilotSupportBundle,
   GetDeploymentDataAudit,
   GetPhase7RolloutStatus,
   GetPilotDeploymentChecklist,
@@ -700,14 +702,16 @@ async function realRetrySingle(id: string): Promise<void> {
   await RetryCollaborativePendingOperation(id)
 }
 
-/* Side-effecting file exports (write a support bundle / sign-off report to
- * disk) — deferred rather than wired sight-unseen; see file header. */
+/* Side-effecting file exports: write a support bundle / sign-off report to disk
+ * and return its path (+ row count for the bundle). The screen surfaces the path. */
 async function realExportSupportBundle(): Promise<PilotSupportBundleResult> {
-  throw new Error('INTEG gap: ExportPilotSupportBundle (App) — side-effecting export, deferred (wires at K5)')
+  const r = (await ExportPilotSupportBundle()) as unknown as Record<string, unknown>
+  return { path: str(r.path), rows: num(r.rows) }
 }
 
 async function realExportSignoff(): Promise<PilotExportResult> {
-  throw new Error('INTEG gap: ExportPilotSignoffReport — side-effecting export, deferred (wires at K5)')
+  const r = (await ExportPilotSignoffReport()) as unknown as Record<string, unknown>
+  return { path: str(r.path) }
 }
 
 async function realReassignLicense(employeeId: string, licenseKey: string, syncName: boolean): Promise<void> {

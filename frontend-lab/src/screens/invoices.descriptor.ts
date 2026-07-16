@@ -2,70 +2,14 @@
  * Old frontend: 2,930 hand-written lines. This file: the whole screen. */
 
 import type { LedgerDescriptor } from '$kernel/descriptor'
-import type { FormSpec } from '$kernel/form'
+import InvoiceReceiptModal from './InvoiceReceiptModal.svelte'
 import {
-  createInvoice,
-  customerOptions,
   deleteInvoice,
-  divisionOptions,
   fetchInvoices,
   fetchInvoicesPage,
-  markInvoicePaid,
   sendInvoice,
   type InvoiceRow,
-  type NewInvoiceDraft,
 } from '../bridge'
-
-const newInvoiceForm: FormSpec<NewInvoiceDraft> = {
-  title: 'New Invoice',
-  submitLabel: 'Create Draft',
-  initial: () => ({
-    customer: '',
-    division: divisionOptions()[0]?.value ?? '',
-    issueDate: '',
-    dueDate: '',
-    amount: null,
-    currency: 'BHD',
-    notes: '',
-  }),
-  fields: [
-    { key: 'customer', label: 'Customer', kind: 'select', required: true, options: customerOptions },
-    // Lazy (async fn), NOT a captured array: read at form-open so the real
-    // GetDivisionRegistry (loaded during boot) wins over the synthetic fallback.
-    { key: 'division', label: 'Division', kind: 'select', required: true, options: async () => divisionOptions() },
-    { key: 'issueDate', label: 'Issue date', kind: 'date', required: true },
-    {
-      key: 'dueDate',
-      label: 'Due date',
-      kind: 'date',
-      required: true,
-      validate: (v, draft) =>
-        draft.issueDate && typeof v === 'string' && v < draft.issueDate
-          ? 'Due date cannot precede the issue date'
-          : null,
-    },
-    {
-      key: 'amount',
-      label: 'Amount',
-      kind: 'number',
-      required: true,
-      step: '0.001',
-      validate: (v) => (typeof v === 'number' && v <= 0 ? 'Amount must be positive' : null),
-    },
-    {
-      key: 'currency',
-      label: 'Currency',
-      kind: 'select',
-      required: true,
-      options: [
-        { value: 'BHD', label: 'BHD' },
-        { value: 'USD', label: 'USD' },
-      ],
-    },
-    { key: 'notes', label: 'Notes', kind: 'textarea', placeholder: 'Optional' },
-  ],
-  submit: (draft) => createInvoice(draft),
-}
 
 export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
   entity: 'invoices',
@@ -147,16 +91,10 @@ export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
     },
   ],
 
+  // Standalone invoice-create is RETIRED (owner ruling G1.3): invoices are
+  // raised from an order (Orders → Create Invoice), never conjured standalone
+  // on this ledger. No `new` action; the empty state points at Orders.
   actions: [
-    {
-      key: 'new',
-      label: '+ New Invoice',
-      kind: 'screen',
-      form: newInvoiceForm,
-      run: () => {
-        /* form actions submit via their FormSpec; run is unused */
-      },
-    },
     {
       // R5: send a Draft invoice to the customer (Draft → Sent). Server rejects
       // a non-Draft status or an invoice with no line items.
@@ -172,14 +110,17 @@ export const invoicesDescriptor: LedgerDescriptor<InvoiceRow> = {
       },
     },
     {
-      key: 'markPaid',
-      label: 'Mark Paid',
+      // G1.2 owner ruling: settlement is a receipt CAPTURE, never a status flip.
+      // Opens a small receipt form (amount/date/method/reference) that records a
+      // real customer receipt against the invoice (CreateCustomerReceipt with the
+      // invoice bound → funds a Payment row + advances invoice state atomically).
+      key: 'recordReceipt',
+      label: 'Record Receipt',
       kind: 'row',
       visible: (r) => r != null && (r.status === 'Sent' || r.status === 'Overdue'),
-      run: async ({ row, reload }) => {
-        if (!row) return
-        await markInvoicePaid(row.id)
-        await reload()
+      modal: InvoiceReceiptModal,
+      run: () => {
+        /* modal action: InvoiceReceiptModal owns its own submit; run is unused */
       },
     },
     {

@@ -210,12 +210,13 @@ async function realDelete(row: OpportunityRow): Promise<void> {
 }
 
 async function realCascadeDelete(row: OpportunityRow, _reason: string): Promise<void> {
-  // App.DeleteRFQWithCascade(id uint, cascade bool) -> DeleteCascadeResult. RFQ-sourced rows only;
-  // pipeline Opportunities have no cascade-delete binding.
+  // App.DeleteRFQWithCascade(id uint, cascade bool) -> DeleteCascadeResult. Cascade
+  // delete is RFQ-only (owner standing default): the binding's domain is RFQ-sourced
+  // rows; pipeline Opportunities have no cascade binding, so the descriptor HIDES this
+  // action for them (opportunities.descriptor.ts: visible = source === 'rfq'). This
+  // guard is a DEFENSIVE invariant, not a gap — it should be unreachable from the UI.
   if (row.source !== 'rfq') {
-    throw new Error(
-      'INTEG gap: DeleteRFQWithCascade — pipeline Opportunities have no cascade-delete binding (RFQ-sourced rows only).',
-    )
+    throw new Error('Cascade delete is available for RFQ-sourced opportunities only.')
   }
   // cascade=true: proceed with deleting all linked costing sheets + offers. The Go func errors when
   // cascade=false and links exist, so a confirmed cascade-delete must pass true. The reason arg has no

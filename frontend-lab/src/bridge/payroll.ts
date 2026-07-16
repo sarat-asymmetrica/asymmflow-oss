@@ -30,7 +30,11 @@ import {
   ListPayrollRuns,
   MarkPayrollRunPaid,
   PostPayrollRun,
+  UpsertEmployeeCompensationProfile,
 } from '$wails/go/main/FinanceService'
+// Employee master list for the Compensation form's picker — a DIFFERENT
+// (collaboration) domain than payroll. Read-only; verified service seam.
+import { ListEmployeeProfiles } from '$wails/go/main/App'
 
 /* ---- types (camelCase; mirrors payroll.* / finance.CompanyBankAccount) ---- */
 
@@ -865,20 +869,51 @@ async function realFetchBankAccounts(): Promise<PayrollBankAccount[]> {
   return (rows ?? []).map((r) => mapBankAccount(r as unknown as Record<string, unknown>))
 }
 
-/** No wired real binding: the old screen sourced the Compensation form's
- * employee picker from `collaboration.listEmployeeProfiles` — a different
- * service/domain entirely, outside this payroll-scoped bridge's collision-
- * free file set. Naming it honestly rather than silently cross-wiring
- * another bridge's binding into this one. */
+/** Employee master list for the Compensation form's picker. Cross-domain by
+ * design — the old screen used collaboration.listEmployeeProfiles; the bound
+ * `App.ListEmployeeProfiles(activeOnly)` is the same read (returns []Employee).
+ * Read-only. Division is left blank when the backend doesn't carry one on the
+ * Employee (the form falls back to the first division chip). */
 async function realFetchEmployeeOptions(): Promise<PayrollEmployeeOption[]> {
-  throw new Error(
-    'INTEG gap: employee master list (old screen used collaboration.listEmployeeProfiles, ' +
-      'a different service/domain than payroll) — wires at K5',
-  )
+  const rows = await ListEmployeeProfiles(true)
+  return (rows ?? []).map((r) => {
+    const e = r as unknown as Record<string, unknown>
+    return {
+      id: str(e.id),
+      name: str(e.full_name) || str(e.preferred_name),
+      jobTitle: str(e.job_title),
+      division: str(e.division),
+    }
+  })
 }
 
-async function realUpsertProfile(_draft: CompensationProfileDraft): Promise<CompensationProfile> {
-  throw new Error('INTEG gap: UpsertEmployeeCompensationProfile — financial + PII hot-zone, wires at K5')
+/** UpsertEmployeeCompensationProfile — financial + PII hot-zone. Assembles the
+ * full payroll.CompensationProfile struct from the draft (R1 technique). The
+ * server owns the actor (CreatedBy = getCurrentUserID), currency default, and
+ * the cross-division clobber guard — we send exactly the draft's fields. Nullable
+ * effective dates cross as `null` when blank (a *time.Time nil), never as Go
+ * zero-time. currency is fixed BHD (the draft carries no currency field). */
+async function realUpsertProfile(draft: CompensationProfileDraft): Promise<CompensationProfile> {
+  const payload = {
+    id: draft.id ?? '',
+    employee_id: draft.employeeId,
+    division: draft.division,
+    pay_frequency: draft.payFrequency,
+    currency: 'BHD',
+    base_salary: draft.baseSalary,
+    housing_allowance: draft.housingAllowance,
+    transport_allowance: draft.transportAllowance,
+    other_allowance: draft.otherAllowance,
+    standard_deduction: draft.standardDeduction,
+    tax_deduction: draft.taxDeduction,
+    employer_cost: draft.employerCost,
+    effective_from: draft.effectiveFrom ? goTime(draft.effectiveFrom) : null,
+    effective_to: draft.effectiveTo ? goTime(draft.effectiveTo) : null,
+    is_active: draft.isActive,
+    notes: draft.notes,
+  }
+  const result = await UpsertEmployeeCompensationProfile(payload as unknown as Parameters<typeof UpsertEmployeeCompensationProfile>[0])
+  return mapProfile(result as unknown as Record<string, unknown>)
 }
 
 async function realCreatePeriod(draft: PayrollPeriodDraft): Promise<PayrollPeriod> {

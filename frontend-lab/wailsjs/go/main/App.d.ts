@@ -768,6 +768,8 @@ export function GetCustomerRelatedSuppliers(arg1:string):Promise<Array<main.Cust
 
 export function GetCustomersByGrade(arg1:string):Promise<Array<crm.CustomerMaster>>;
 
+export function GetCustomerWinRates():Promise<Array<main.CustomerWinRate>>;
+
 export function GetDBSyncSettings():Promise<main.DBSyncSettings>;
 
 export function GetDBSyncStatus():Promise<Record<string, any>>;

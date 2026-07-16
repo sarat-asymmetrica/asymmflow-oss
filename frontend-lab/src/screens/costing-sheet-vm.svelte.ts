@@ -786,7 +786,19 @@ export class CostingSheetViewModel {
         try {
           const items = JSON.stringify(payload)
           if (this.currentCostingId) {
-            await updateCostingSheet(this.currentCostingId, items, preparedBy)
+            // Assemble the full CostingSheetData refresh (owner standing default,
+            // R1 technique): the new items JSON + the VM's own authoritative
+            // totals, which are the values summarisePersistedCosting derives.
+            const t = this.totals
+            await updateCostingSheet(this.currentCostingId, {
+              items,
+              subtotal: t.totalCost,
+              finalPrice: t.grandTotal,
+              totalMarkup: t.profit,
+              marginPercent: t.profitPercent,
+              customerName: this.header.customerName,
+              rfqId,
+            })
           } else {
             const created = await createCostingSheet(rfqId, items, preparedBy)
             this.currentCostingId = created.id
@@ -815,7 +827,7 @@ export class CostingSheetViewModel {
     this.exporting = true
     this.exportError = null
     try {
-      const path = await exportCostingToPDF(this.buildExportPayload())
+      const path = await exportCostingToPDF(this.buildCostingExportData())
       if (path) await openExportedFile(path)
     } catch (e) {
       this.exportError = e instanceof Error ? e.message : String(e)
@@ -832,7 +844,7 @@ export class CostingSheetViewModel {
     this.exporting = true
     this.exportError = null
     try {
-      const path = await exportCostingToExcel(this.buildExportPayload())
+      const path = await exportCostingToExcel(this.buildCostingExportData())
       if (path) await openExportedFile(path)
     } catch (e) {
       this.exportError = e instanceof Error ? e.message : String(e)
