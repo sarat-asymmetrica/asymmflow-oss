@@ -6,7 +6,8 @@
 
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
-import { ListGRNs } from '$wails/go/main/App'
+import { CompleteGRN, ListGRNs, UpdateGRNQCStatus } from '$wails/go/main/App'
+import { actingUserId } from '../stores/session.svelte'
 
 export interface GRNRow {
   id: string
@@ -114,6 +115,33 @@ async function mockFetch(): Promise<GRNRow[]> {
   return [...cache]
 }
 
+const todayIso = (): string => new Date().toISOString().slice(0, 10)
+
+/** QC Review (R5): stamp the QC verdict + notes. Passed/Failed/Pending. */
+async function mockQCReview(id: string, status: string, notes: string): Promise<void> {
+  cache ??= generate()
+  const row = cache.find((r) => r.id === id)
+  if (row) {
+    row.qcStatus = status
+    row.qcNotes = notes
+    row.qcBy = actingUserId()
+    row.qcDate = todayIso()
+  }
+  await sleep(140)
+}
+
+/** Complete (R5): close the GRN (server updates the linked PO + defaults a
+ * still-Pending QC to Passed). Server refuses if QC has Failed. */
+async function mockComplete(id: string): Promise<void> {
+  cache ??= generate()
+  const row = cache.find((r) => r.id === id)
+  if (row) {
+    row.isCompleted = true
+    if (row.qcStatus === 'Pending') row.qcStatus = 'Passed'
+  }
+  await sleep(140)
+}
+
 /* ---- real: fetch WIRED (no mutations to gap — this module is read-only) ---- */
 function mapGRN(r: Record<string, unknown>): GRNRow {
   return {
@@ -145,5 +173,21 @@ async function realFetch(): Promise<GRNRow[]> {
   return (rows ?? []).map((x) => mapGRN(x as unknown as Record<string, unknown>))
 }
 
-/* ---- public switched API (descriptor imports THIS) ---- */
+async function realQCReview(id: string, status: string, notes: string): Promise<void> {
+  // UpdateGRNQCStatus(id, status, notes, qcBy). qcBy is re-derived server-side
+  // from the session (client value ignored, kept for binding stability) — we
+  // still pass the session actor, never a caller-supplied identity.
+  await UpdateGRNQCStatus(id, status, notes, actingUserId())
+}
+
+async function realComplete(id: string): Promise<void> {
+  // CompleteGRN(id) — closes the GRN, updates the linked PO status, and
+  // defaults a Pending QC to Passed. Server refuses a Failed-QC GRN.
+  await CompleteGRN(id)
+}
+
+/* ---- public switched API (descriptor imports THESE) ---- */
 export const fetchGRNs = (): Promise<GRNRow[]> => pick(realFetch, mockFetch)()
+export const updateGRNQCReview = (id: string, status: string, notes: string): Promise<void> =>
+  pick(realQCReview, mockQCReview)(id, status, notes)
+export const completeGRN = (id: string): Promise<void> => pick(realComplete, mockComplete)(id)

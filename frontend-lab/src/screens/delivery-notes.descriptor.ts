@@ -2,15 +2,77 @@
  * sub-form), Dispatch-with-capture, and Confirm-POD are all ledgered here
  * (see parity doc) — K1 builds the list spine + a simplified status advance. */
 
-import type { LedgerDescriptor } from '$kernel/descriptor'
+import type { ActionSpec, LedgerDescriptor } from '$kernel/descriptor'
+import type { FormSpec } from '$kernel/form'
 import {
-  advanceDeliveryNoteStatus,
+  confirmDeliveryNote,
   deleteDeliveryNote,
   deliveryNoteTransitions,
+  dispatchDeliveryNote,
   fetchDeliveryNotes,
   type DeliveryNoteRow,
 } from '../bridge/delivery-notes'
-import { nextStates } from '$kernel/ledger-core'
+
+// R5 capture forms — the real backend flow is Prepared → Dispatched → Delivered.
+const dispatchForm: FormSpec<{ driverName: string; vehicleNumber: string }> = {
+  title: 'Dispatch Delivery Note',
+  submitLabel: 'Dispatch',
+  initial: (row) => {
+    const r = row as DeliveryNoteRow | undefined
+    return { driverName: r?.driverName ?? '', vehicleNumber: r?.vehicleNumber ?? '' }
+  },
+  fields: [
+    { key: 'driverName', label: 'Driver Name', kind: 'text', required: true, placeholder: 'Who is driving the delivery?' },
+    { key: 'vehicleNumber', label: 'Vehicle Number', kind: 'text', required: true, placeholder: 'e.g. plate / fleet no.' },
+  ],
+  submit: async (draft, row) => {
+    const r = row as DeliveryNoteRow
+    await dispatchDeliveryNote(r.id, draft.driverName, draft.vehicleNumber)
+  },
+}
+
+const confirmDeliveryForm: FormSpec<{ signedBy: string }> = {
+  title: 'Confirm Delivery',
+  submitLabel: 'Confirm Delivery',
+  initial: () => ({ signedBy: '' }),
+  fields: [
+    {
+      key: 'signedBy',
+      label: 'Received / Signed By',
+      kind: 'text',
+      required: true,
+      placeholder: 'Name of the person who received the goods',
+    },
+  ],
+  submit: async (draft, row) => {
+    const r = row as DeliveryNoteRow
+    await confirmDeliveryNote(r.id, draft.signedBy)
+  },
+}
+
+const dispatchAction: ActionSpec<DeliveryNoteRow> = {
+  key: 'dispatch',
+  label: 'Dispatch',
+  kind: 'row',
+  // Server accepts dispatch only from Prepared.
+  visible: (r) => r != null && r.status === 'Prepared',
+  form: dispatchForm,
+  run: () => {
+    /* submitted via dispatchForm */
+  },
+}
+
+const confirmDeliveryAction: ActionSpec<DeliveryNoteRow> = {
+  key: 'confirm-delivery',
+  label: 'Confirm Delivery',
+  kind: 'row',
+  // Server accepts confirmation only from Dispatched.
+  visible: (r) => r != null && r.status === 'Dispatched',
+  form: confirmDeliveryForm,
+  run: () => {
+    /* submitted via confirmDeliveryForm */
+  },
+}
 
 export const deliveryNotesDescriptor: LedgerDescriptor<DeliveryNoteRow> = {
   entity: 'delivery-notes',
@@ -85,26 +147,9 @@ export const deliveryNotesDescriptor: LedgerDescriptor<DeliveryNoteRow> = {
   ],
 
   actions: [
-    {
-      // Simplified status advance (Prepared→Dispatched→InTransit→Delivered).
-      // Real Dispatch (driver/vehicle capture) and Confirm Delivery (POD
-      // signature capture) are richer forms — ledgered per the brief, not
-      // built in K1. This is a plain confirm-gated flip along the same chain.
-      key: 'advance',
-      label: 'Advance Status',
-      kind: 'row',
-      visible: (r) => r != null && nextStates(r.status, deliveryNoteTransitions).length > 0,
-      confirm: (r) => {
-        const row = r as DeliveryNoteRow | null
-        const next = row ? nextStates(row.status, deliveryNoteTransitions)[0] : undefined
-        return `Advance ${row?.dnNumber ?? 'this delivery note'} to ${next ?? 'the next status'}?`
-      },
-      run: async ({ row, reload }) => {
-        if (!row) return
-        await advanceDeliveryNoteStatus(row.id)
-        await reload()
-      },
-    },
+    // R5: the real two-step fulfillment flow, each with its capture form.
+    dispatchAction,
+    confirmDeliveryAction,
     {
       // Old screen allows Delete from any status; K1 restricts it to
       // Prepared (pre-dispatch) — an intentional safety improvement, not a

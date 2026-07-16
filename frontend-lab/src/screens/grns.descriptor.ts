@@ -3,9 +3,10 @@
  * or auth-gated slot, ledgered rather than rebuilt loosely (see
  * screens/parity/GRNs.parity.md). */
 
-import type { LedgerDescriptor } from '$kernel/descriptor'
+import type { ActionSpec, LedgerDescriptor } from '$kernel/descriptor'
+import type { FormSpec } from '$kernel/form'
 import type { Tone } from '$kernel/tones'
-import { fetchGRNs, type GRNRow } from '../bridge/grns'
+import { completeGRN, fetchGRNs, updateGRNQCReview, type GRNRow } from '../bridge/grns'
 
 /** Acceptance-rate threshold colouring (census: ≥95 green / ≥80 amber / <80 red). */
 function acceptanceTone(pct: number): Tone {
@@ -13,6 +14,64 @@ function acceptanceTone(pct: number): Tone {
   if (pct >= 80) return 'warning'
   return 'danger'
 }
+
+// R5 capture forms. Receive-from-PO (creates a GRN from PO line items) stays a
+// ledgered SLOT — it needs the LineItemsEditor engine (per-line receive qty),
+// not a flat FormModal. QC Review + Complete are flat and built here.
+const qcReviewForm: FormSpec<{ status: string; notes: string }> = {
+  title: 'QC Review',
+  submitLabel: 'Record QC',
+  initial: (row) => {
+    const r = row as GRNRow | undefined
+    return { status: r && r.qcStatus !== 'Pending' ? r.qcStatus : 'Passed', notes: r?.qcNotes ?? '' }
+  },
+  fields: [
+    {
+      key: 'status',
+      label: 'QC Verdict',
+      kind: 'select',
+      required: true,
+      options: [
+        { value: 'Passed', label: 'Passed' },
+        { value: 'Failed', label: 'Failed' },
+        { value: 'Partial', label: 'Partial' },
+      ],
+    },
+    { key: 'notes', label: 'QC Notes', kind: 'textarea', placeholder: 'Inspection findings (optional)' },
+  ],
+  submit: async (draft, row) => {
+    const r = row as GRNRow
+    await updateGRNQCReview(r.id, draft.status, draft.notes)
+  },
+}
+
+const grnActions: ActionSpec<GRNRow>[] = [
+  {
+    key: 'qc-review',
+    label: 'QC Review',
+    kind: 'row',
+    // Reviewable until the GRN is completed.
+    visible: (r) => r != null && !r.isCompleted,
+    form: qcReviewForm,
+    run: () => {
+      /* submitted via qcReviewForm */
+    },
+  },
+  {
+    key: 'complete',
+    label: 'Complete',
+    kind: 'row',
+    // Server refuses a Failed-QC GRN and is idempotent; hide once completed.
+    visible: (r) => r != null && !r.isCompleted && r.qcStatus !== 'Failed',
+    confirm: (r) =>
+      `Complete ${r ? r.grnNumber : 'this GRN'}? This closes the GRN and updates the linked purchase order.`,
+    run: async ({ row, reload }) => {
+      if (!row) return
+      await completeGRN(row.id)
+      await reload()
+    },
+  },
+]
 
 export const grnsDescriptor: LedgerDescriptor<GRNRow> = {
   entity: 'grns',
@@ -105,8 +164,11 @@ export const grnsDescriptor: LedgerDescriptor<GRNRow> = {
     },
   ],
 
-  // No actions: Receive-from-PO (creates the GRN), QC Review (auth-gated),
-  // and Complete (posts inventory, idempotent) are all ledgered — see the
-  // parity doc. Row click still opens the default column-list detail panel.
+  // R5: QC Review + Complete built as capture/confirm actions. Receive-from-PO
+  // (creates the GRN from PO line items) stays a ledgered SLOT pending the
+  // LineItemsEditor engine — see the parity doc. Row click still opens the
+  // default column-list detail panel.
+  actions: grnActions,
+
   emptyMessage: 'No GRNs yet. Receive against a purchase order to create the first one.',
 }
