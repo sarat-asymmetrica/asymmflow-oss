@@ -17,7 +17,7 @@
 import { pick } from './runtime'
 import { goDate, num, str } from './map'
 import { getDivisionOptions, getDefaultDivisionKey } from '../stores/divisions.svelte'
-import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions, SaveCostingAsOffer } from '$wails/go/main/App'
+import { GetRFQs, GetPipelineOpportunities, GetOpportunityLineItems, ListCustomers, GetPreparedByOptions, SaveCostingAsOffer, ExportCostingToPDF, ExportCostingToExcel, OpenExportedFile } from '$wails/go/main/App'
 import { GetCostingSheets, GetCostingsByRFQ, CreateCostingSheet, CloneCostingAsNewRevision, SetActiveCostingRevision, UpdateCostingSheet } from '$wails/go/main/CRMService'
 import { GetSettings } from '$wails/go/main/DocumentsService'
 import type { main } from '$wails/go/models'
@@ -637,11 +637,11 @@ async function mockSaveCostingAsOffer(_data: CostingExportData): Promise<{ offer
   mockOfferSeq += 1
   return { offerNumber: `OFR-${pad(mockOfferSeq, 4)}` }
 }
-async function mockExportCostingToPDF(_payload: CostingExportPayload): Promise<string> {
+async function mockExportCostingToPDF(_data: CostingExportData): Promise<string> {
   await sleep(300)
   return 'C:\\Exports\\costing-mock.pdf'
 }
-async function mockExportCostingToExcel(_payload: CostingExportPayload): Promise<string> {
+async function mockExportCostingToExcel(_data: CostingExportData): Promise<string> {
   await sleep(300)
   return 'C:\\Exports\\costing-mock.xlsx'
 }
@@ -841,14 +841,20 @@ async function realSaveCostingAsOffer(data: CostingExportData): Promise<{ offerN
   const rec = offer as unknown as Record<string, unknown>
   return { offerNumber: str(rec.offer_number) }
 }
-async function realExportCostingToPDF(_payload: CostingExportPayload): Promise<string> {
-  throw new Error('INTEG gap: ExportCostingToPDF — wires at K5')
+// The export bindings take the FLAT main.CostingExportData (same shape
+// SaveCostingAsOffer uses, assembled by the VM's buildCostingExportData) and
+// return the absolute path of the file they wrote. The VM then hands that path to
+// OpenExportedFile behind the existing confirm/try flow.
+async function realExportCostingToPDF(data: CostingExportData): Promise<string> {
+  return ExportCostingToPDF(data as unknown as main.CostingExportData)
 }
-async function realExportCostingToExcel(_payload: CostingExportPayload): Promise<string> {
-  throw new Error('INTEG gap: ExportCostingToExcel — wires at K5')
+async function realExportCostingToExcel(data: CostingExportData): Promise<string> {
+  return ExportCostingToExcel(data as unknown as main.CostingExportData)
 }
-async function realOpenExportedFile(_path: string): Promise<void> {
-  throw new Error('INTEG gap: OpenExportedFile — wires at K5 (side-effecting: opens a file on disk)')
+async function realOpenExportedFile(path: string): Promise<void> {
+  // The ONE true side-effect in this file: shells out to the OS to open the file.
+  // Called only after a successful export produced a real path.
+  await OpenExportedFile(path)
 }
 
 /* ---- public switched API (VM imports THESE) ---- */
@@ -878,9 +884,9 @@ export const setActiveCostingRevision = (id: number): Promise<void> =>
   pick(realSetActiveCostingRevision, mockSetActiveCostingRevision)(id)
 export const saveCostingAsOffer = (data: CostingExportData): Promise<{ offerNumber: string }> =>
   pick(realSaveCostingAsOffer, mockSaveCostingAsOffer)(data)
-export const exportCostingToPDF = (payload: CostingExportPayload): Promise<string> =>
-  pick(realExportCostingToPDF, mockExportCostingToPDF)(payload)
-export const exportCostingToExcel = (payload: CostingExportPayload): Promise<string> =>
-  pick(realExportCostingToExcel, mockExportCostingToExcel)(payload)
+export const exportCostingToPDF = (data: CostingExportData): Promise<string> =>
+  pick(realExportCostingToPDF, mockExportCostingToPDF)(data)
+export const exportCostingToExcel = (data: CostingExportData): Promise<string> =>
+  pick(realExportCostingToExcel, mockExportCostingToExcel)(data)
 export const openExportedFile = (path: string): Promise<void> =>
   pick(realOpenExportedFile, mockOpenExportedFile)(path)

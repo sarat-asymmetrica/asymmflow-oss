@@ -92,9 +92,10 @@ function mapCustomer(c: Record<string, unknown>): CustomerRow {
     balance: num(c.outstanding_bhd ?? c.balance_bhd),
     openOrders: num(c.open_orders),
     lastOrderDate: goDate(c.last_order_date),
-    // CustomerFullProfile fields — blank/zero here (INTEG gap: ListCustomers
-    // does not return them; GetCustomerFullProfile is a second fetch this
-    // bridge does not wire). Mock generates full values. See Customers.parity.md.
+    // CustomerFullProfile fields — blank/zero in the LIST mapper: ListCustomers
+    // does not return them. They are filled by the wired secondary fetch
+    // fetchCustomerProfile (GetCustomerFullProfile) when a profile opens — honest
+    // list-vs-profile depth, not a gap. See Customers.parity.md.
     trn: '',
     industry: '',
     relationYears: 0,

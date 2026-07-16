@@ -827,7 +827,7 @@ export class CostingSheetViewModel {
     this.exporting = true
     this.exportError = null
     try {
-      const path = await exportCostingToPDF(this.buildExportPayload())
+      const path = await exportCostingToPDF(this.buildCostingExportData())
       if (path) await openExportedFile(path)
     } catch (e) {
       this.exportError = e instanceof Error ? e.message : String(e)
@@ -844,7 +844,7 @@ export class CostingSheetViewModel {
     this.exporting = true
     this.exportError = null
     try {
-      const path = await exportCostingToExcel(this.buildExportPayload())
+      const path = await exportCostingToExcel(this.buildCostingExportData())
       if (path) await openExportedFile(path)
     } catch (e) {
       this.exportError = e instanceof Error ? e.message : String(e)
