@@ -100,10 +100,18 @@ try {
   check('transport: join peer connected through the Holesail tunnel', joinReady.baseKey === hostReady.baseKey)
   const LAPTOP = joinReady.devicePub
 
-  // Beat 1 — replication plane opens fully.
-  host.send(`add-writer ${joinReady.writerKey}`)
+  // Beat 0 — human-error hardening (the live 2026-07-16 ceremony crash):
+  // garbage keys get a FRIENDLY error (never a crash, never a log entry)…
+  const bad = host.waitNext((e) => e.event === 'error' && e.cmd === 'add-writer', 30000, 'friendly error')
+  host.send('add-writer <not-a-key>')
+  check('hardening: garbage writer key -> friendly error, host still alive',
+    (await bad).error.includes('64-hex'))
+
+  // Beat 1 — replication plane opens fully. The key is sent WITH the <>
+  // decoration a human pastes — the REPL must sanitize it.
+  host.send(`add-writer <${joinReady.writerKey}>`)
   await joiner.wait((e) => e.event === 'writable', 60000, 'join admitted to the writer set')
-  check('writer set: join peer admitted (pipe + linearizer open)', true)
+  check('writer set: join peer admitted (pasted key sanitized of <> decoration)', true)
 
   // Beat 2 — signed but UNGRANTED. Beat 3 — unsigned entirely.
   await joiner.cmd('append {"actor":"laptop","sku":"TX-100","delta":5}', 'pre-grant append')

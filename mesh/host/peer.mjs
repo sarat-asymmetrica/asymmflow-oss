@@ -162,17 +162,28 @@ const requireAuthority = (cmd) => {
 }
 const actorName = () => (isAuthority ? 'authority' : 'device')
 
+// Humans paste keys wrapped in <>, quotes, or with stray whitespace — strip
+// the decoration, then insist on bare 64-hex with a message a human can act on.
+const cleanKey = (cmd, raw) => {
+  const key = String(raw ?? '').replace(/[<>"'`\s]/g, '')
+  if (!/^[0-9a-fA-F]{64}$/.test(key)) {
+    throw new Error(`${cmd}: expected a 64-hex-char key, got ${JSON.stringify(raw)} — paste the bare hex only`)
+  }
+  return key.toLowerCase()
+}
+
 const rl = readline.createInterface({ input: process.stdin })
 rl.on('line', async (line) => {
   const [cmd, ...argParts] = line.trim().split(' ')
   const arg = argParts.join(' ')
   try {
     if (cmd === 'add-writer') {
-      await node.addWriter(arg)
+      await node.addWriter(cleanKey(cmd, arg))
       out({ event: 'ok', cmd })
     } else if (cmd === 'grant') {
       requireAuthority(cmd)
-      const [device, epochStr] = argParts
+      const [deviceRaw, epochStr] = argParts
+      const device = cleanKey(cmd, deviceRaw)
       const epoch = epochStr !== undefined ? Number(epochStr) : (await node.state()).capEpoch ?? 0
       await node.append(grantOp(stamp({ actor: actorName(), device, epoch }), keys))
       out({ event: 'ok', cmd, device, epoch })
@@ -182,8 +193,9 @@ rl.on('line', async (line) => {
       out({ event: 'ok', cmd, epoch: Number(arg) })
     } else if (cmd === 'revoke') {
       requireAuthority(cmd)
-      await node.append(revokeOp(stamp({ actor: actorName(), device: arg }), keys))
-      out({ event: 'ok', cmd, device: arg })
+      const device = cleanKey(cmd, arg)
+      await node.append(revokeOp(stamp({ actor: actorName(), device }), keys))
+      out({ event: 'ok', cmd, device })
     } else if (cmd === 'append') {
       const op = stamp(JSON.parse(arg))
       await node.append(capability ? signOp(op, keys) : op)

@@ -65,6 +65,9 @@ const reconnect = () => { wires = [a.connect(b), a.connect(c), b.connect(c)] }
 
 await a.addWriter(b.writerKey)
 await a.addWriter(c.writerKey)
+// Poison-pill regression (live 2026-07-16): a malformed addWriter value in the
+// log must be IGNORED by apply on every peer — never a crash, never a grant.
+await a.base.append({ addWriter: '<not-hex>' })
 await waitFor(async () => { await b.base.update(); return b.writable }, { label: 'B writable' })
 await waitFor(async () => { await c.base.update(); return c.writable }, { label: 'C writable' })
 

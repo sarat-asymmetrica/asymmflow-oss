@@ -63,7 +63,13 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
       for (const node of nodes) {
         const value = node.value
         if (value && typeof value.addWriter === 'string') {
-          await host.addWriter(Buffer.from(value.addWriter, 'hex'), { indexer: true })
+          // Guard the decode: a malformed key in the log must be IGNORED, not
+          // thrown — an unguarded throw here is a poison-pill op that crashes
+          // every peer on every refold, forever (found live: a writer key
+          // pasted with '<>' wrapping crashed the host until its store was
+          // deleted). apply must never crash on hostile/typo'd values.
+          const key = Buffer.from(value.addWriter, 'hex')
+          if (key.length === 32) await host.addWriter(key, { indexer: true })
           continue
         }
         if (!isOp(value)) continue // unknown/malformed values are ignored, never crash apply
@@ -81,9 +87,13 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
     get writerKey() { return base.local.key.toString('hex') },
     get writable() { return base.writable },
 
-    /** Grant another peer write access (their writerKey, hex). */
+    /** Grant another peer write access (their writerKey, hex). Validates
+     * BEFORE appending — a malformed key must never enter the shared log. */
     async addWriter(writerKeyHex) {
-      await base.append({ addWriter: writerKeyHex })
+      if (!/^[0-9a-fA-F]{64}$/.test(writerKeyHex)) {
+        throw new Error(`writer key must be 64 hex chars (got ${JSON.stringify(writerKeyHex)}) — paste it bare, no <> or quotes`)
+      }
+      await base.append({ addWriter: writerKeyHex.toLowerCase() })
     },
 
     /** Append one inventory op. */
