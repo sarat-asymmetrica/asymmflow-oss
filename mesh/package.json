@@ -27,6 +27,7 @@
     "reissuespike:update-golden": "npm run build && node host/reissue-spike.mjs --update-golden",
     "socialspike": "npm run build && node host/social-spike.mjs",
     "socialspike:update-golden": "npm run build && node host/social-spike.mjs --update-golden",
+    "bridgespike": "npm run build && node host/bridge-spike.mjs",
     "missiond": "npm run build && node host/missiond-mesh.mjs",
     "missiond:update-golden": "npm run build && node host/missiond-mesh.mjs --update-golden",
     "missiond:holesail": "npm run build && node host/missiond-holesail.mjs",
