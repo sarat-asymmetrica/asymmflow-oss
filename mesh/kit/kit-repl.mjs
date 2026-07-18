@@ -291,7 +291,13 @@ export async function startRepl(ctx) {
       if (!line.startsWith('/')) {
         await cmds.post(line)
       } else {
-        const [cmd, ...rest] = line.slice(1).split(' ')
+        // Quote-aware tokenizer: Windows humans paste paths as "C:\...\file.txt"
+        // (often with spaces inside). Double-quoted spans become ONE token with
+        // the quotes stripped; everything else splits on whitespace. Found at
+        // the kitchen table: the naive split(' ') glued the quoted path onto
+        // the CWD and ENOENT'd the very first real file transfer.
+        const tokens = [...line.slice(1).matchAll(/"([^"]*)"|(\S+)/g)].map((m) => m[1] ?? m[2])
+        const [cmd, ...rest] = tokens
         const arg = rest.join(' ').trim()
         switch (cmd) {
           case 'rooms': await cmds.rooms(); break
