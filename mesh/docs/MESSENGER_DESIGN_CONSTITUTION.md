@@ -224,6 +224,14 @@ lands for them at stage 2 as defense-in-depth). Metadata honesty: even encrypted
 the mirror sees who-talks-to-whom-when for rooms it carries; the owner may veto
 DM-mirroring entirely at the stage-2 gate.
 
+**RULED 2026-07-18 (post stage-2, owner):** DM-mirroring is ON — social rooms and
+DMs transit the org mirror as ciphertext ("it feels more natural"). The encryption
+prerequisite landed same day (Autobase encryptionKey end-to-end, keyless-probe
+proven, midnight-vent spike). The metadata boundary was presented plainly and
+accepted: the mirror learns which room keys sync when, never a byte of content.
+The P2P-only interim clause above is hereby retired; it remains in the text as
+the record of why the intermediate state was never shipped.
+
 ## Article XII — Amendment
 
 Only the owner amends this constitution. Engineering may propose; articles change by
@@ -232,10 +240,15 @@ explicit ruling, recorded here with date.
 **Amendment log:**
 - 2026-07-18 — Art. II: room identity = a sequence of crypto-epoch Autobase
   containers linked by `predecessorRoomKey` (rotate-on-revoke = room re-issue;
-  proposed from MSG-D18's rotation findings, owner-approved same day). Stop-and-asks currently open at the owner's
-desk: mirror encryption/room-key distribution doctrine (M4 stage 2, now prerequisite
-for the social layer per Article XI), mailbox-vs-pure-mirror, ops packaging for the
-office-machine mirror, kernel-screen UI wave, M5+ ladder (mobile/push/calls).
+  proposed from MSG-D18's rotation findings, owner-approved same day).
+- 2026-07-18 — Art. XI: DM-mirroring ruled ON (owner, post stage-2) — DMs/social
+  rooms ride the org mirror encrypted; metadata boundary accepted; P2P-only
+  interim clause retired.
+
+Stop-and-asks currently open at the owner's
+desk: mailbox-vs-pure-mirror, ops packaging for the
+office-machine mirror, kernel-screen UI wave (joint design IN PROGRESS
+2026-07-18), M5+ ladder (mobile/push/calls).
 
 ---
 

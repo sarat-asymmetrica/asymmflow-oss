@@ -627,3 +627,19 @@ nine pre-existing spikes (`roomspike`, `invitespike`, `attachspike`,
 `missionc`, `missiond`) green UNMODIFIED — `git diff --stat
 mesh/goldens/` is empty; `social_autobase.json` is a new, untracked
 addition, not a diff to an existing golden.
+
+## MSG-D22 — DM-mirroring RULED ON (Art. XI closed) — 2026-07-18
+
+Owner ruling, given after the human-layer wave shipped and the metadata
+boundary was stated plainly: **DMs and social rooms ride the org mirror as
+ciphertext.** "It feels more natural" — offline delivery for the human layer
+beats the P2P-only posture's zero-metadata purity. What the mirror learns:
+which room keys sync, and when. What it can never learn: a byte of content,
+a member list, a claim, a blocked device (all of that is inside the encrypted
+oplog — the keyless-probe and midnight-vent spikes are the proof). The
+Art. XI P2P-only interim clause is retired; the constitution's amendment log
+carries the ruling. Engineering consequence: no code change required — the
+social-spike already proved the mirrored-DM path end-to-end; this ruling
+simply makes that path the PRODUCT default rather than an owner-gated
+experiment. The mailbox-vs-pure-mirror question remains open and now applies
+to DM traffic too.
