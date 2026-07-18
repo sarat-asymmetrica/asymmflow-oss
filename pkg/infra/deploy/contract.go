@@ -29,7 +29,14 @@ const schemaVersionKey = "schema_version"
 
 // forceReseedEnv is the sole, explicit escape hatch that re-seeds a PRESENT
 // database from the packaged canon — for dev/demo only. It backs up first and
-// is one-shot within a process (cleared after it fires).
+// is one-shot within a process (cleared via os.Unsetenv after it fires).
+//
+// One-shot holds for the intended usage — prefixing a single launch
+// (PH_FORCE_RESEED=1 ./app). A value set PERSISTENTLY in the machine/user
+// environment (setx) cannot be cleared from within the process, so every launch
+// will reseed again — each time backing up first, so no data is silently lost,
+// but it is a surprising repeated full reseed. Set it per-invocation, not
+// persistently.
 const forceReseedEnv = "PH_FORCE_RESEED"
 
 // preMigratePrefix names the backup taken immediately before a migration or a
@@ -458,8 +465,21 @@ func stampSchemaVersion(path string, version int, logf func(string, ...any)) {
 			updated_at = CURRENT_TIMESTAMP,
 			deleted_at = NULL
 	`, "deployment-schema-version", schemaVersionKey, strconv.Itoa(version))
-	if err != nil && logf != nil {
-		logf("⚠️ Could not stamp schema version %d: %v", version, err)
+	if err != nil {
+		if logf != nil {
+			logf("⚠️ Could not stamp schema version %d: %v", version, err)
+		}
+		return
+	}
+
+	// Flush the stamp into the main file BEFORE this connection closes. The file
+	// may already be in WAL mode (journal_mode is persisted in the SQLite header
+	// — e.g. after migrateDatabaseFileForContract migrated the copy in WAL), so
+	// the upsert could otherwise land only in a -wal sibling that the caller's
+	// atomic swap then deletes, silently dropping the stamp and re-triggering the
+	// migration on every boot. TRUNCATE is a no-op on non-WAL databases.
+	if _, cpErr := db.Exec("PRAGMA wal_checkpoint(TRUNCATE)"); cpErr != nil && logf != nil {
+		logf("⚠️ Could not checkpoint after stamping schema version %d: %v", version, cpErr)
 	}
 }
 
@@ -499,10 +519,15 @@ func copyFile(src, dst string) error {
 	}
 	if _, err := io.Copy(out, in); err != nil {
 		out.Close()
+		// Never leave a truncated file behind: a half-written pre-migrate backup
+		// is indistinguishable by name from a good one and a human following the
+		// restore instructions could pick it (it would be the newest).
+		_ = os.Remove(dst)
 		return err
 	}
 	if err := out.Sync(); err != nil {
 		out.Close()
+		_ = os.Remove(dst)
 		return err
 	}
 	return out.Close()

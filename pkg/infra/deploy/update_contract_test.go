@@ -211,6 +211,60 @@ func TestContract_UpgradeBackupMigrateStamp(t *testing.T) {
 	}
 }
 
+// TestContract_UpgradeStampSurvivesWALMigrator exercises the production shape
+// the plain-migrator test missed: the real boot migrator migrates the copy in
+// WAL mode, which persists WAL in the SQLite header, so the subsequent schema
+// stamp is written to a WAL-mode file whose -wal sibling the atomic swap
+// deletes. This guards that after a WAL-mode migration the stamp is present in
+// the live file and the contract CONVERGES (a second boot opens it untouched
+// rather than re-migrating every launch). stampSchemaVersion checkpoints before
+// close so the stamp survives independent of driver close-checkpoint behavior.
+func TestContract_UpgradeStampSurvivesWALMigrator(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "data", DBFileName)
+	makeDB(t, dbPath, 1, 5)
+
+	// Migrate the copy in WAL mode, exactly as migrateDatabaseFileForContract does.
+	walMigrator := func(copyPath string) error {
+		db, err := sql.Open("sqlite3", "file:"+filepath.ToSlash(copyPath)+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+		if _, err := db.Exec(`CREATE TABLE gadgets (id INTEGER PRIMARY KEY)`); err != nil {
+			return err
+		}
+		// Mirror the real migrator: checkpoint the migration data before close.
+		_, _ = db.Exec(`PRAGMA wal_checkpoint(TRUNCATE)`)
+		return nil
+	}
+
+	res, err := EnsureDatabase(ContractConfig{
+		DBPath: dbPath, BinarySchema: 2, Migrate: walMigrator, Now: fixedClock(),
+	})
+	if err != nil {
+		t.Fatalf("EnsureDatabase: %v", err)
+	}
+	if res.Action != ActionMigrated {
+		t.Fatalf("action = %s, want %s", res.Action, ActionMigrated)
+	}
+	// The stamp must have survived the swap — a second boot must converge, not
+	// re-migrate.
+	if got := readSchemaVersion(dbPath); got != 2 {
+		t.Fatalf("post-migrate schema = %d, want 2 (stamp dropped by WAL swap — migration would loop every boot)", got)
+	}
+	// Second boot on the migrated DB opens untouched (converged).
+	res2, err := EnsureDatabase(ContractConfig{
+		DBPath: dbPath, BinarySchema: 2, Migrate: walMigrator, Now: fixedClock(),
+	})
+	if err != nil {
+		t.Fatalf("second boot: %v", err)
+	}
+	if res2.Action != ActionOpenedCurrent {
+		t.Fatalf("second boot action = %s, want %s (migration must converge)", res2.Action, ActionOpenedCurrent)
+	}
+}
+
 func TestContract_DowngradeRefused(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "data", DBFileName)
