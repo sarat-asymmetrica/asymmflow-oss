@@ -313,3 +313,64 @@ history" (Constitution Art. V: physics, stated plainly). The room-as-
 sequence topology touches Constitution Art. II's "one eternal room" framing
 — flagged to the owner for an Art. XII amendment; engineering proposes,
 only the owner amends.
+
+**MSG-D19 [Mirror] — Self-serve evidence export: the envelope IS the
+evidence; verification trusts nothing the bundle claims.**
+(Constitution Art. V §5, `export-transcript.mjs` / `verify-transcript.mjs`.)
+**Export law:** `exportTranscript(node, { exportedBy })` reads the room's
+linearized ops off the caller's OWN node (`node.ops()`) and carries them
+VERBATIM into a plain JSON-able bundle — no re-signing, no filtering, no
+normalization, tombstones export as the tombstone (MSG-D5's blanked-not-
+erased structure survives the export unchanged). This is what makes the
+export self-serve and admin-free (Art. V §5's "no IT/admin mediation" —
+the export function takes a node, not a network call; it reads whatever
+copy of the room the caller already holds, same physics as Art. V §3's "no
+unsend"). `mesh-node.mjs` grew one read-only passthrough,
+`node.authorityPub`, so the bundle can carry the room's authority key
+without the exporter tracking it out-of-band — additive, no other spike's
+behavior changes (proven by the untouched gates below passing unmodified).
+**Verify law:** `verifyTranscript(bundle)` is the trust-nothing counterpart
+— offline, no Autobase, no network, no storage. It recomputes, per op, the
+versioned signable BY KIND via `capability.mjs`'s own `signable()` (the
+same function the reducer's Go mirror agrees with — no duplicated field
+list, per the standing standard) and checks the Ed25519 signature against
+the op's own `devicePub`; then it re-folds the verbatim ops through the
+REAL wasm room reducer (`applyViaWasm(ops, config, 'room')`, `authorityPub`
+read from the bundle since an offline verifier has no other source) and
+compares the recomputed state digest to the bundle's claimed one. VERIFIED
+requires both: all signatures valid AND the digest matches. **The
+forged-key case, and why it needs the refold, not just the sig-check:** an
+attacker who tampers a body and re-signs with a device key that was never
+granted in the room produces an op whose OWN signature checks out
+perfectly (the attacker controls both the payload and the key it's checked
+against) — sig-verification alone is blind to this. The refold is what
+catches it: the kernel's capability plane rejects the ungranted device
+(`capability.go`'s "no grant for device" law, unmodified), so the
+recomputed digest diverges from what the bundle claims. `transcript-spike.mjs`
+asserts this split explicitly (case 4: `sigValid === true` for the forged
+op, `digestMatches === false` overall) so the property is proven, not
+assumed. Dropped-op tampering is caught the same way (digest mismatch,
+case 3); a tampered-but-not-re-signed op is caught by the sig-check alone
+(case 1/2) — three different tamper shapes, three different mechanisms,
+one bundle format. **Honest limitations, stated plainly (the seatbelt
+sentence's sibling):** a VERIFIED verdict proves every op in the bundle was
+lawfully signed by the device it claims AND that the exported state is
+exactly what those ops fold to — it does NOT prove the transcript is
+*complete* beyond the exported range (a verifier only ever sees what's
+inside the bundle; a truncated-but-internally-consistent export verifies
+cleanly, same as a truncated bank statement balances internally), and it
+does NOT prove exporter identity — `exportedBy` is a plain string field,
+unsigned, a claim of intent for the reader's benefit, not a cryptographic
+attestation (nothing today has the exporting human sign anything; that
+would be a real feature, not a documentation gap, if ever wanted). Social
+rooms (Art. II, unanchored, no authority in the room at all) export and
+verify identically — `authorityPub: null` in the bundle, `config: undefined`
+into the refold, same reducer, same law: Art. V's evidence right was
+written for the human layer first, and the code doesn't special-case it
+away. Scenario is single-writer/causally-chained (GL-2 lets a state+view
+golden stand on that shape); gate: `npm run build`, `go test ./mesh/...`
+green, `transcriptspike:update-golden` then three plain `transcriptspike`
+runs byte-identical, all seven pre-existing spikes (`roomspike`,
+`invitespike`, `attachspike`, `mirrorspike`, `smoke`, `wave1`, `missionc`,
+`missiond`) green unmodified, `git diff --stat mesh/goldens/` showing only
+the new `transcript_autobase.json` addition.

@@ -91,3 +91,23 @@ findings is indistinguishable from a crashed one. Deliver the report, THEN
 go idle. **Gate outcome:** zero code changes required by the lead — first
 mission this wave to pass the gate untouched; rotation ruled (room re-issue
 doctrine, MSG-D18 addendum) from the coder's findings.
+
+**GL-4 [W-mirror-2 Mission 3: evidence export] — The ledger works: GL-3's lesson arrived pre-installed.**
+Second consecutive zero-fix gate. **Patterns to repeat:** (a) the report
+arrived BEFORE the agent idled — GL-3, read at mission start, changed
+behavior without the lead saying a word; this is the ledger doing its job
+and the reason it exists. (b) The one out-of-scope file change (a read-only
+`node.authorityPub` getter on mesh-node.mjs) was minimal, additive,
+justified in the report, and proven harmless by the full regression floor —
+the right way to handle a brief that didn't anticipate a missing accessor:
+smallest possible change, loudly declared. (c) The golden was scoped to what
+the mission actually proves (bundle reproducibility: stateDigest +
+viewDigest + bundleSha256) instead of duplicating the state-shape golden
+that room_autobase.json already owns — golden MINIMALISM is a virtue;
+overlapping goldens rot in pairs. (d) The spike's forge case asserts the
+subtle thing (the attacker's self-consistent signature PASSES sig-check and
+only the capability-plane refold catches it) — testing the mechanism's
+limits, not just its successes. **Confirmed on review (the coder's flagged
+uncertainty):** `createMeshNode` with no `authorityPub` IS the correct
+social-room shape (unenforced fold, no admin in the room — Art. II / MSG-D17
+vocabulary); the from-scratch construction was right.

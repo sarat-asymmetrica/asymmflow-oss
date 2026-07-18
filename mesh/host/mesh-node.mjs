@@ -109,6 +109,11 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
     get key() { return base.key.toString('hex') },
     get writerKey() { return base.local.key.toString('hex') },
     get writable() { return base.writable },
+    /** The mesh-authority key this node was configured with, or null (unenforced
+     * room / business node). Read-only passthrough of the constructor option —
+     * export-transcript.mjs uses it to carry authority into a portable bundle
+     * without the exporter having to remember the room's config out-of-band. */
+    get authorityPub() { return authorityPub ?? null },
 
     /** Grant another peer write access (their writerKey, hex). Validates
      * BEFORE appending — a malformed key must never enter the shared log. */

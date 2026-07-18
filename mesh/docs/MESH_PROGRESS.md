@@ -357,6 +357,56 @@ its own workstream; POC-grade upstream untouched.
 - The `//go:wasmexport` incremental reactor (per MESH-D6) when marshalling
   volume warrants it.
 
+## Messenger wave: "The Blind Mirror Earns Its Name" (2026-07-18)
+
+The first orchestrated wave on this track: Fable 5 technical lead + Sonnet 5
+coder agents, each mission gated by the lead before the next launched
+(`AGENT_GATE_LEDGER.md` GL-1..GL-4 — the quality findings now bind every
+future agent). Preceded by the DESIGN CONSTITUTION
+(`MESSENGER_DESIGN_CONSTITUTION.md`, 12 articles, four-agent research pass,
+owner-ratified) — the wave enacted its Articles III, VI, XI, and V §5.
+
+- **Mission 1 — constitution vocabulary** (commit a1375d0): expectation tags
+  on `msg.post` (`whenever/today/urgent`, signed, unknown = typed skip) +
+  `room.claim` (anchored-only, authority-or-self, SELF-RELEASE per gate
+  ruling, last-canonical-wins). v2 signable grew (MSG-D16, owner-ratified
+  re-golden of the four room-family goldens; legacy v1 byte-frozen). 14 new
+  Go tests incl. 500-perm seed 2204. Gate also fixed a latent M3-era flake:
+  attach-spike pinned a view digest over a genuinely concurrent fork (GL-2 —
+  state-pinned now, view asserted converged).
+- **Mission 2 — the mirror goes blind** (16dce36): Autobase's own
+  `encryptionKey` threaded through `createMeshNode` (source-verified: oplog
+  AND named view cores encrypt); `asymm-room2.` invite codes carry the
+  content key (one paste = capability + key; room1 path byte-identical);
+  mirror-spike honesty check FLIPPED — mirror holds ciphertext, an
+  independent keyless third node pulling the same bytes over its own
+  replication stream reads nothing, the keyed phone reads fine. Rotation
+  investigated NOT built: no content-key rotation API exists (MSG-D18);
+  gate ruling = room re-issue as the crypto-epoch boundary; Constitution
+  Art. II amended (owner-approved, 7b2e540): room identity = a chain of
+  crypto-epoch containers linked by `predecessorRoomKey`.
+- **Mission 3 — the evidence export** (this commit): Article V §5 real —
+  `exportTranscript` (verbatim signed ops off the target's OWN node, no
+  admin mediation, tombstones stay tombstones) + `verifyTranscript`
+  (offline, trust-nothing: every signature recomputed via the shared
+  versioned signable, whole transcript refolded through the real wasm
+  reducer). transcript-spike: 25 checks — tamper (sig fails), drop (digest
+  catches), FORGE (self-consistent attacker signature passes sig-check but
+  the capability plane's refold diverges — the kernel is the lie detector),
+  social-room export (no authority, still verifies), bundle immutability,
+  golden 3× reproducible.
+- **Regression floor**: every gate green after every mission (9 npm gates +
+  go suite), legacy goldens byte-identical throughout.
+
+**The honest line:** rotation/room re-issue is ruled doctrine but NOT
+implemented (future wave: successor manifest + predecessorRoomKey + re-issue
+ceremony); room2's interim boundary = confidentiality against the mirror and
+new joiners, NOT forward secrecy against a device that already held the key;
+`exportedBy` on a transcript is a claim, not an attestation; expectation
+tags/claims/evidence export have no UI yet (kernel-screen wave pending,
+owner placement ruling stands); DMs remain P2P-only until the social layer
+ships on this encrypted road (Constitution Art. XI).
+
 ---
 
 ## Residue / notes for the next session

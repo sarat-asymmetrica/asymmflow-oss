@@ -21,6 +21,8 @@
     "invitespike:update-golden": "npm run build && node host/invite-spike.mjs --update-golden",
     "roomspike": "npm run build && node host/room-spike.mjs",
     "roomspike:update-golden": "npm run build && node host/room-spike.mjs --update-golden",
+    "transcriptspike": "npm run build && node host/transcript-spike.mjs",
+    "transcriptspike:update-golden": "npm run build && node host/transcript-spike.mjs --update-golden",
     "missiond": "npm run build && node host/missiond-mesh.mjs",
     "missiond:update-golden": "npm run build && node host/missiond-mesh.mjs --update-golden",
     "missiond:holesail": "npm run build && node host/missiond-holesail.mjs",
