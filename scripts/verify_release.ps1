@@ -1,5 +1,6 @@
 param(
     [switch]$SkipWailsBuild,
+    [switch]$SkipNSIS,
     [int]$GoTestTimeoutSeconds = 300
 )
 
@@ -30,8 +31,27 @@ npm run check
 Pop-Location
 
 if (-not $SkipWailsBuild) {
-    Step "Wails build"
-    wails build
+    if ($SkipNSIS) {
+        Step "Wails build"
+        wails build
+    } else {
+        # DP2 G5: build the full NSIS installer. Stage the payload (seed +
+        # identity) into build/windows/installer/payload/ first, then build with
+        # -nsis. makensis must be on PATH; add the default NSIS location if the
+        # caller has not already.
+        Step "Stage installer payload"
+        & (Join-Path $PSScriptRoot "stage_installer_payload.ps1")
+
+        Step "Wails build (NSIS installer)"
+        $nsisDir = "C:\Program Files (x86)\NSIS"
+        if ((Get-Command makensis -ErrorAction SilentlyContinue) -eq $null -and (Test-Path (Join-Path $nsisDir "makensis.exe"))) {
+            $env:Path = "$nsisDir;$env:Path"
+        }
+        if ((Get-Command makensis -ErrorAction SilentlyContinue) -eq $null) {
+            throw "makensis (NSIS) not found on PATH; install NSIS or pass -SkipNSIS"
+        }
+        wails build -nsis
+    }
 }
 
 $elapsed = (Get-Date) - $started

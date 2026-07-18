@@ -10,5 +10,11 @@
   "author": {
     "name": "AsymmFlow",
     "email": "you@example.com"
+  },
+  "info": {
+    "companyName": "Asymmetrica",
+    "productName": "AsymmFlow",
+    "productVersion": "2.3.0",
+    "comments": "AsymmFlow ERP desktop application"
   }
 }

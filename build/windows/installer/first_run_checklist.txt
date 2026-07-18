@@ -1,0 +1,69 @@
+===============================================================================
+  AsymmFlow — First-Run Checklist
+===============================================================================
+
+Thanks for installing AsymmFlow! This short checklist confirms the install
+went well. It only takes a few minutes and nothing here requires technical
+knowledge — just look at the screen and compare with what's described below.
+
+INSTALL BASICS
+---------------
+ [ ] The installer ran WITHOUT asking for an administrator password.
+ [ ] AsymmFlow launched automatically when Setup finished (or via the Start
+     Menu / Desktop shortcut).
+ [ ] Enter a license key when prompted (PH-{ROLE}-{6}). First run seeds a
+     fresh local database — starting empty is expected on a brand new
+     install; your real data is loaded separately.
+
+LOOK & FEEL
+------------
+ [ ] Icon is correct in the taskbar, alt-tab switcher, and the window's
+     title bar.
+ [ ] Login screen and sidebar show the right company name and mark; nothing
+     unrelated on screen turned the same accent colour (status chips keep
+     their own colours).
+ [ ] Timeline density, button press feel, and loading skeletons look normal
+     on the busiest screens (dashboard, sales, invoices).
+ [ ] Turn on Windows' reduced-motion setting (Settings -> Accessibility ->
+     Visual effects -> Animation OFF) and confirm the app goes static —
+     no bouncing or sliding.
+
+DOCUMENTS
+----------
+ [ ] Generate one PDF each: offer, invoice, delivery note. Check the
+     letterhead, legal name, VAT/TRN number and address are all correct.
+
+MONEY & SOUND
+--------------
+ [ ] Record a receipt that fully settles an invoice -> hear the paid-settle
+     sound and see the timeline mark PAID with a complete document
+     checklist.
+ [ ] Apply an on-account receipt to an invoice that it fully settles ->
+     same single settle sound, second path.
+ [ ] Settings -> turn the sound toggle OFF -> settle a second invoice ->
+     confirm it's silent this time.
+
+UNINSTALL / REINSTALL (do this only if asked to verify data survival)
+------------------------------------------------------------------------
+ [ ] Uninstall AsymmFlow (Windows Settings -> Apps, or the Start Menu
+     shortcut). Confirm the uninstall dialog says your business data stays
+     put.
+ [ ] Reinstall using the same Setup.exe. On first launch, the app should
+     recognise your existing data (boot diagnostic reports "opened_current",
+     not "seeded_fresh") — nothing you entered before is missing.
+
+UPDATING TO A NEW VERSION (do this only if you were given a newer Setup.exe)
+------------------------------------------------------------------------------
+ [ ] Close AsymmFlow, run the new Setup.exe, reopen. The boot diagnostic
+     should report "migrated" and a dated backup file should exist
+     alongside your data.
+
+PORTABLE FLAG CHECK (technical, optional)
+-------------------------------------------
+ [ ] A file named "portable.flag" should NOT exist next to AsymmFlow.exe in
+     an installed copy (that flag is only for portable, no-installer builds).
+
+If anything above doesn't match, note what you saw and who to tell — don't
+worry about fixing it yourself.
+
+Om Lokah Samastah Sukhino Bhavantu

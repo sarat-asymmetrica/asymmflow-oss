@@ -239,6 +239,41 @@ func TestLoadOverlay_ValidFile(t *testing.T) {
 	}
 }
 
+// TestLoadOverlay_ToleratesUTF8BOM proves a Windows-editor UTF-8 BOM at the
+// start of a hand-edited identity overlay.json does NOT make it silently fail
+// to parse and revert to built-in defaults. The identity plane is an explicitly
+// human-edited surface (campaign §0), and Notepad / PowerShell 5.1 add a BOM.
+func TestLoadOverlay_ToleratesUTF8BOM(t *testing.T) {
+	dir := t.TempDir()
+	overlay := CompanyOverlay{
+		SchemaVersion:      1,
+		DefaultDivisionKey: "BomDivision",
+		CompanyDisplayName: "BOM Test Company",
+		Currency:           "BHD",
+		CurrencyDecimals:   3,
+		DefaultVATRate:     10.0,
+		Divisions: []DivisionProfile{
+			{Key: "BomDivision", LegalName: "BOM Division LLC"},
+		},
+	}
+	data, _ := json.Marshal(overlay)
+	withBOM := append([]byte{0xEF, 0xBB, 0xBF}, data...)
+	if err := writeFile(dir+"/overlay.json", withBOM); err != nil {
+		t.Fatalf("could not write BOM overlay.json: %v", err)
+	}
+
+	got := LoadOverlay([]string{dir})
+	if got == nil {
+		t.Fatal("LoadOverlay returned nil")
+	}
+	if got.DefaultDivisionKey != "BomDivision" {
+		t.Errorf("BOM-prefixed overlay was not parsed (fell back to defaults): DefaultDivisionKey = %q, want BomDivision", got.DefaultDivisionKey)
+	}
+	if got.CompanyDisplayName != "BOM Test Company" {
+		t.Errorf("CompanyDisplayName = %q, want BOM Test Company", got.CompanyDisplayName)
+	}
+}
+
 // writeFile is a minimal helper to write bytes to a file path.
 func writeFile(path string, data []byte) error {
 	f, err := os.Create(path)
