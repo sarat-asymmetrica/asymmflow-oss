@@ -74,6 +74,13 @@ type DivisionProfile struct {
 type CompanyOverlay struct {
 	SchemaVersion int `json:"schema_version"`
 
+	// Deployment carries deployment-layout identity — currently the slug that
+	// keys the three-plane directory namespace (%APPDATA%\Asymmetrica\<slug>\...).
+	// A separate exe-adjacent deployment.json (written by the installer) is the
+	// authoritative source; this overlay field is the secondary fallback for
+	// single-config / dev deployments. See pkg/infra/deploy.
+	Deployment DeploymentConfig `json:"deployment"`
+
 	// DefaultDivisionKey is the Key of the division returned when no match is found.
 	DefaultDivisionKey string `json:"default_division_key"`
 
@@ -156,6 +163,13 @@ type CompanyOverlay struct {
 	// value derives a minimal fallback from the default division; see
 	// SignatureFallback.
 	SignatureDefault *SignatureBlockProfile `json:"signature_default"`
+}
+
+// DeploymentConfig holds deployment-layout identity read from the overlay.
+type DeploymentConfig struct {
+	// Slug keys the three-plane directory layout; blank falls back to the
+	// built-in "AsymmFlow-Dev" via DeploymentSlug().
+	Slug string `json:"slug"`
 }
 
 // SignatureBlockProfile is one "Best Regards" identity printed on documents.
@@ -468,6 +482,18 @@ func (o *CompanyOverlay) LicenseKeyPrefixOrDefault() string {
 		return p
 	}
 	return "PH"
+}
+
+// DeploymentSlug returns the deployment slug that keys the three-plane
+// directory layout. A blank slug in overlay.json falls back to the built-in
+// "AsymmFlow-Dev" default so a partial or absent overlay never yields an empty
+// namespace. Note: an exe-adjacent deployment.json (installer-written) takes
+// precedence over this value — see pkg/infra/deploy.DeploymentSlug.
+func (o *CompanyOverlay) DeploymentSlug() string {
+	if s := strings.TrimSpace(o.Deployment.Slug); s != "" {
+		return s
+	}
+	return "AsymmFlow-Dev"
 }
 
 // NormalizeDivisionName maps a raw division string (as stored in the DB or

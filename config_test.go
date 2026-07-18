@@ -1,11 +1,17 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIG TESTS - Verify configuration loading and validation
+//
+// Mission DP1: database-path resolution and the seed/migrate/stamp update
+// contract moved to pkg/infra/deploy (see pkg/infra/deploy/deploy_paths_test.go
+// and update_contract_test.go). The count-heuristic reseed tests that used to
+// live here were retired with the behavior they covered — the anti-reseed proof
+// is now the byte-compare test in update_contract_test.go. The DATABASE_PATH
+// escape hatch was retired in favor of PH_DB_PATH.
 // ═══════════════════════════════════════════════════════════════════════════
 
 package main
 
 import (
-	"database/sql"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,32 +56,22 @@ func TestLoadConfigWithoutEnvFile(t *testing.T) {
 }
 
 func TestLoadConfigWithEnvVars(t *testing.T) {
-	// Set environment variables
-	os.Setenv("DATABASE_PATH", "./test_custom.db")
-	os.Setenv("LOG_LEVEL", "debug")
-	os.Setenv("DEBUG_MODE", "true")
-	os.Setenv("WATCHER_DEBOUNCE_MS", "500")
-	os.Setenv("ENABLE_FILE_WATCHER", "false")
-	defer func() {
-		os.Unsetenv("DATABASE_PATH")
-		os.Unsetenv("LOG_LEVEL")
-		os.Unsetenv("DEBUG_MODE")
-		os.Unsetenv("WATCHER_DEBOUNCE_MS")
-		os.Unsetenv("ENABLE_FILE_WATCHER")
-	}()
+	// PH_DB_PATH is the sole dev escape hatch (DATABASE_PATH retired, Mission DP1).
+	// An absolute PH_DB_PATH is honored verbatim as the database path.
+	customDB := filepath.Join(t.TempDir(), "test_custom.db")
+	t.Setenv("PH_DB_PATH", customDB)
+	t.Setenv("LOG_LEVEL", "debug")
+	t.Setenv("DEBUG_MODE", "true")
+	t.Setenv("WATCHER_DEBOUNCE_MS", "500")
+	t.Setenv("ENABLE_FILE_WATCHER", "false")
 
 	cfg, err := LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig() failed: %v", err)
 	}
 
-	// Packaged database now takes precedence over ad-hoc env overrides when present.
-	expectedDBPath := resolveConfiguredPath("./test_custom.db")
-	if packaged := packagedDatabasePath(); packaged != "" {
-		expectedDBPath = packaged
-	}
-	if cfg.Database.Path != expectedDBPath {
-		t.Errorf("Expected database path '%s', got %s", expectedDBPath, cfg.Database.Path)
+	if cfg.Database.Path != filepath.Clean(customDB) {
+		t.Errorf("Expected database path '%s', got %s", filepath.Clean(customDB), cfg.Database.Path)
 	}
 
 	if cfg.App.LogLevel != "debug" {
@@ -153,328 +149,24 @@ func TestLoadEnvFilesWithPrecedenceMergesMissingKeys(t *testing.T) {
 	}
 }
 
-func TestGetDatabasePathResolvesRelativeEnvPath(t *testing.T) {
-	dataDir := filepath.Join(".", "data")
-	dbPath := filepath.Join(dataDir, "ph_holdings.db")
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		t.Fatalf("failed to create test data dir: %v", err)
-	}
-	if err := os.WriteFile(dbPath, []byte("test"), 0644); err != nil {
-		t.Fatalf("failed to create test db: %v", err)
-	}
-	defer os.Remove(dbPath)
-	defer os.Remove(dataDir)
-
-	originalPHDB := os.Getenv("PH_DB_PATH")
-	originalDB := os.Getenv("DATABASE_PATH")
-	os.Unsetenv("PH_DB_PATH")
-	os.Setenv("DATABASE_PATH", "./data/ph_holdings.db")
-	defer func() {
-		if originalPHDB == "" {
-			os.Unsetenv("PH_DB_PATH")
-		} else {
-			os.Setenv("PH_DB_PATH", originalPHDB)
-		}
-		if originalDB == "" {
-			os.Unsetenv("DATABASE_PATH")
-		} else {
-			os.Setenv("DATABASE_PATH", originalDB)
-		}
-	}()
+// TestGetDatabasePathRelativeEnvResolvesAgainstCWD proves the surviving CWD
+// dev-DB flow: a relative PH_DB_PATH is resolved against the working directory
+// (the mechanism that keeps `wails dev` finding an in-repo database after the
+// six-priority archaeology was retired).
+func TestGetDatabasePathRelativeEnvResolvesAgainstCWD(t *testing.T) {
+	t.Setenv("PH_DB_PATH", filepath.Join("data", "ph_holdings.db"))
 
 	resolved := getDatabasePath()
-	if packaged := packagedDatabasePath(); packaged != "" {
-		if resolved != packaged {
-			t.Fatalf("expected packaged database path %s to win, got %s", packaged, resolved)
-		}
-		return
+	if !filepath.IsAbs(resolved) {
+		t.Fatalf("expected relative PH_DB_PATH to resolve to an absolute path, got %s", resolved)
 	}
 	if !strings.HasSuffix(filepath.ToSlash(resolved), "data/ph_holdings.db") {
 		t.Fatalf("expected resolved path to end with data/ph_holdings.db, got %s", resolved)
 	}
-	if _, err := os.Stat(resolved); err != nil {
-		t.Fatalf("expected resolved database path to exist: %v", err)
+	cwd, _ := os.Getwd()
+	if !strings.HasPrefix(resolved, filepath.Clean(cwd)) {
+		t.Fatalf("expected relative PH_DB_PATH to resolve under CWD %s, got %s", cwd, resolved)
 	}
-}
-
-func TestSeedAppDataDatabaseReplacesHollowExistingDB(t *testing.T) {
-	dir := t.TempDir()
-	appDataPath := filepath.Join(dir, "appdata", "ph_holdings.db")
-	packagedPath := filepath.Join(dir, "package", "data", "ph_holdings.db")
-
-	createDeploymentProfileDB(t, appDataPath, 0, 0, 0, 0, 0)
-	db, err := sql.Open("sqlite3", appDataPath)
-	if err != nil {
-		t.Fatalf("failed to open hollow appdata db: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE license_keys (
-			key TEXT PRIMARY KEY,
-			role TEXT,
-			display_name TEXT,
-			device_hash TEXT,
-			activated INTEGER,
-			activated_at TEXT,
-			notes TEXT,
-			created_by TEXT
-		);
-		INSERT INTO license_keys (key, role, display_name, device_hash, activated, activated_at)
-		VALUES ('PH-SLS-B4AA10', 'sales', 'Sales Test', 'device-123', 1, '2026-04-20 10:00:00');
-	`); err != nil {
-		db.Close()
-		t.Fatalf("failed to seed hollow appdata license: %v", err)
-	}
-	db.Close()
-
-	createDeploymentProfileDB(t, packagedPath, 453, 35, 196, 470, 586)
-	db, err = sql.Open("sqlite3", packagedPath)
-	if err != nil {
-		t.Fatalf("failed to open packaged db: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE license_keys (
-			key TEXT PRIMARY KEY,
-			role TEXT,
-			display_name TEXT,
-			device_hash TEXT,
-			activated INTEGER,
-			activated_at TEXT,
-			notes TEXT,
-			created_by TEXT
-		);
-		INSERT INTO license_keys (key, role, display_name, device_hash, activated, activated_at)
-		VALUES ('PH-SLS-B4AA10', 'sales', 'Sales Test', '', 0, NULL);
-	`); err != nil {
-		db.Close()
-		t.Fatalf("failed to seed packaged license: %v", err)
-	}
-	db.Close()
-
-	if !seedAppDataDatabaseFromPackaged(appDataPath, packagedPath) {
-		t.Fatalf("expected hollow appdata db to be replaced from packaged seed")
-	}
-
-	profile := readDeploymentDatabaseProfile(appDataPath)
-	if profile.Customers != 453 || profile.Orders != 196 || profile.Invoices != 470 {
-		t.Fatalf("expected packaged business data after reseed, got %+v", profile)
-	}
-
-	db, err = sql.Open("sqlite3", appDataPath)
-	if err != nil {
-		t.Fatalf("failed to reopen reseeded db: %v", err)
-	}
-	defer db.Close()
-	var activated int
-	var deviceHash string
-	if err := db.QueryRow(`SELECT activated, device_hash FROM license_keys WHERE key = 'PH-SLS-B4AA10'`).Scan(&activated, &deviceHash); err != nil {
-		t.Fatalf("failed to load restored license activation: %v", err)
-	}
-	if activated != 1 || deviceHash != "device-123" {
-		t.Fatalf("expected existing Sales Test activation to be preserved, got activated=%d device=%q", activated, deviceHash)
-	}
-
-	matches, err := filepath.Glob(appDataPath + ".reseed-backup-*")
-	if err != nil || len(matches) == 0 {
-		t.Fatalf("expected existing hollow db to be backed up, matches=%v err=%v", matches, err)
-	}
-}
-
-func TestSeedAppDataDatabaseReplacesMateriallyStaleExistingDB(t *testing.T) {
-	dir := t.TempDir()
-	appDataPath := filepath.Join(dir, "appdata", "ph_holdings.db")
-	packagedPath := filepath.Join(dir, "package", "data", "ph_holdings.db")
-
-	createDeploymentProfileDB(t, appDataPath, 381, 35, 17, 0, 0)
-	db, err := sql.Open("sqlite3", appDataPath)
-	if err != nil {
-		t.Fatalf("failed to open stale appdata db: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE license_keys (
-			key TEXT PRIMARY KEY,
-			role TEXT,
-			display_name TEXT,
-			device_hash TEXT,
-			activated INTEGER,
-			activated_at TEXT,
-			notes TEXT,
-			created_by TEXT
-		);
-		INSERT INTO license_keys (key, role, display_name, device_hash, activated, activated_at)
-		VALUES ('PH-SLS-B4AA10', 'sales', 'Sales Test', 'sales-device', 1, '2026-04-20 11:00:00');
-	`); err != nil {
-		db.Close()
-		t.Fatalf("failed to seed stale appdata license: %v", err)
-	}
-	db.Close()
-
-	createDeploymentProfileDB(t, packagedPath, 453, 35, 196, 470, 586)
-	db, err = sql.Open("sqlite3", packagedPath)
-	if err != nil {
-		t.Fatalf("failed to open packaged db: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE license_keys (
-			key TEXT PRIMARY KEY,
-			role TEXT,
-			display_name TEXT,
-			device_hash TEXT,
-			activated INTEGER,
-			activated_at TEXT,
-			notes TEXT,
-			created_by TEXT
-		);
-		INSERT INTO license_keys (key, role, display_name, device_hash, activated, activated_at)
-		VALUES ('PH-SLS-B4AA10', 'sales', 'Sales Test', '', 0, NULL);
-	`); err != nil {
-		db.Close()
-		t.Fatalf("failed to seed packaged license: %v", err)
-	}
-	db.Close()
-
-	if !seedAppDataDatabaseFromPackaged(appDataPath, packagedPath) {
-		t.Fatalf("expected materially stale appdata db to be replaced from packaged seed")
-	}
-
-	profile := readDeploymentDatabaseProfile(appDataPath)
-	if profile.Opportunities != 586 || profile.Orders != 196 || profile.Invoices != 470 {
-		t.Fatalf("expected current packaged business data after reseed, got %+v", profile)
-	}
-
-	db, err = sql.Open("sqlite3", appDataPath)
-	if err != nil {
-		t.Fatalf("failed to reopen reseeded db: %v", err)
-	}
-	defer db.Close()
-	var activated int
-	var deviceHash string
-	if err := db.QueryRow(`SELECT activated, device_hash FROM license_keys WHERE key = 'PH-SLS-B4AA10'`).Scan(&activated, &deviceHash); err != nil {
-		t.Fatalf("failed to load restored license activation: %v", err)
-	}
-	if activated != 1 || deviceHash != "sales-device" {
-		t.Fatalf("expected Sales Test activation to survive stale DB reseed, got activated=%d device=%q", activated, deviceHash)
-	}
-}
-
-func TestSeedAppDataDatabaseFlushesActivationWhenRequested(t *testing.T) {
-	dir := t.TempDir()
-	appDataPath := filepath.Join(dir, "appdata", "ph_holdings.db")
-	packagedPath := filepath.Join(dir, "package", "data", "ph_holdings.db")
-
-	createDeploymentProfileDB(t, appDataPath, 381, 35, 17, 0, 0)
-	db, err := sql.Open("sqlite3", appDataPath)
-	if err != nil {
-		t.Fatalf("failed to open stale appdata db: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE license_keys (
-			key TEXT PRIMARY KEY,
-			role TEXT,
-			display_name TEXT,
-			device_hash TEXT,
-			activated INTEGER,
-			activated_at TEXT,
-			notes TEXT,
-			created_by TEXT
-		);
-		INSERT INTO license_keys (key, role, display_name, device_hash, activated, activated_at)
-		VALUES ('PH-SLS-B4AA10', 'sales', 'Sales Test', 'sales-device', 1, '2026-04-20 11:00:00');
-	`); err != nil {
-		db.Close()
-		t.Fatalf("failed to seed stale appdata license: %v", err)
-	}
-	db.Close()
-
-	createDeploymentProfileDB(t, packagedPath, 453, 35, 196, 470, 586)
-	db, err = sql.Open("sqlite3", packagedPath)
-	if err != nil {
-		t.Fatalf("failed to open packaged db: %v", err)
-	}
-	if _, err := db.Exec(`
-		CREATE TABLE license_keys (
-			key TEXT PRIMARY KEY,
-			role TEXT,
-			display_name TEXT,
-			device_hash TEXT,
-			activated INTEGER,
-			activated_at TEXT,
-			notes TEXT,
-			created_by TEXT
-		);
-		INSERT INTO license_keys (key, role, display_name, device_hash, activated, activated_at)
-		VALUES ('PH-SLS-B4AA10', 'sales', 'Sales Test', '', 0, NULL);
-	`); err != nil {
-		db.Close()
-		t.Fatalf("failed to seed packaged license: %v", err)
-	}
-	db.Close()
-
-	originalFlush, hadFlush := os.LookupEnv("ASYMMFLOW_FLUSH_LICENSE_ON_RESEED")
-	if err := os.Setenv("ASYMMFLOW_FLUSH_LICENSE_ON_RESEED", "true"); err != nil {
-		t.Fatalf("failed to set flush env: %v", err)
-	}
-	defer func() {
-		if hadFlush {
-			_ = os.Setenv("ASYMMFLOW_FLUSH_LICENSE_ON_RESEED", originalFlush)
-		} else {
-			_ = os.Unsetenv("ASYMMFLOW_FLUSH_LICENSE_ON_RESEED")
-		}
-	}()
-
-	if !seedAppDataDatabaseFromPackaged(appDataPath, packagedPath) {
-		t.Fatalf("expected stale appdata db to be replaced from packaged seed")
-	}
-
-	db, err = sql.Open("sqlite3", appDataPath)
-	if err != nil {
-		t.Fatalf("failed to reopen reseeded db: %v", err)
-	}
-	defer db.Close()
-	var activated int
-	var deviceHash string
-	if err := db.QueryRow(`SELECT activated, device_hash FROM license_keys WHERE key = 'PH-SLS-B4AA10'`).Scan(&activated, &deviceHash); err != nil {
-		t.Fatalf("failed to load flushed license activation: %v", err)
-	}
-	if activated != 0 || deviceHash != "" {
-		t.Fatalf("expected Sales Test activation to be flushed, got activated=%d device=%q", activated, deviceHash)
-	}
-}
-
-func createDeploymentProfileDB(t *testing.T, path string, customers, suppliers, orders, invoices, opportunities int) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-		t.Fatalf("failed to create db dir: %v", err)
-	}
-	db, err := sql.Open("sqlite3", path)
-	if err != nil {
-		t.Fatalf("failed to open test db: %v", err)
-	}
-	defer db.Close()
-	statements := []string{
-		`CREATE TABLE customers (id INTEGER PRIMARY KEY, deleted_at TEXT);`,
-		`CREATE TABLE suppliers (id INTEGER PRIMARY KEY, deleted_at TEXT);`,
-		`CREATE TABLE orders (id INTEGER PRIMARY KEY);`,
-		`CREATE TABLE invoices (id INTEGER PRIMARY KEY);`,
-		`CREATE TABLE opportunities (id INTEGER PRIMARY KEY);`,
-	}
-	for _, stmt := range statements {
-		if _, err := db.Exec(stmt); err != nil {
-			t.Fatalf("failed to create test table: %v", err)
-		}
-	}
-	insertRows := func(table string, count int) {
-		t.Helper()
-		for i := 0; i < count; i++ {
-			if _, err := db.Exec("INSERT INTO " + table + " DEFAULT VALUES"); err != nil {
-				t.Fatalf("failed to insert into %s: %v", table, err)
-			}
-		}
-	}
-	insertRows("customers", customers)
-	insertRows("suppliers", suppliers)
-	insertRows("orders", orders)
-	insertRows("invoices", invoices)
-	insertRows("opportunities", opportunities)
 }
 
 func TestConfigValidation(t *testing.T) {

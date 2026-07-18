@@ -16,6 +16,8 @@ import (
 
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pbkdf2"
+
+	"ph_holdings_app/pkg/infra/deploy"
 )
 
 // FieldCrypto provides field-level encryption for sensitive database values.
@@ -349,7 +351,7 @@ func loadOrCreateSalt() ([]byte, error) {
 			candidates = append(candidates, filepath.Join(filepath.Dir(resolved), saltFileName))
 		}
 	}
-	if dataDir := appDataDirPath(); dataDir != "" {
+	if dataDir := deploy.DataDir(); dataDir != "" {
 		candidates = append(candidates, filepath.Join(dataDir, saltFileName))
 	}
 

@@ -10,7 +10,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
-//go:embed all:frontend/dist
+//go:embed all:frontend-lab/dist
 var assets embed.FS
 
 // brandWindowTitle is the desktop window title shown in the OS title bar and

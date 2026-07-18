@@ -16,9 +16,10 @@ import (
 // the overlay registry, that is an Article III violation (one job, one path) and
 // silently re-introduces the mis-scoping landmine this wave removed.
 //
-// SCOPE: the ERP application only — Go source (this module) plus frontend/src.
-// The separate packages/ design-system showcase and e2e test fixtures are NOT
-// governed by the ERP's overlay and are out of scope.
+// SCOPE: the ERP application only — Go source (this module) plus the kernel
+// frontend under frontend-lab/src. The separate packages/ design-system
+// showcase and e2e test fixtures are NOT governed by the ERP's overlay and
+// are out of scope.
 //
 // WHAT IS AUDITED: executable code. Comments are stripped before matching —
 // documentation and the synthetic canon it references (per SYNTHETIC_IDENTITY.md)
@@ -26,13 +27,14 @@ import (
 //
 // EXEMPTIONS (the legitimate homes for the synthetic literals):
 //   - the registry source of truth (pkg/overlay/overlay.go, business_rules.go)
-//   - the frontend builtin fallback mirror (divisions.svelte.ts, wailsMock.ts,
-//     brand.ts) — the never-empty-selector guarantee, analogous to BuiltinDefaults
+//   - the kernel builtin fallback mirror (stores/divisions.svelte.ts) and the
+//     mock-fixture bridge layer — the never-empty-selector guarantee and the
+//     adversarial synthetic canon (bridge/real.ts, the live adapter, stays audited)
 //   - the annotated example config (data/overlay*.json)
 //   - seed / bulk-import / standalone tooling (import_2026_data.go, cmd/…)
 //   - GORM struct-tag column defaults (pkg/crm/domain.go): compile-time
 //     constants that cannot hold a runtime registry value (see report residual)
-//   - tests (_test.go), generated bindings (frontend/wailsjs), deps, build output
+//   - tests (_test.go), generated bindings (frontend-lab/wailsjs), deps, build output
 func TestNoSyntheticDivisionLiteralsInLiveCode(t *testing.T) {
 	forbidden := []string{
 		"Acme Instrumentation",
@@ -43,21 +45,21 @@ func TestNoSyntheticDivisionLiteralsInLiveCode(t *testing.T) {
 
 	// Exact repo-relative paths that legitimately carry the synthetic literals.
 	exemptFile := map[string]bool{
-		"pkg/overlay/overlay.go":              true,
-		"pkg/overlay/business_rules.go":       true,
-		"frontend/src/lib/divisions.svelte.ts": true,
-		"frontend/src/lib/wailsMock.ts":       true,
-		"frontend/src/lib/brand.ts":           true,
-		"import_2026_data.go":                 true, // bulk 2026 data-import canon
-		"pkg/crm/domain.go":                   true, // GORM struct-tag default (residual)
+		"pkg/overlay/overlay.go":        true,
+		"pkg/overlay/business_rules.go": true,
+		// the kernel builtin fallback mirror — the never-empty-selector
+		// guarantee, analogous to BuiltinDefaults
+		"frontend-lab/src/stores/divisions.svelte.ts": true,
+		"import_2026_data.go":                         true, // bulk 2026 data-import canon
+		"pkg/crm/domain.go":                           true, // GORM struct-tag default (residual)
 	}
 	// Directory prefixes that are out of scope or generated.
 	exemptPrefix := []string{
-		"cmd/",                 // standalone tooling (export scripts, etc.)
-		"frontend/wailsjs/",    // generated Wails bindings
-		"frontend/tests/",      // e2e test fixtures
-		"packages/",            // separate design-system showcase (not the ERP)
-		"data/",                // overlay.json + data files
+		"frontend-lab/src/bridge/", // mock-fixture layer: adversarial synthetic canon
+		"cmd/",                     // standalone tooling (export scripts, etc.)
+		"frontend-lab/wailsjs/",    // generated Wails bindings
+		"packages/",                // separate design-system showcase (not the ERP)
+		"data/",                    // overlay.json + data files
 	}
 
 	scanExt := map[string]bool{".go": true, ".ts": true, ".svelte": true, ".js": true}
@@ -68,6 +70,12 @@ func TestNoSyntheticDivisionLiteralsInLiveCode(t *testing.T) {
 		}
 		if strings.HasSuffix(rel, "_test.go") {
 			return true
+		}
+		// The real Wails adapter lives inside bridge/ but is live code — it
+		// must stay audited even though the mock-fixture layer around it is
+		// exempt.
+		if rel == "frontend-lab/src/bridge/real.ts" {
+			return false
 		}
 		for _, p := range exemptPrefix {
 			if strings.HasPrefix(rel, p) {
@@ -94,8 +102,8 @@ func TestNoSyntheticDivisionLiteralsInLiveCode(t *testing.T) {
 		}
 		rel := filepath.ToSlash(path)
 		rel = strings.TrimPrefix(rel, "./")
-		// Only audit the ERP frontend under frontend/src (skip other frontend/*).
-		if strings.HasPrefix(rel, "frontend/") && !strings.HasPrefix(rel, "frontend/src/") {
+		// Only audit the ERP frontend under frontend-lab/src (skip other frontend-lab/*).
+		if strings.HasPrefix(rel, "frontend-lab/") && !strings.HasPrefix(rel, "frontend-lab/src/") {
 			return nil
 		}
 		if isExempt(rel) {

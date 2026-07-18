@@ -25,7 +25,7 @@ Write-Host "Dirty:   $dirty"
 
 go test ./pkg/infra/release -count=1
 go build ./...
-Push-Location frontend
+Push-Location frontend-lab
 npm run build
 npm run check
 Pop-Location

@@ -1,0 +1,56 @@
+/* Local font faces — same TTFs the old frontend ships (one-source via $tokens
+ * alias). Desktop app = fully offline; no external font hosts, ever. */
+@font-face {
+  font-family: 'Rubik';
+  src: url('$tokens/fonts/google/Rubik-Light.ttf') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('$tokens/fonts/google/Rubik-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('$tokens/fonts/google/Rubik-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('$tokens/fonts/google/Rubik-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('$tokens/fonts/google/Rubik-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('$tokens/fonts/google/SpaceGrotesk-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('$tokens/fonts/google/SpaceGrotesk-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('$tokens/fonts/google/SpaceGrotesk-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('$tokens/fonts/google/SpaceGrotesk-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}

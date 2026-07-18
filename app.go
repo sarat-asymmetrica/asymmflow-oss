@@ -23,6 +23,7 @@ import (
 	"ph_holdings_app/pkg/crm"
 	"ph_holdings_app/pkg/graph"
 	"ph_holdings_app/pkg/infra/audit"
+	"ph_holdings_app/pkg/infra/deploy"
 	"ph_holdings_app/pkg/infra/events"
 	"ph_holdings_app/pkg/overlay"
 	"ph_holdings_app/pkg/runtime/composition"
@@ -197,9 +198,9 @@ func (a *App) getAppPaths() *ApplicationPaths {
 	// use the data directory where the DB lives for all exports
 	testDir := filepath.Join(projectRoot, "exports")
 	if err := os.MkdirAll(testDir, 0755); err != nil {
-		// CWD not writable — use the platform data directory (3-PLAT:
-		// %APPDATA% on Windows, ~/.local/share elsewhere).
-		if dataDir := appDataDirPath(); dataDir != "" {
+		// CWD not writable — use the deployment data plane
+		// (%APPDATA%\Asymmetrica\<slug>\data). Never the legacy %APPDATA%\AsymmFlow.
+		if dataDir := deploy.DataDir(); dataDir != "" {
 			os.MkdirAll(dataDir, 0755)
 			log.Printf("CWD not writable, using data dir: %s", dataDir)
 			projectRoot = dataDir
@@ -375,94 +376,18 @@ func (a *App) startup(ctx context.Context) {
 		dbPath = getDatabasePath()
 	}
 
-	// Production fix: packaged apps may launch with an unexpected CWD.
-	// Resolve relative DB paths against executable-relative locations first,
-	// then platform data, then CWD as a final fallback.
+	// Mission DP1: getDatabasePath() (→ deploy.ResolveDatabasePath) already
+	// returns an absolute, deterministic path — the six-priority CWD/exe-dir/
+	// legacy-AppData archaeology that used to live here was retired. A relative
+	// value can only arise from a relative PH_DB_PATH under an empty CWD; resolve
+	// it against CWD as a last courtesy so `wails dev` from an odd shell survives.
 	if !filepath.IsAbs(dbPath) {
-		dbName := filepath.Base(dbPath)
-		resolved := false
-
-		// 1. Executable-relative locations (portable deployment)
-		if exePath, exeErr := os.Executable(); exeErr == nil {
-			exeDir := filepath.Dir(exePath)
-			candidates := []string{
-				filepath.Join(exeDir, dbPath),
-				filepath.Join(exeDir, "..", "Resources", dbPath),
-				filepath.Join(exeDir, "data", dbName),
-				filepath.Join(exeDir, dbName),
-				filepath.Join(exeDir, "..", "Resources", "data", dbName),
-				filepath.Join(exeDir, "..", "Resources", dbName),
-			}
-
-			// 4. Three levels up from .app/Contents/MacOS/ (project root / build/bin)
-			projectRoot := filepath.Join(exeDir, "..", "..", "..")
-			candidates = append(candidates,
-				filepath.Join(projectRoot, dbPath),
-				filepath.Join(projectRoot, dbName),
-			)
-
-			for _, candidate := range candidates {
-				if _, statErr := os.Stat(candidate); statErr == nil {
-					log.Printf("DB found relative to executable: %s", candidate)
-					dbPath = candidate
-					resolved = true
-					break
-				}
-			}
-		}
-
-		// 2. Platform data directory (Windows AppData, Unix ~/.local/share)
-		if !resolved {
-			var dataDir string
-			if goruntime.GOOS == "windows" {
-				if appData := os.Getenv("APPDATA"); appData != "" {
-					dataDir = filepath.Join(appData, "AsymmFlow")
-				}
-			} else if homeDir, hErr := os.UserHomeDir(); hErr == nil {
-				dataDir = filepath.Join(homeDir, ".local", "share", "AsymmFlow")
-			}
-
-			if dataDir != "" {
-				candidates := []string{
-					filepath.Join(dataDir, dbPath),
-					filepath.Join(dataDir, dbName),
-				}
-				for _, candidate := range candidates {
-					if _, statErr := os.Stat(candidate); statErr == nil {
-						log.Printf("DB found in data directory: %s", candidate)
-						dbPath = candidate
-						resolved = true
-						break
-					}
-				}
-			}
-		}
-
-		// 3. CWD (wails dev mode / explicit local launch)
-		if !resolved {
-			if _, statErr := os.Stat(dbPath); statErr == nil {
-				log.Printf("DB found in CWD: %s", dbPath)
-			} else {
-				// Last resort: create in data directory
-				var dataDir string
-				if goruntime.GOOS == "windows" {
-					if appData := os.Getenv("APPDATA"); appData != "" {
-						dataDir = filepath.Join(appData, "AsymmFlow")
-					}
-				} else if homeDir, hErr := os.UserHomeDir(); hErr == nil {
-					dataDir = filepath.Join(homeDir, ".local", "share", "AsymmFlow")
-				}
-
-				if dataDir != "" {
-					os.MkdirAll(dataDir, 0755)
-					dbPath = filepath.Join(dataDir, dbName)
-					log.Printf("DB will be created in data directory: %s", dbPath)
-				}
-			}
+		if abs, absErr := filepath.Abs(dbPath); absErr == nil {
+			dbPath = abs
 		}
 	}
 
-	// Ensure database directory exists
+	// Ensure the data plane directory exists.
 	dbDir := filepath.Dir(dbPath)
 	if dbDir != "" && dbDir != "." {
 		if err := os.MkdirAll(dbDir, 0755); err != nil {
@@ -472,6 +397,41 @@ func (a *App) startup(ctx context.Context) {
 			})
 		}
 	}
+
+	// Mission DP1 update contract: seed an absent data plane from the packaged
+	// canon, refuse a downgrade, and back up + migrate (on a copy) before an
+	// upgrade — all BEFORE the connection pool opens. A present, current
+	// database is opened untouched (the anti-reseed invariant). This is the ONLY
+	// path that may seed or migrate; nothing here ever touches the legacy dir.
+	contractRes, contractErr := deploy.EnsureDatabase(deploy.ContractConfig{
+		DBPath:       dbPath,
+		SeedPath:     deploy.PackagedSeedPath(),
+		BinarySchema: deploy.BinarySchemaVersion(),
+		Migrate:      migrateDatabaseFileForContract,
+		ForceReseed:  deploy.ForceReseedRequested(),
+		Now:          time.Now(),
+		Logf:         log.Printf,
+	})
+	if contractErr != nil {
+		// Downgrade refusal or a failed migration: do NOT open the database. The
+		// original data plane is intact; surface the reason and stop startup.
+		AppLogger.Error("Database update contract refused to proceed", contractErr, map[string]any{
+			"path": dbPath,
+		})
+		appendStartupDiagnostic("DB CONTRACT REFUSED: %v", contractErr)
+		if ctx != nil {
+			runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+				Type:    runtime.ErrorDialog,
+				Title:   "Cannot Open Database",
+				Message: contractErr.Error(),
+			})
+		} else {
+			fmt.Fprintf(os.Stderr, "FATAL: %s\n", contractErr.Error())
+		}
+		return
+	}
+	appendStartupDiagnostic("DB CONTRACT: action=%s from=%d to=%d backup=%s",
+		contractRes.Action, contractRes.FromSchema, contractRes.ToSchema, contractRes.BackupPath)
 
 	AppLogger.Info("Connecting to SQLite database", map[string]any{
 		"path": dbPath,
@@ -2111,3 +2071,43 @@ func (a *App) migrateOfferNumbers() {
 }
 
 // PredictPayment performs payment prediction for a single customer
+
+// migrateDatabaseFileForContract runs the trading-model migrations against a
+// standalone database file. The Mission DP1 update contract invokes it on a
+// COPY of the live data plane during a schema upgrade; the copy is atomically
+// swapped in only if this returns nil, so a failed migration never touches the
+// live database. It opens its own short-lived connection and closes it before
+// returning so the caller can rename the file (Windows cannot rename an open
+// file). Per-model skips (SQLite cannot alter constraints on existing tables)
+// are tolerated exactly as the startup migrator tolerates them — only a failure
+// to open the copy is fatal.
+func migrateDatabaseFileForContract(path string) error {
+	root := composition.NewRoot()
+	dsn := composition.SQLiteDSN(filepath.Clean(path), composition.DefaultPragmas...)
+	db, err := root.OpenSQLite(dsn, &gorm.Config{
+		Logger:                                   logger.Default.LogMode(logger.Warn),
+		DisableForeignKeyConstraintWhenMigrating: true, // same as startup()
+	})
+	if err != nil {
+		return fmt.Errorf("open database copy for migration: %w", err)
+	}
+	defer func() {
+		if sqlDB, dbErr := db.DB(); dbErr == nil {
+			// Flush the WAL back into the main file BEFORE closing so the atomic
+			// swap (which deletes the -wal/-shm siblings) can never drop committed
+			// migration data. TRUNCATE is the strongest checkpoint; a clean close
+			// would checkpoint anyway, but this makes the guarantee explicit on a
+			// data-loss-critical path.
+			_, _ = sqlDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
+			_ = sqlDB.Close()
+		}
+	}()
+
+	migrated, skipped := root.MigrateModels(tradingModels(), func(index, total int, model string, mErr error) {
+		if mErr != nil {
+			log.Printf("⚠️ contract migration skipped %s (%d/%d): %v", model, index, total, mErr)
+		}
+	})
+	log.Printf("🔧 contract migration on copy: %d migrated, %d skipped (%s)", migrated, skipped, path)
+	return nil
+}

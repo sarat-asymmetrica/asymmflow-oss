@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 $script:SchemaDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:RepoRoot = Split-Path -Parent $script:SchemaDir
 $script:GoOutDir = Join-Path $script:SchemaDir "go"
-$script:TsOutDir = Join-Path $script:RepoRoot "frontend\src\lib\types\schemas"
+$script:TsOutDir = Join-Path $script:RepoRoot "frontend-lab\src\lib\types\schemas"
 $script:SchemaOrder = @(
     "common",
     "finance",
@@ -242,7 +242,7 @@ function Convert-CapnpToTypeScript {
 }
 
 function Invoke-TypeScriptGeneration {
-    Assert-ChildPath $script:TsOutDir (Join-Path $script:RepoRoot "frontend")
+    Assert-ChildPath $script:TsOutDir (Join-Path $script:RepoRoot "frontend-lab")
     if (Test-Path -LiteralPath $script:TsOutDir) {
         Remove-Item -LiteralPath $script:TsOutDir -Recurse -Force
     }

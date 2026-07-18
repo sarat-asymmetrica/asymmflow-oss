@@ -22,7 +22,7 @@ Step "Go tests"
 go test ./... -count=1 -timeout "${GoTestTimeoutSeconds}s"
 
 Step "Frontend build"
-Push-Location frontend
+Push-Location frontend-lab
 npm run build
 
 Step "Frontend check"
