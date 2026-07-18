@@ -643,3 +643,44 @@ social-spike already proved the mirrored-DM path end-to-end; this ruling
 simply makes that path the PRODUCT default rather than an owner-gated
 experiment. The mailbox-vs-pure-mirror question remains open and now applies
 to DM traffic too.
+
+## MSG-D23 — Kernel-UI design rulings (joint session) — 2026-07-18
+
+Owner + lead design session, informed by a 3-agent recon of the ERP's
+task/notification/frontend machinery. Rulings:
+
+1. **Room list = flat inbox + FilterChips** (All | Rooms | People), recency-
+   sorted with expectation-tagged rooms floating to top. FOR ME is a SORT RULE,
+   not a section. Reuses the kernel's house FilterChips idiom; zero taxonomy.
+2. **Per-object surface = the `embedded` convention** (Payroll/Customer360
+   precedent): `<Correspondence embedded anchorType anchorId/>` hosted in
+   detail screens. NO new drawer primitive.
+3. **Voice notes deferred**; v1 spine = messenger + file transfer (Hyperblobs
+   machinery from M3 rides in from the start).
+4. **Wave/kettle's-on 👋 in v1 scope** — but it requires a new `msg.wave` op
+   kind (v2 signable growth + re-golden), so it lands in W-UI-2 as a proper
+   reducer mini-mission, never smuggled through the bridge.
+5. **Urgent weight**: colored left-border + float-to-top. `today` = quieter
+   tint. Never a popup, sound, or shake (Art. IV).
+6. **TaskComment turf**: left untouched. v1 anchors = projects, POs, offers,
+   customers (objects with no existing thread). Task-level convergence
+   revisited at DP4.
+7. **Notifications**: messenger BYPASSES the notification table (no rows,
+   no dedup-less spam) and INHERITS the wails-event channel pattern — the
+   messenger becomes the kernel's first real EventsOn consumer.
+8. **Claim ↔ task assignment**: graduation-seam UI gesture only — claiming in
+   a task/project-anchored room OFFERS "also assign the task" via the normal
+   RBAC'd `ReassignCollaborativeTask` binding. No backend coupling planes.
+
+## MSG-D24 — The Kitchen Table Test (portable field kit) — 2026-07-18
+
+Owner-initiated: a synthetic two-machine installation package (owner's machine
++ spouse's laptop) to field-test messenger + file transfer over a REAL network
+— the campaign's first genuine two-box replication (everything prior ran on
+the hermetic in-process testnet; this is the outstanding real-replication gate
+from the scaffold wave, brought forward). Ruled: **Portable Field Kit** (zip
+per machine, DP1 plane doctrine layout, portable.flag style) rather than
+waiting for the DP4 sidecar + NSIS path — which still happens later and is
+not replaced by this. Constraints: synthetic canon ONLY on both machines;
+first packets leave localhost (real DHT bootstrap or LAN-direct) — named
+plainly, content encrypted end-to-end regardless.
