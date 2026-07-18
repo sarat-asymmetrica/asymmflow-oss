@@ -253,6 +253,47 @@ room ceremony yet (the machinery is the ceremony-proven Mission D stack; the
 room-specific dress rehearsal is a rung for later). Refold-per-read is still
 O(n) — fine for the spike, priced at M3/M4 per campaign §8.
 
+## Messenger Wave 2 — MISSION M2, invites (2026-07-18) · ✅ GREEN
+
+"Click a code, you're in the PO room." Invites fused with the capability
+plane per the campaign — owner rulings ratified same-day (one-time + 72h
+defaults, kernel-screen UI direction, M2→M4 autonomous scope). Decisions:
+MSG-D11 (fold-enforced offers, v3-by-kind signable, clock-free expiry,
+code format) + MSG-D12 (current-epoch grants, stale re-redemption,
+observer read-only).
+
+- **Reducer**: `applyInvite` in room_domain.go — offer/redeem/revoke as
+  capability LAW (all failures → `rejected[]`); proof-of-possession bound
+  to the joining device (`verifyInviteProof`); observer role floor (every
+  room op from an observer device rejects; replication untouched). Invite
+  plane + digest projection materialize lazily → invite-free rooms (incl.
+  the Wave-1 golden) hash byte-identically.
+- **Host**: `invite-code.mjs` (pasteable `asymm-room1.…` code via
+  hypercore-id-encoding z32: baseKey + authorityPub + invite seed +
+  inviteId; transport rendezvous deliberately excluded) + capability.mjs
+  FIELDS_V3 mirror, inviteKeys/proof/offer/redeem/revoke builders with the
+  owner defaults at creation.
+- **Tests** (`invite_test.go`): offer law (authority-only, derived id,
+  budget/role/pub validation), redeem law (proof binding incl.
+  captured-proof replay, wrong-key, expiry BY OP-DATA TIME, exhaustion,
+  current-grant refusal, stale re-redemption across an epoch bump),
+  revocation, observer read-only, 500-permutation convergence.
+- **Gate (`npm run invitespike`)**: 3 peers, genuine offline fork, FULL
+  code round-trip (redeem ops built only from decoded strings): one-time
+  writer join lands + speaks; same code exhausted for the second device;
+  short-lived code expired by the redeem op's own ts; observer joins via
+  multi-use code, both its writes reject on every peer while it holds the
+  full replicated view. 11/11 first run; goldened
+  (`goldens/invite_autobase.json`), reproducible.
+- **Regression floor**: roomspike (W1 golden UNTOUCHED) + smoke + missionc
+  + missiond + full go suite — green.
+
+**The honest line (M2 scope):** the spike proves the invite LAW + code over
+the existing transport; blind-pairing's asynchronous pairing (host offline at
+join time) and the REPL `invite`/`join-code` ceremony commands are the M2
+stage-2 rung, not yet built. UI (kernel screen direction ratified) untouched
+by design.
+
 ## Wave 4+ — Mission E (next)
 
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).

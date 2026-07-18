@@ -73,6 +73,33 @@ final OFF removes the entry and empty sets are pruned, so two rooms that end in
 the same visible reactions digest identically regardless of toggle history.
 Off-toggling an unset reaction is an idempotent no-op, not an error.
 
+**MSG-D11 [Mirror] — Invites are FOLD-ENFORCED grant offers; signable v3 by kind.**
+(M2, owner invite law ratified 2026-07-18.) `invite.offer` (authority-signed:
+invitePub, role writer|observer, expiresAt, maxUses≥1) / `invite.redeem`
+(joining-device-signed, carrying an Ed25519 proof by the INVITE key over the
+joining devicePub — a captured proof admits nobody else) / `invite.revoke`
+(authority tombstone). Everything upstream blind-pairing leaves advisory —
+expiry, use-count, revocation — is law here. EXPIRY NEVER READS A CLOCK: the
+redeem op's own TS is compared against the offer's expiresAt at the op's
+canonical position — one answer on every peer (MESH-D13 discipline). Defaults
+live at CREATION (host `inviteOfferOp`: one-time, 72h TTL); the fold enforces
+whatever the offer says (expiresAt 0 = never, explicit opt-in). Invite fields
+ride a `meshop.v3` signable selected ONLY by `invite.*` kinds — v1/v2 bytes
+and all prior goldens untouched (the MSG-D2 pattern, third generation). The
+invite plane materializes lazily: invite-free rooms hash byte-identically.
+The shareable code (`asymm-room1.…`, invite-code.mjs) carries baseKey +
+authorityPub + invite SEED + inviteId via hypercore-id-encoding z32; the
+transport rendezvous is deliberately NOT in the code (transport ≠ capability).
+
+**MSG-D12 [Mirror] — Redemption grants at the CURRENT epoch; stale holders may re-redeem.**
+A device holding a CURRENT-epoch grant is refused ("already holds a current
+grant" — a use is never wasted); a STALE-epoch device may re-redeem a
+still-open multi-use invite to rejoin after a revocation wave, consuming a
+use and granting at the new epoch. Observer-role grants are READ-ONLY in
+full: every room op from an observer device rejects (not even read cursors —
+campaign M2's "observer (read-only)" taken literally); replication is
+untouched (pipe open, capability scoped).
+
 **MSG-D10 [Mirror] — The room capability plane is Mission D's, verbatim.**
 `capabilityGate()` extracted from `checkCapability` by pure code motion (the
 Mission D unit tests + goldens prove no semantic drift) and pointed at the

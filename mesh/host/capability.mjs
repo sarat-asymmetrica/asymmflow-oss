@@ -61,17 +61,37 @@ const FIELDS_V2 = [
   (op) => op.attachment ?? '',
 ]
 
+/**
+ * Invite fields appended for the "meshop.v3" payload — MIRROR of signableV3().
+ * Selected ONLY by invite.* kinds (MSG-D11): v1 AND v2 bytes stay untouched.
+ */
+const FIELDS_V3 = [
+  ...FIELDS_V2,
+  (op) => op.inviteId ?? '',
+  (op) => op.invitePub ?? '',
+  (op) => op.inviteProof ?? '',
+  (op) => String(op.expiresAt ?? 0),
+  (op) => String(op.maxUses ?? 0),
+]
+
 export function isRoomKind(kind) {
   // Exact mirror of Go: kind == "room.manifest" || (len > 4 && prefix "msg.").
   return kind === 'room.manifest' ||
     (typeof kind === 'string' && kind.length > 4 && kind.startsWith('msg.'))
 }
 
+export function isInviteKind(kind) {
+  // Exact mirror of Go: len > 7 && prefix "invite.".
+  return typeof kind === 'string' && kind.length > 7 && kind.startsWith('invite.')
+}
+
 /** The canonical signed payload: version prefix + netstring per field. */
 export function signable(op) {
-  const v2 = isRoomKind(op.kind)
-  const parts = [Buffer.from(v2 ? 'meshop.v2' : 'meshop.v1')]
-  for (const get of v2 ? FIELDS_V2 : FIELDS) {
+  const [prefix, fields] = isInviteKind(op.kind)
+    ? ['meshop.v3', FIELDS_V3]
+    : isRoomKind(op.kind) ? ['meshop.v2', FIELDS_V2] : ['meshop.v1', FIELDS]
+  const parts = [Buffer.from(prefix)]
+  for (const get of fields) {
     const f = Buffer.from(get(op), 'utf8')
     parts.push(Buffer.from(`${f.length}:`), f, Buffer.from(','))
   }
@@ -113,4 +133,48 @@ export function epochOp({ seq, actor, ts, epoch }, authorityKeys) {
 /** A targeted single-device revocation. */
 export function revokeOp({ seq, actor, ts, device }, authorityKeys) {
   return signOp({ seq, actor, ts, kind: 'cap.revoke', device }, authorityKeys)
+}
+
+// ── Mission M2: invites ──────────────────────────────────────────────────────
+
+/** An invite keypair. The SEED travels inside the shareable code; the pub is
+ * what the offer op pins. Same derivation as device keys (RFC 8032). */
+export function inviteKeys(seed) {
+  return deviceKeys(seed)
+}
+
+/** The proof payload the INVITE key signs at redemption — binds possession of
+ * the invite secret to the JOINING device. MIRROR of Go inviteProofPayload. */
+export function inviteProofPayload(devicePubHex) {
+  return Buffer.concat([Buffer.from('meshinvite.v1:'), Buffer.from(devicePubHex, 'utf8')])
+}
+
+export function inviteProof(inviteSecretKeys, devicePubHex) {
+  const digest = createHash('sha256').update(inviteProofPayload(devicePubHex)).digest()
+  return hcrypto.sign(digest, inviteSecretKeys.secretKey).toString('hex')
+}
+
+/** invite.offer — authority-signed grant offer. Owner defaults (2026-07-18):
+ * ONE-TIME (maxUses 1) and 72h expiry, both set HERE at creation; the fold
+ * enforces whatever the offer says (0 expiresAt = never, explicit opt-in). */
+export const INVITE_DEFAULT_TTL_MS = 72 * 60 * 60 * 1000
+
+export function inviteOfferOp({ seq, actor, ts, invitePub, role = 'writer', expiresAt, maxUses = 1 }, authorityKeys) {
+  return signOp({
+    seq, actor, ts, kind: 'invite.offer', invitePub, role,
+    expiresAt: expiresAt ?? ts + INVITE_DEFAULT_TTL_MS, maxUses,
+  }, authorityKeys)
+}
+
+/** invite.redeem — signed by the JOINING device, carrying the invite proof. */
+export function inviteRedeemOp({ seq, actor, ts, inviteId }, inviteSecretKeys, deviceKeysOfJoiner) {
+  return signOp({
+    seq, actor, ts, kind: 'invite.redeem', inviteId,
+    inviteProof: inviteProof(inviteSecretKeys, deviceKeysOfJoiner.pubHex),
+  }, deviceKeysOfJoiner)
+}
+
+/** invite.revoke — authority tombstones the offer. */
+export function inviteRevokeOp({ seq, actor, ts, inviteId }, authorityKeys) {
+  return signOp({ seq, actor, ts, kind: 'invite.revoke', inviteId }, authorityKeys)
 }

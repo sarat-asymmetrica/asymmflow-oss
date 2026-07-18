@@ -57,6 +57,9 @@ type GrantState struct {
 // a NON-room op are therefore unsigned — and ignored: no legacy handler reads
 // them, and the room fold only ever sees room kinds.
 func signable(op Op) []byte {
+	if isInviteKind(op.Kind) {
+		return signableV3(op)
+	}
 	if isRoomKind(op.Kind) {
 		return signableV2(op)
 	}
@@ -66,6 +69,11 @@ func signable(op Op) []byte {
 // isRoomKind reports whether kind belongs to the Messenger room vocabulary.
 func isRoomKind(kind string) bool {
 	return kind == "room.manifest" || (len(kind) > 4 && kind[:4] == "msg.")
+}
+
+// isInviteKind reports whether kind belongs to the M2 invite vocabulary.
+func isInviteKind(kind string) bool {
+	return len(kind) > 7 && kind[:7] == "invite."
 }
 
 func signableV1(op Op) []byte {
@@ -138,6 +146,80 @@ func signableV2(op Op) []byte {
 		op.Attachment,
 	}
 	return netstrings("meshop.v2", fields)
+}
+
+// signableV3 = the v2 field list + the invite fields, prefix "meshop.v3".
+// Selected ONLY by invite.* kinds, so v1 AND v2 payloads (and their goldens)
+// stay byte-stable (MSG-D11, same pattern as MSG-D2).
+// MIRROR: mesh/host/capability.mjs FIELDS_V3 must match byte-for-byte.
+func signableV3(op Op) []byte {
+	fields := []string{
+		strconv.FormatInt(op.Seq, 10),
+		op.Actor,
+		strconv.FormatInt(op.TS, 10),
+		op.Kind,
+		op.SKU,
+		strconv.FormatInt(op.Delta, 10),
+		op.Customer,
+		strconv.FormatInt(op.AmountMinor, 10),
+		strconv.FormatInt(op.LimitMinor, 10),
+		op.Currency,
+		op.Subject,
+		op.SubjectType,
+		op.Decision,
+		op.Reason,
+		op.CorrelationID,
+		op.ActorType,
+		strconv.Itoa(op.Authority),
+		op.PolicyID,
+		op.Device,
+		op.Role,
+		strconv.FormatInt(op.Epoch, 10),
+		op.DevicePub,
+		op.MsgID,
+		op.Body,
+		op.ReplyTo,
+		op.Emoji,
+		strconv.FormatBool(op.On),
+		op.UpToActor,
+		strconv.FormatInt(op.UpToSeq, 10),
+		op.Title,
+		op.AnchorType,
+		op.AnchorID,
+		strconv.FormatBool(op.Observers),
+		op.Draft,
+		op.Attachment,
+		// invite fields (Mission M2)
+		op.InviteID,
+		op.InvitePub,
+		op.InviteProof,
+		strconv.FormatInt(op.ExpiresAt, 10),
+		strconv.FormatInt(op.MaxUses, 10),
+	}
+	return netstrings("meshop.v3", fields)
+}
+
+// inviteProofPayload is the byte payload the INVITE key signs at redemption:
+// possession of the invite secret, bound to the joining device's public key so
+// a captured proof cannot admit any other device.
+// MIRROR: mesh/host/capability.mjs inviteProofPayload() must match.
+func inviteProofPayload(devicePubHex string) []byte {
+	return append([]byte("meshinvite.v1:"), devicePubHex...)
+}
+
+// verifyInviteProof checks op.InviteProof (hex Ed25519) over
+// sha256(inviteProofPayload(op.DevicePub)) with the offer's invite public key.
+func verifyInviteProof(invitePubHex string, op Op) bool {
+	pub, err := hex.DecodeString(invitePubHex)
+	if err != nil || len(pub) != ed25519.PublicKeySize {
+		return false
+	}
+	sig, err := hex.DecodeString(op.InviteProof)
+	if err != nil || len(sig) != ed25519.SignatureSize {
+		return false
+	}
+	digest := sha256.Sum256(inviteProofPayload(op.DevicePub))
+	return ed25519.Verify(ed25519.PublicKey(pub), digest[:], sig)
 }
 
 func netstrings(prefix string, fields []string) []byte {

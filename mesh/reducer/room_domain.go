@@ -94,7 +94,24 @@ type RoomState struct {
 	CapEpoch int64                 `json:"capEpoch,omitempty"`
 	Grants   map[string]GrantState `json:"grants,omitempty"`
 
+	// Invite plane (Mission M2): signed grant OFFERS with fold-enforced expiry,
+	// use-count, and revocation. Created lazily on the first invite op, so
+	// rooms without invites (incl. the Wave-1 golden) hash byte-identically.
+	Invites map[string]InviteState `json:"invites,omitempty"`
+
 	msgIndex map[string]int // msgId → index into Messages (fold-internal, not hashed)
+}
+
+// InviteState is one converged invite offer. Uses counts successful
+// redemptions; Revoked tombstones the offer (kept, never deleted — an
+// append-only plane stays inspectable).
+type InviteState struct {
+	InvitePub string `json:"invitePub"`
+	Role      string `json:"role"`
+	ExpiresAt int64  `json:"expiresAt,omitempty"` // 0 = never (explicit opt-in; creation defaults set 72h)
+	MaxUses   int64  `json:"maxUses"`
+	Uses      int64  `json:"uses"`
+	Revoked   bool   `json:"revoked,omitempty"`
 }
 
 // ApplyRoom replays a room op log into the converged RoomState. Pure function
@@ -123,7 +140,25 @@ func ApplyRoom(cfg Config, ops []Op) RoomState {
 		var capReason string
 		handled := false
 		if enforce {
-			handled, capReason = capabilityGate(rs.Grants, &rs.CapEpoch, cfg, op)
+			if isInviteKind(op.Kind) {
+				// The invite plane is capability law with its own bootstrap
+				// rule: invite.redeem is HOW an ungranted device becomes
+				// granted, so it bypasses the grant check (never the
+				// signature or proof checks) — see applyInvite.
+				handled = true
+				capReason = applyInvite(&rs, cfg, op)
+			} else {
+				handled, capReason = capabilityGate(rs.Grants, &rs.CapEpoch, cfg, op)
+				if !handled && capReason == "" && op.DevicePub != cfg.AuthorityPub {
+					// Role floor (M2): an observer grant replicates and reads;
+					// it writes NOTHING — not even read cursors (campaign M2:
+					// "observer (read-only)"). The authority and writer-role
+					// grants pass through untouched.
+					if g, ok := rs.Grants[op.DevicePub]; ok && g.Role == "observer" {
+						capReason = "capability: observer grant is read-only (device " + shortKey(op.DevicePub) + " may not write room ops)"
+					}
+				}
+			}
 		}
 		if capReason != "" {
 			// Invariant-bound half: capability refusals share the business
@@ -155,6 +190,8 @@ func ApplyRoom(cfg Config, ops []Op) RoomState {
 			skipReason = applyRead(&rs, op)
 		case "cap.grant", "cap.epoch", "cap.revoke":
 			skipReason = "capability op in a room with no authority configured"
+		case "invite.offer", "invite.redeem", "invite.revoke":
+			skipReason = "invite op in a room with no authority configured"
 		default:
 			// Business kinds and unknowns alike: not this base's law.
 			skipReason = "not a room op: " + strconv.Quote(op.Kind)
@@ -177,6 +214,113 @@ func ApplyRoom(cfg Config, ops []Op) RoomState {
 // per writer (Hypercore seqs are per-writer monotonic), no uuid, no rand.
 func deriveMsgID(op Op) string {
 	return op.Actor + ":" + strconv.FormatInt(op.Seq, 10)
+}
+
+// applyInvite folds the M2 invite plane: offers, redemptions, revocations.
+// Every failure is a capability-law REJECTION (invariant-bound half of the
+// taxonomy). Returns "" on success. Determinism notes:
+//   - expiry NEVER reads a clock: the redemption op's own TS (event data) is
+//     compared against the offer's ExpiresAt (offer data) — one answer on
+//     every peer at the op's canonical position (MESH-D13 discipline).
+//   - inviteId = {actor}:{seq} of the offer, derived like msgIds.
+func applyInvite(rs *RoomState, cfg Config, op Op) string {
+	// Signature first — same floor as every enforced op.
+	if op.DevicePub == "" || op.Sig == "" {
+		return "capability: unsigned op (devicePub+sig required when an authority is configured)"
+	}
+	if !verifySig(op) {
+		return "capability: signature verification failed for device " + shortKey(op.DevicePub)
+	}
+	isAuthority := op.DevicePub == cfg.AuthorityPub
+
+	switch op.Kind {
+	case "invite.offer":
+		if !isAuthority {
+			return "invite: offers must be signed by the room authority"
+		}
+		id := deriveMsgID(op)
+		if op.InviteID != "" && op.InviteID != id {
+			return "invite: inviteId must be {actor}:{seq} (got " + strconv.Quote(op.InviteID) + ", want " + strconv.Quote(id) + ")"
+		}
+		if len(op.InvitePub) != 64 {
+			return "invite: offer requires a 32-byte hex invitePub"
+		}
+		if op.MaxUses < 1 {
+			return "invite: maxUses must be >= 1 (one-time is the default, not zero)"
+		}
+		if rs.Invites == nil {
+			rs.Invites = make(map[string]InviteState)
+		}
+		if _, dup := rs.Invites[id]; dup {
+			return "invite: duplicate inviteId " + strconv.Quote(id)
+		}
+		role := op.Role
+		if role == "" {
+			role = "writer"
+		}
+		if role != "writer" && role != "observer" {
+			return "invite: unknown role " + strconv.Quote(op.Role) + " (writer or observer)"
+		}
+		rs.Invites[id] = InviteState{
+			InvitePub: op.InvitePub,
+			Role:      role,
+			ExpiresAt: op.ExpiresAt,
+			MaxUses:   op.MaxUses,
+		}
+		return ""
+
+	case "invite.redeem":
+		if rs.Invites == nil {
+			return "invite: unknown invite " + strconv.Quote(op.InviteID)
+		}
+		inv, ok := rs.Invites[op.InviteID]
+		if !ok {
+			return "invite: unknown invite " + strconv.Quote(op.InviteID)
+		}
+		if inv.Revoked {
+			return "invite: invite " + strconv.Quote(op.InviteID) + " was revoked"
+		}
+		if inv.ExpiresAt > 0 && op.TS > inv.ExpiresAt {
+			return "invite: invite " + strconv.Quote(op.InviteID) + " expired at " +
+				strconv.FormatInt(inv.ExpiresAt, 10) + " (redeem ts " + strconv.FormatInt(op.TS, 10) + ")"
+		}
+		if inv.Uses >= inv.MaxUses {
+			return "invite: invite " + strconv.Quote(op.InviteID) + " exhausted (" +
+				strconv.FormatInt(inv.MaxUses, 10) + " use(s))"
+		}
+		if !verifyInviteProof(inv.InvitePub, op) {
+			return "invite: invalid invite proof for device " + shortKey(op.DevicePub)
+		}
+		// A device holding a CURRENT grant gains nothing from redeeming — the
+		// use would be wasted; refuse. A STALE-epoch holder MAY re-redeem a
+		// multi-use invite to rejoin after a revocation wave (MSG-D12).
+		if g, ok := rs.Grants[op.DevicePub]; ok && g.Epoch == rs.CapEpoch {
+			return "invite: device " + shortKey(op.DevicePub) + " already holds a current grant"
+		}
+		inv.Uses++
+		rs.Invites[op.InviteID] = inv
+		rs.Grants[op.DevicePub] = GrantState{Role: inv.Role, Epoch: rs.CapEpoch}
+		return ""
+
+	case "invite.revoke":
+		if !isAuthority {
+			return "invite: revocations must be signed by the room authority"
+		}
+		if rs.Invites == nil {
+			return "invite: unknown invite " + strconv.Quote(op.InviteID)
+		}
+		inv, ok := rs.Invites[op.InviteID]
+		if !ok {
+			return "invite: unknown invite " + strconv.Quote(op.InviteID)
+		}
+		if inv.Revoked {
+			return "invite: invite " + strconv.Quote(op.InviteID) + " was revoked"
+		}
+		inv.Revoked = true
+		rs.Invites[op.InviteID] = inv
+		return ""
+	}
+	return "invite: unknown kind " + strconv.Quote(op.Kind)
 }
 
 // isRoomAuthor reports whether op comes from msg's author. With enforcement on,
@@ -363,6 +507,10 @@ func roomDigest(rs RoomState) string {
 		Device string     `json:"device"`
 		Grant  GrantState `json:"grant"`
 	}
+	type inviteKV struct {
+		InviteID string      `json:"inviteId"`
+		Invite   InviteState `json:"invite"`
+	}
 	proj := struct {
 		Manifest    *RoomManifest `json:"manifest,omitempty"`
 		Messages    []RoomMessage `json:"messages"`
@@ -373,6 +521,9 @@ func roomDigest(rs RoomState) string {
 		Applied     int           `json:"applied"`
 		CapEpoch    int64         `json:"capEpoch,omitempty"`
 		Grants      []grantKV     `json:"grants,omitempty"`
+		// Appended ONLY when an invite op ever appeared — invite-free rooms
+		// (incl. the Wave-1 golden) hash byte-identically (MSG-D11).
+		Invites []inviteKV `json:"invites,omitempty"`
 	}{
 		Manifest:    rs.Manifest,
 		Messages:    rs.Messages,
@@ -404,6 +555,12 @@ func roomDigest(rs RoomState) string {
 		proj.Grants = make([]grantKV, 0, len(rs.Grants))
 		for _, k := range sortedKeys(rs.Grants) {
 			proj.Grants = append(proj.Grants, grantKV{Device: k, Grant: rs.Grants[k]})
+		}
+	}
+	if rs.Invites != nil {
+		proj.Invites = make([]inviteKV, 0, len(rs.Invites))
+		for _, k := range sortedKeys(rs.Invites) {
+			proj.Invites = append(proj.Invites, inviteKV{InviteID: k, Invite: rs.Invites[k]})
 		}
 	}
 	b, _ := json.Marshal(proj)

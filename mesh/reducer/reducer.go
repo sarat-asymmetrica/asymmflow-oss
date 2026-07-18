@@ -99,6 +99,15 @@ type Op struct {
 	Draft      string `json:"draft,omitempty"`      // msg.draft-op: INERT business-op JSON, opaque string
 	Attachment string `json:"attachment,omitempty"` // msg.post: INERT blob-reference JSON (M3 fills it)
 
+	// invite.offer / invite.redeem / invite.revoke (Mission M2 — invites are
+	// signed grant OFFERS, enforced by the fold: expiry, use-count, revocation.
+	// Covered by the "meshop.v3" signable, selected by kind (MSG-D11).
+	InviteID    string `json:"inviteId,omitempty"`    // derived {actor}:{seq} of the offer
+	InvitePub   string `json:"invitePub,omitempty"`   // hex Ed25519 pub of the invite keypair (the code carries its seed)
+	InviteProof string `json:"inviteProof,omitempty"` // redeem: hex sig by the INVITE key over the joining devicePub
+	ExpiresAt   int64  `json:"expiresAt,omitempty"`   // offer: redemption deadline (ms, op-data time; 0 = never — explicit opt-in)
+	MaxUses     int64  `json:"maxUses,omitempty"`     // offer: redemption budget (>=1)
+
 	// Capability envelope (every op, when enforcement is on): the signing
 	// device's public key + Ed25519 signature over sha256(signable(op)).
 	DevicePub string `json:"devicePub,omitempty"`
@@ -198,6 +207,9 @@ func canonicalLess(a, b Op) bool {
 	}
 	if a.Emoji != b.Emoji {
 		return a.Emoji < b.Emoji
+	}
+	if a.InviteID != b.InviteID {
+		return a.InviteID < b.InviteID
 	}
 	return a.TS < b.TS
 }
