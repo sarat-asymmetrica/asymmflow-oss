@@ -684,3 +684,26 @@ waiting for the DP4 sidecar + NSIS path — which still happens later and is
 not replaced by this. Constraints: synthetic canon ONLY on both machines;
 first packets leave localhost (real DHT bootstrap or LAN-direct) — named
 plainly, content encrypted end-to-end regardless.
+
+## MSG-D25 — Field findings round 1 + the Receptionist Test — 2026-07-18
+
+Kitchen-table results (owner + spouse, 2 real machines, LAN): messaging
+replication CONFIRMED both ways (transcript received cross-machine);
+attach-side file transfer confirmed (sha256 printed); fetch-side FAILED
+("not writeable" + a second error) — E2E file transfer NOT yet confirmed;
+invite one-time exhaustion surfaced hostile messaging on a restart-rejoin
+(correct law, wrong words — the room was already in the joiner's registry;
+/open was the move, not /join). Two same-hour REPL fixes shipped from the
+field (b223220 quote-aware tokenizer, e17edf2 fetch-by-seq).
+
+RULED (owner): next field test = the PH receptionist's machine, SPOC on a
+call with the owner directing remotely. The kit must therefore pass the
+"non-technical human driven by phone" bar: W-UI-1.6 hardens fetch paths
+(mkdir parents, directory-target handling, zero-argument default into
+data\downloads\), restart flow (auto-reopen + auto-reconnect to last-known
+peer, friendly already-joined messaging on an exhausted invite), a /status
+command, guided next-step banners, and a phone-script README. Constraint
+named in bold in the kit: the office machine hosts the live legacy PH DB —
+the kit is a self-contained folder, touches NOTHING outside itself,
+synthetic canon only. build-kit must never clobber an existing machine
+folder's data/.
