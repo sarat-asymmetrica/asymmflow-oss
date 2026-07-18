@@ -227,3 +227,28 @@ property it touches is already pinned elsewhere; an adapter golden would rot
 in duplicate); topExpectation over all messages (v0 simplification, revisit
 with real cursors at the chrome wave); members = current-epoch only ("who can
 act right now" — matches blockDevice's own survivor convention).
+
+**GL-10 [W-UI-1.5 Mission U1.5: field kit] — The gate is a tool the coder should use on itself; and a prune is only real if it's a computed closure.**
+Zero-fix gate (lead re-ran kitspike + full 10-spike floor; zero golden
+drift). Two patterns worth the entry: (a) **the coder used its own gate to
+find a real bug** — kit-net's close() awaited server.close() before
+destroying accepted sockets, a guaranteed teardown deadlock, caught because
+kitspike HUNG rather than because anyone read the code suspiciously. "The
+gate caught it" is the designed behavior; a coder who ships the first
+looks-done pass without running its own gate hard enough to hang it would
+have delivered this bug. (b) **the node_modules prune is a dependency-graph
+closure, not a guess** — it verified via the installed packages' OWN
+package.jsons that autobase internally needs hyperbee/hyperschema/
+protomux-wakeup (which a naive our-imports grep would have deleted), then
+walked import-graph + dependency BFS, then PROVED sufficiency by booting the
+packaged kit standalone from a scratch dir. Prune-by-proof, not
+prune-by-vibes. **Gate rulings:** single-process host+REPL ACCEPTED as the
+correct literal honoring of "no new wire method" (addWriter stays host-plane;
+all v0 methods still cross the real localhost seam); /create's direct
+social-room call ACCEPTED for the kit (a caller-supplied storage name on the
+wire method is a W-UI-2 candidate, done as a loud host/* change then);
+encryption-always with NO plaintext escape hatch ACCEPTED — a kit whose
+point is leaving the LAN ships encrypted-only. Honest-scope note repeated
+for the record: hyperswarm is wired and source-verified but NOT gate-
+exercised (needs live bootstrap); TCP fallback is the gated path, and the
+kitchen-table README says so plainly.
