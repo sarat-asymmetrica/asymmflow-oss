@@ -51,6 +51,17 @@ import { createNetwork } from './kit-net.mjs'
 import { startRepl } from './kit-repl.mjs'
 import { loadRoomRegistry } from './kit-registry.mjs'
 
+/** "ip:port" -> [host, port] | null. Defensive: a hand-edited or malformed
+ * registry entry must never crash boot (kit-registry.mjs's own standard). */
+function parsePeerAddr(addr) {
+  if (typeof addr !== 'string' || !addr.includes(':')) return null
+  const idx = addr.lastIndexOf(':')
+  const host = addr.slice(0, idx)
+  const port = Number(addr.slice(idx + 1))
+  if (!host || !Number.isInteger(port) || port <= 0) return null
+  return [host, port]
+}
+
 /** Load-or-create a persistent 32-byte seed. Same shape as peer.mjs's own
  * persistentSeed — proven precedent, not reinvented here. */
 function persistentSeed(file) {
@@ -109,6 +120,15 @@ export async function createKitHost({
   // GL-5 reopen discipline: every room this device previously created or
   // joined comes back automatically — a restart must not orphan a room the
   // human already has open on the other machine. See kit-registry.mjs.
+  //
+  // F2 (MSG-D25) auto-reconnect: each reopened room also (a) best-effort
+  // rejoins hyperswarm on its own topic, and (b) if the registry has a
+  // lastPeer, tries dialing it over the TCP fallback RIGHT NOW — a
+  // restarted device should not need a human to re-run /connect just
+  // because the process bounced. Either outcome is printed; a failed
+  // auto-reconnect is not an error (the peer may not be up yet — kit-repl's
+  // /connect and hyperswarm both keep trying independently).
+  const reopened = []
   for (const entry of loadRoomRegistry(keysDir)) {
     try {
       const node = await createMeshNode({
@@ -120,6 +140,18 @@ export async function createKitHost({
       })
       server.registerRoom(node.key, node)
       log(`reopened room "${entry.title ?? ''}" — ${node.key.slice(0, 16)}…`)
+      reopened.push(node.key)
+      net.joinHyperswarm(node.key, node) // best-effort DHT rejoin; never throws
+      const parsed = parsePeerAddr(entry.lastPeer)
+      if (parsed) {
+        const [host, port] = parsed
+        try {
+          await net.connectTcp(host, port, node)
+          log(`  auto-reconnected to last-known peer ${entry.lastPeer}`)
+        } catch (err) {
+          log(`  could not auto-reconnect to ${entry.lastPeer} yet (${err.message}) — /connect ${entry.lastPeer} to retry by hand, or wait for hyperswarm`)
+        }
+      }
     } catch (err) {
       log(`could not reopen a registered room (${entry.roomKey?.slice(0, 16)}…): ${err.message}`)
     }
@@ -131,7 +163,13 @@ export async function createKitHost({
   return {
     dataDir, keysDir, corestoreDir, actor, keys, tcpPort,
     server, client, net, log,
-    currentRoomKey: null,
+    // Kitchen-table UX (deliverable 4): the kit's real use case is ONE
+    // shared room per device, so if exactly one came back at boot, open it
+    // automatically — a receptionist who restarts mid-conversation should
+    // see their conversation, not an empty prompt demanding /open. Multiple
+    // rooms stay unopened (ambiguous which one "current" means); zero rooms
+    // stays null (nothing to open yet).
+    currentRoomKey: reopened.length === 1 ? reopened[0] : null,
     async close() {
       await net.close()
       await client.close()

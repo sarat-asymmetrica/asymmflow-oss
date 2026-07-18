@@ -83,8 +83,8 @@
 
 import net from 'node:net'
 import { randomUUID, randomBytes } from 'node:crypto'
-import { readFileSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs'
+import { join, dirname, resolve, sep } from 'node:path'
 import { createMeshNode, waitFor } from './mesh-node.mjs'
 import { signOp, inviteKeys, inviteOfferOp, inviteRedeemOp } from './capability.mjs'
 import { createSocialRoom as createSocialRoomNode } from './social-room.mjs'
@@ -327,11 +327,25 @@ export async function createBridgeServer({
       return { ok: true, result: { seq, ref, sha256: refObj.sha256 } }
     },
 
+    // U1.6 (MSG-D25, F1): the ONLY reported field failure was here — a
+    // Windows human's savePath either didn't have its parent dir yet
+    // (ENOENT, surfaced as "not writeable") or WAS a directory they meant
+    // to drop the file into (EISDIR). Both are now resolved to a real,
+    // writable file path before the write, never left for writeFileSync's
+    // raw errno to explain to a non-technical reader. Zero-argument default
+    // (data\downloads\<name>) lives in kit-repl.mjs, which knows the kit's
+    // data dir; this method stays a thin, protocol-level adapter usable by
+    // ANY caller, not just the kit.
     async fetchAttachment({ roomKey, ref, savePath } = {}) {
+      if (!savePath) throw new Error('fetchAttachment requires savePath')
       const node = getRoom(roomKey)
       const { bytes, ref: parsedRef } = await getAttachment(node.store, ref)
-      writeFileSync(savePath, bytes)
-      return { ok: true, result: { path: savePath, sha256: parsedRef.sha256, verified: true } }
+      let target = savePath
+      const looksLikeDir = target.endsWith(sep) || target.endsWith('/') || (existsSync(target) && statSync(target).isDirectory())
+      if (looksLikeDir) target = join(target, parsedRef.name || 'attachment')
+      mkdirSync(dirname(target), { recursive: true })
+      writeFileSync(target, bytes)
+      return { ok: true, result: { path: resolve(target), sha256: parsedRef.sha256, verified: true } }
     },
 
     async createSocialRoom({ title, encryptionKey, ts } = {}) {

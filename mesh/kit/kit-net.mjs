@@ -50,14 +50,24 @@ export function roomTopic(roomKeyHex) {
  * createNetwork({ useHyperswarm }) -> {
  *   mode,                          // 'hyperswarm' | 'tcp' | 'none' (best current guess)
  *   joinHyperswarm(roomKey, node) -> boolean   (true if DHT join attempted)
- *   listenTcp(port, node) -> Promise<boundPort>
+ *   listenTcp(port, node, onPeer?) -> Promise<boundPort>
  *   connectTcp(host, port, node) -> Promise<socket>
+ *   peerCount(roomKey) -> number   (U1.6 /status: live TCP replication sockets for this room)
  *   close() -> Promise<void>
  * }
  *
  * useHyperswarm defaults true (primary path); the kit always ALSO wires TCP
  * on request — the two paths are independent and both may be active for the
  * same room (redundant replication is harmless; Autobase/Hypercore dedupe).
+ *
+ * U1.6: `listenTcp`'s optional `onPeer(remoteAddress)` fires once per
+ * ACCEPTED inbound socket — kit-repl.mjs's ensureTcpListen wires this to
+ * kit-registry.mjs's updateRoomRegistryPeer (the F2 auto-reconnect fix).
+ * `peerCount` backs the new /status command; it counts TCP sockets only
+ * (per room, via node.key) — hyperswarm's own per-topic connection count
+ * isn't tracked here (multiple rooms can share one swarm connection, so a
+ * per-room count would be a fiction; /status reports hyperswarm reachability
+ * as the general `mode` instead, honestly, not a fabricated per-room number).
  */
 export function createNetwork({ useHyperswarm = true } = {}) {
   let swarm = null
@@ -65,6 +75,13 @@ export function createNetwork({ useHyperswarm = true } = {}) {
   const joinedTopics = new Map() // topicHex -> { roomKey, node }
   const tcpServers = new Map()   // port -> net.Server
   const tcpSockets = new Set()
+  const roomSockets = new Map()  // node.key -> Set<socket>, TCP only (see peerCount doc above)
+
+  function trackRoomSocket(node, socket) {
+    if (!roomSockets.has(node.key)) roomSockets.set(node.key, new Set())
+    roomSockets.get(node.key).add(socket)
+    return () => { roomSockets.get(node.key)?.delete(socket) }
+  }
 
   function ensureSwarm() {
     if (swarm || swarmFailed || !useHyperswarm) return swarm
@@ -96,6 +113,10 @@ export function createNetwork({ useHyperswarm = true } = {}) {
       return 'none'
     },
 
+    peerCount(roomKey) {
+      return roomSockets.get(roomKey)?.size ?? 0
+    },
+
     joinHyperswarm(roomKey, node) {
       const s = ensureSwarm()
       if (!s) return false
@@ -112,14 +133,16 @@ export function createNetwork({ useHyperswarm = true } = {}) {
       }
     },
 
-    listenTcp(port, node) {
+    listenTcp(port, node, onPeer) {
       return new Promise((resolve, reject) => {
         const server = net.createServer((socket) => {
           tcpSockets.add(socket)
+          const untrack = trackRoomSocket(node, socket)
           const rs = node.store.replicate(false)
           socket.pipe(rs).pipe(socket)
-          const drop = () => { tcpSockets.delete(socket); rs.destroy(); socket.destroy() }
+          const drop = () => { tcpSockets.delete(socket); untrack(); rs.destroy(); socket.destroy() }
           socket.on('close', drop); socket.on('error', drop); rs.on('error', drop)
+          if (onPeer) { try { onPeer(socket.remoteAddress) } catch { /* onPeer failures never break replication */ } }
         })
         server.once('error', reject)
         server.listen(port, () => {
@@ -137,9 +160,10 @@ export function createNetwork({ useHyperswarm = true } = {}) {
         socket.once('connect', () => {
           socket.off('error', reject)
           tcpSockets.add(socket)
+          const untrack = trackRoomSocket(node, socket)
           const rs = node.store.replicate(true)
           socket.pipe(rs).pipe(socket)
-          const drop = () => { tcpSockets.delete(socket); rs.destroy() }
+          const drop = () => { tcpSockets.delete(socket); untrack(); rs.destroy() }
           socket.on('close', drop); socket.on('error', drop); rs.on('error', drop)
           resolve(socket)
         })
@@ -152,6 +176,7 @@ export function createNetwork({ useHyperswarm = true } = {}) {
       // those same connections deadlocks close() forever.
       for (const socket of tcpSockets) socket.destroy()
       tcpSockets.clear()
+      roomSockets.clear()
       for (const server of tcpServers.values()) await new Promise((r) => server.close(r))
       tcpServers.clear()
       joinedTopics.clear()
