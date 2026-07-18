@@ -157,7 +157,7 @@ func b2StockCandidateDBPaths() []string {
 	}
 	return []string{
 		"ph_holdings.db", // project-root working copy
-		appDataDatabasePath(),
+		runtimeDataDatabasePath(),
 	}
 }
 

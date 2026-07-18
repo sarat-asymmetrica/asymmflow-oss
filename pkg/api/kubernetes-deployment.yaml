@@ -41,7 +41,7 @@ spec:
           protocol: TCP
 
         env:
-        - name: DATABASE_PATH
+        - name: PH_DB_PATH
           value: "/data/ph_holdings.db"
         - name: ALLOWED_ORIGINS
           value: "http://localhost:5173,http://localhost:8080"
