@@ -15,7 +15,7 @@ func TestManualApplyMasterDataCleanup(t *testing.T) {
 		t.Skip("set MASTER_DATA_CLEANUP_COMMIT=1 to apply low-risk master-data cleanup to the runtime database")
 	}
 
-	runtimePath := appDataDatabasePath()
+	runtimePath := runtimeDataDatabasePath()
 	if runtimePath == "" || !fileExists(runtimePath) {
 		t.Skip("runtime deployment database not present on this machine")
 	}

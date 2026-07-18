@@ -11,7 +11,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"ph_holdings_app/pkg/infra/deploy"
 )
+
+// runtimeDataDatabasePath is the on-disk location of the deployment data plane's
+// database (Mission DP1: <slugRoot>\data\ph_holdings.db). Diagnostic tests use
+// it to locate a real runtime DB and skip when none is present on the machine.
+func runtimeDataDatabasePath() string {
+	return filepath.Join(deploy.DataDir(), deploy.DBFileName)
+}
 
 func openDeploymentAuditTestDB(t *testing.T, dbPath string) *gorm.DB {
 	t.Helper()
@@ -222,7 +231,7 @@ func TestDeploymentDataAuditFlagsBlockingAndWarningIssues(t *testing.T) {
 }
 
 func TestDeploymentRuntimeDBBootstrapAndAudit(t *testing.T) {
-	runtimePath := appDataDatabasePath()
+	runtimePath := runtimeDataDatabasePath()
 	if runtimePath == "" || !fileExists(runtimePath) {
 		t.Skip("runtime deployment database not present on this machine")
 	}
@@ -286,7 +295,7 @@ func TestDeploymentFoundationRecreatesCurrentExtensionTablesOnExistingDB(t *test
 }
 
 func TestDeploymentDBCopyReconciliationAndPackaging(t *testing.T) {
-	runtimePath := appDataDatabasePath()
+	runtimePath := runtimeDataDatabasePath()
 	wd, err := os.Getwd()
 	require.NoError(t, err)
 
@@ -297,7 +306,6 @@ func TestDeploymentDBCopyReconciliationAndPackaging(t *testing.T) {
 	}
 
 	t.Setenv("PH_DB_PATH", "")
-	t.Setenv("DATABASE_PATH", "")
 	require.Equal(t, runtimePath, getDatabasePath())
 
 	runtimeCopy := copyDeploymentAuditDBToTemp(t, runtimePath)
@@ -359,7 +367,7 @@ func TestManualRepairRuntimeDeploymentDatabase(t *testing.T) {
 		t.Skip("set DEPLOYMENT_RUNTIME_REPAIR_COMMIT=1 to repair runtime deployment database")
 	}
 
-	runtimePath := appDataDatabasePath()
+	runtimePath := runtimeDataDatabasePath()
 	if runtimePath == "" || !fileExists(runtimePath) {
 		t.Fatalf("runtime deployment database not present: %s", runtimePath)
 	}

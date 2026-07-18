@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+
+	"ph_holdings_app/pkg/infra/deploy"
 )
 
 const legacyOfferShellAmountTolerance = 0.000001
@@ -265,8 +267,8 @@ func (a *App) computeDeploymentDataAudit() (DeploymentDataAudit, error) {
 	audit := DeploymentDataAudit{
 		GeneratedAt:                 time.Now().UTC().Format(time.RFC3339),
 		DatabasePath:                getDatabasePath(),
-		ExpectedRuntimeDatabasePath: appDataDatabasePath(),
-		PackagedDatabasePath:        packagedDatabasePath(),
+		ExpectedRuntimeDatabasePath: filepath.Join(deploy.DataDir(), deploy.DBFileName),
+		PackagedDatabasePath:        deploy.PackagedSeedPath(),
 		MissingTables:               []string{},
 		BlockingDataIssues:          []string{},
 		WarningDataIssues:           []string{},

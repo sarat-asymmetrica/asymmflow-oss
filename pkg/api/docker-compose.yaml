@@ -11,7 +11,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - DATABASE_PATH=/data/ph_holdings.db
+      - PH_DB_PATH=/data/ph_holdings.db
       - ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
       - RATE_LIMIT_PER_MIN=60
       - LOG_LEVEL=info
