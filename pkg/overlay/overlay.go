@@ -13,12 +13,21 @@
 package overlay
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+// utf8BOM is the byte-order mark Windows editors (Notepad, PowerShell
+// Set-Content -Encoding UTF8 on 5.1) prepend when saving UTF-8. Go's JSON
+// parser rejects it as an "invalid character" at the start of input, which
+// would make a human's hand-edited identity overlay silently fail to parse and
+// fall back to built-in defaults. The identity plane is explicitly a
+// human-edited surface (campaign §0), so LoadOverlay strips a leading BOM.
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
 
 // DivisionProfile holds all the per-division facts that used to be hardcoded
 // in the companyDocumentProfile switch in company_branding.go.
@@ -697,6 +706,7 @@ func LoadOverlay(searchDirs []string) *CompanyOverlay {
 		if err != nil {
 			continue // Not found in this dir — try next.
 		}
+		data = bytes.TrimPrefix(data, utf8BOM) // tolerate a Windows-editor UTF-8 BOM
 		var o CompanyOverlay
 		if err := json.Unmarshal(data, &o); err != nil {
 			fmt.Printf("[overlay] WARNING: found %s but could not parse it (%v) — using built-in defaults\n", candidate, err)

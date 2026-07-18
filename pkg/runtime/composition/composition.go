@@ -22,6 +22,7 @@ import (
 	"gorm.io/gorm"
 
 	"ph_holdings_app/pkg/compliance"
+	"ph_holdings_app/pkg/infra/deploy"
 	"ph_holdings_app/pkg/infra/events"
 	"ph_holdings_app/pkg/overlay"
 )
@@ -183,25 +184,32 @@ func ExecutableSearchDirs() []string {
 	return dirs
 }
 
-// StandardOverlayDirs is the overlay.json search cascade shared by packaged
-// verticals, in precedence order:
+// StandardOverlayDirs is the overlay.json search cascade, in precedence order:
 //
-//  1. executable-adjacent dirs (portable deployment, macOS bundles)
-//  2. data/ sub-dir of CWD, then CWD itself (development / wails dev mode)
-//  3. the platform user app-data dir (Windows %APPDATA%\<appDirName>,
-//     Unix ~/.local/share/<appDirName>)
-func StandardOverlayDirs(appDirName string) []string {
+//  1. the deployment IDENTITY PLANE (deploy.IdentityDir(),
+//     %APPDATA%\Asymmetrica\<slug>\identity) — where the installer seeds
+//     overlay.json if-absent and a human edits it. It is FIRST so a sovereign
+//     identity always wins over a packaged default, and because it lives
+//     outside the wiped code plane a hand-edit survives every reinstall
+//     (DP2 gate G4). The slug resolves from the exe-adjacent deployment.json,
+//     so this is correct even though it runs before the overlay is Active.
+//  2. executable-adjacent dirs (portable deployment, macOS bundles, and the
+//     packaged default overlay that ships inside the code plane).
+//  3. data/ sub-dir of CWD, then CWD itself (development / wails dev mode).
+//
+// The legacy platform app-data dir (%APPDATA%\AsymmFlow) is deliberately NOT
+// searched: campaign invariant §4.2 forbids the app reading the legacy layout,
+// and the identity plane replaces it. IdentityDir() is skipped when it cannot
+// resolve to an absolute path (e.g. APPDATA unset), never yielding a stray
+// relative entry.
+func StandardOverlayDirs() []string {
 	dirs := make([]string, 0, 6)
+	if id := deploy.IdentityDir(); filepath.IsAbs(id) {
+		dirs = append(dirs, id)
+	}
 	dirs = append(dirs, ExecutableSearchDirs()...)
 	if cwd, err := os.Getwd(); err == nil {
 		dirs = append(dirs, filepath.Join(cwd, "data"), cwd)
-	}
-	if runtime.GOOS == "windows" {
-		if appData := os.Getenv("APPDATA"); appData != "" {
-			dirs = append(dirs, filepath.Join(appData, appDirName))
-		}
-	} else if homeDir, err := os.UserHomeDir(); err == nil {
-		dirs = append(dirs, filepath.Join(homeDir, ".local", "share", appDirName))
 	}
 	return dirs
 }

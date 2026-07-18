@@ -359,7 +359,7 @@ func (a *App) startup(ctx context.Context) {
 	// LoadConfig / getDatabasePath (executable dirs → CWD/data → CWD →
 	// platform app-data dir).
 	a.composition = composition.NewRoot()
-	setActiveOverlay(a.composition.LoadOverlay(composition.StandardOverlayDirs("AsymmFlow")))
+	setActiveOverlay(a.composition.LoadOverlay(composition.StandardOverlayDirs()))
 
 	// Wave 12.5 B3: wire the crm delivery-terms composer to the active overlay so
 	// a new offer's empty delivery terms compose from ITS division (not the

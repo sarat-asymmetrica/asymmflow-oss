@@ -2,6 +2,7 @@ package composition
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"ph_holdings_app/pkg/compliance"
 	"ph_holdings_app/pkg/compliance/bahrain"
 	"ph_holdings_app/pkg/compliance/saudi"
+	"ph_holdings_app/pkg/infra/deploy"
 	"ph_holdings_app/pkg/infra/events"
 )
 
@@ -116,10 +118,20 @@ func TestWireCompliance_ReusesExistingBus(t *testing.T) {
 }
 
 func TestStandardOverlayDirs_CascadeOrder(t *testing.T) {
-	dirs := StandardOverlayDirs("AsymmFlow")
+	dirs := StandardOverlayDirs()
 	if len(dirs) == 0 {
 		t.Fatal("no search dirs")
 	}
+
+	// The identity plane, when it resolves to an absolute path, must be FIRST
+	// (highest priority) so a sovereign identity wins over any packaged default
+	// and a hand-edit in the identity plane always takes precedence (gate G4).
+	if id := deploy.IdentityDir(); filepath.IsAbs(id) {
+		if filepath.Clean(dirs[0]) != filepath.Clean(id) {
+			t.Fatalf("identity plane must be searched first: dirs[0]=%q want %q", dirs[0], id)
+		}
+	}
+
 	// CWD/data must precede CWD; both must be present.
 	var dataIdx, cwdIdx = -1, -1
 	for i, d := range dirs {
@@ -136,5 +148,16 @@ func TestStandardOverlayDirs_CascadeOrder(t *testing.T) {
 	}
 	if dataIdx == -1 || cwdIdx == -1 || dataIdx > cwdIdx {
 		t.Fatalf("cascade order wrong: dirs=%v (dataIdx=%d cwdIdx=%d)", dirs, dataIdx, cwdIdx)
+	}
+
+	// Invariant §4.2: the legacy platform layout (%APPDATA%\AsymmFlow) must
+	// never be searched. The identity plane replaces it.
+	if appData := os.Getenv("APPDATA"); appData != "" {
+		legacy := filepath.Clean(filepath.Join(appData, "AsymmFlow"))
+		for _, d := range dirs {
+			if filepath.Clean(d) == legacy {
+				t.Fatalf("legacy AppData layout %q must not be in the overlay cascade: dirs=%v", legacy, dirs)
+			}
+		}
 	}
 }
