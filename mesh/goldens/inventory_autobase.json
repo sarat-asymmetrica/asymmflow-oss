@@ -1,0 +1,41 @@
+{
+  "viewLength": 5,
+  "viewDigest": "5962c1f9cfd717a76ee5885dd3fb1b625636f16c70adca8954c4d4ac783e4451",
+  "linearized": [
+    {
+      "seq": 1,
+      "actor": "dev-a",
+      "sku": "TX-100",
+      "delta": 10,
+      "ts": 100
+    },
+    {
+      "seq": 2,
+      "actor": "dev-a",
+      "sku": "TX-100",
+      "delta": -6,
+      "ts": 200
+    },
+    {
+      "seq": 1,
+      "actor": "dev-a",
+      "sku": "PH-200",
+      "delta": 3,
+      "ts": 120
+    },
+    {
+      "seq": 1,
+      "actor": "dev-b",
+      "sku": "TX-100",
+      "delta": -6,
+      "ts": 150
+    },
+    {
+      "seq": 2,
+      "actor": "dev-b",
+      "sku": "PH-200",
+      "delta": 4,
+      "ts": 220
+    }
+  ]
+}

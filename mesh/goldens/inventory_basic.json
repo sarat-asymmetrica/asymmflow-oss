@@ -3,6 +3,9 @@
     "PH-200": 7,
     "TX-100": 4
   },
+  "ar": {},
+  "approvals": {},
+  "policies": {},
   "rejected": [
     {
       "seq": 2,
@@ -13,6 +16,6 @@
     }
   ],
   "applied": 4,
-  "digest": "aa5fa4161212afedd5293c065eb5af17a3804fc2ccee65f600c2c5637caa2924",
+  "digest": "6c8c35eff1e2c04d6d46704ad7c542c2808717fae58fb1d91ceccfcbd09eb410",
   "opsHashed": 5
 }

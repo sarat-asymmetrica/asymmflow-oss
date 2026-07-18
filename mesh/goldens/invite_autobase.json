@@ -1,0 +1,88 @@
+{
+  "viewLength": 11,
+  "viewDigest": "71edd44164b7f4ec92ef0d561eb8f8d553284a0da92863fb77f9fc27aec5490d",
+  "stateDigest": "a3d679e22cd5393bfca431d602b03301a73630cfcd42fdb239a11e448ea54e12",
+  "state": {
+    "manifest": {
+      "title": "PO-2201 — Steel Coils",
+      "anchorType": "po",
+      "anchorId": "PO-2201",
+      "observersAllowed": false,
+      "actor": "hub",
+      "ts": 100
+    },
+    "messages": [
+      {
+        "msgId": "desk:6",
+        "actor": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "ts": 600,
+        "body": "in via the code — sovereignty by paste"
+      }
+    ],
+    "reactions": {},
+    "readCursors": {},
+    "skipped": [],
+    "rejected": [
+      {
+        "seq": 7,
+        "actor": "phone",
+        "kind": "invite.redeem",
+        "reason": "invite: invite \"hub:2\" exhausted (1 use(s))"
+      },
+      {
+        "seq": 8,
+        "actor": "phone",
+        "kind": "invite.redeem",
+        "reason": "invite: invite \"hub:4\" expired at 450 (redeem ts 800)"
+      },
+      {
+        "seq": 10,
+        "actor": "phone",
+        "kind": "msg.post",
+        "reason": "capability: observer grant is read-only (device c9077518… may not write room ops)"
+      },
+      {
+        "seq": 11,
+        "actor": "phone",
+        "kind": "msg.read",
+        "reason": "capability: observer grant is read-only (device c9077518… may not write room ops)"
+      }
+    ],
+    "applied": 7,
+    "digest": "a3d679e22cd5393bfca431d602b03301a73630cfcd42fdb239a11e448ea54e12",
+    "opsHashed": 11,
+    "grants": {
+      "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd": {
+        "role": "writer",
+        "epoch": 0
+      },
+      "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0": {
+        "role": "observer",
+        "epoch": 0
+      }
+    },
+    "invites": {
+      "hub:2": {
+        "invitePub": "db995fe25169d141cab9bbba92baa01f9f2e1ece7df4cb2ac05190f37fcc1f9d",
+        "role": "writer",
+        "expiresAt": 100000,
+        "maxUses": 1,
+        "uses": 1
+      },
+      "hub:3": {
+        "invitePub": "2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12",
+        "role": "observer",
+        "maxUses": 2,
+        "uses": 1
+      },
+      "hub:4": {
+        "invitePub": "22fc297792f0b6ffc0bfcfdb7edb0c0aa14e025a365ec0e342e86e3829cb74b6",
+        "role": "writer",
+        "expiresAt": 450,
+        "maxUses": 1,
+        "uses": 0
+      }
+    }
+  }
+}

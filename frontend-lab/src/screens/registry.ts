@@ -58,6 +58,7 @@ import SalesHub from './SalesHub.svelte'
 import CRMHub from './CRMHub.svelte'
 import OperationsHub from './OperationsHub.svelte'
 import OneDriveImport from './OneDriveImport.svelte'
+import Correspondence from './Correspondence.svelte'
 import Showcase from './Showcase.svelte'
 
 export type ArchetypeKind = 'ledger' | 'entity' | 'hub' | 'bespoke'
@@ -138,6 +139,8 @@ export const screens: ScreenEntry[] = [
   { key: 'deployment', label: 'Deployment', group: 'System', archetype: 'bespoke', component: DeploymentHub },
   // K5 — OneDrive Import (Wizard primitive; the last screen migrated)
   { key: 'onedrive-import', label: 'OneDrive Import', group: 'System', archetype: 'bespoke', component: OneDriveImport },
+  // Messenger UI campaign, Mission U2 — the Correspondence Desk (mock-only v0)
+  { key: 'correspondence', label: 'Correspondence', group: 'Operations', archetype: 'bespoke', component: Correspondence },
   // K5 — tab-navigator hubs (TabShell over built screens)
   { key: 'sales-hub', label: 'Sales Hub', group: 'Sales', archetype: 'bespoke', component: SalesHub },
   { key: 'finance-hub', label: 'Finance Hub', group: 'Finance', archetype: 'bespoke', component: FinanceHub },

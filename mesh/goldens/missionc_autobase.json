@@ -1,0 +1,66 @@
+{
+  "viewLength": 12,
+  "viewDigest": "69f08cec5d61192aa867b812a6411a2ed00eab1a684f11b42a5b78ee84134b78",
+  "stateDigest": "79432ed8c16c9898154a4186f6ded3aef2d67bea973aee0bc9366a2b600aeb23",
+  "state": {
+    "stock": {
+      "TX-100": 4
+    },
+    "ar": {
+      "CUST-01": {
+        "balanceMinor": 250000,
+        "limitMinor": 500000,
+        "currency": "BHD"
+      }
+    },
+    "approvals": {
+      "posting-77": {
+        "decision": "approved",
+        "actor": "sarat",
+        "actorType": "operator",
+        "correlationId": "c-2",
+        "decidedAtMs": 410
+      }
+    },
+    "policies": {
+      "VAT-DEADLINE": {
+        "status": "overridden",
+        "overriddenBy": "sarat",
+        "reason": "filed via portal, receipt attached"
+      }
+    },
+    "rejected": [
+      {
+        "seq": 2,
+        "actor": "dev-a",
+        "sku": "TX-100",
+        "delta": -6,
+        "reason": "floor invariant: stock would fall below 0 (have 4, delta -6)"
+      },
+      {
+        "seq": 2,
+        "actor": "dev-b",
+        "kind": "ar.charge",
+        "customer": "CUST-01",
+        "reason": "ar: no credit limit set for customer CUST-01"
+      },
+      {
+        "seq": 4,
+        "actor": "butler-ai",
+        "kind": "approval.decide",
+        "subject": "posting-77",
+        "reason": "approval: actor butler-ai (agent/propose) cannot decide approved (AI-authority boundary / insufficient authority)"
+      },
+      {
+        "seq": 6,
+        "actor": "butler-ai",
+        "kind": "policy.override",
+        "policyId": "VAT-DEADLINE",
+        "reason": "policy: actor \"butler-ai\" cannot override policy \"VAT-DEADLINE\" (AI-authority boundary)"
+      }
+    ],
+    "applied": 8,
+    "digest": "79432ed8c16c9898154a4186f6ded3aef2d67bea973aee0bc9366a2b600aeb23",
+    "opsHashed": 12
+  }
+}
