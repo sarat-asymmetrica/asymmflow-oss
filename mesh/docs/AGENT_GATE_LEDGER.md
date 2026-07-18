@@ -134,3 +134,27 @@ of validation as law so a future "helpful" shape-check reads as a
 deliberate change; its in-process-hermetic interpretation (no DHT/mirror
 when the mission proves ceremony+crypto, not delivery) was accepted as
 correct scope discipline.
+
+**GL-6 [W-human-3 Mission B: social/DM] — The stop-tripwire fired and held; a red gate honestly reported beats a green gate quietly bought.**
+The new Art. III §6 fold law exposed a pre-existing untested gap:
+`TestReadCursorMonotonicity`'s fixture emitted read cursors with NO manifest
+(legal before, skipped now). The brief's tripwire said stop-don't-edit; the
+coder delivered a RED go-suite verdict verbatim, named the failing test, left
+it byte-untouched, proved the underlying law intact via its own new
+anchored-room test, and put the one-line fix on the lead's desk as a ruling.
+**Pattern to repeat, above all others:** an honestly-reported red with
+analysis is a BETTER deliverable than a green obtained by editing a fixture
+whose meaning you weren't authorized to change. Gate ruling: the fixture's
+intent is monotonicity, so it gained an anchored manifest (dedicated tests
+own the social-room skip). Also repeat-worthy: (a) the "next morning" reopen
+— proving convergence with a REOPENED same-device store that only ever met
+the mirror, instead of a stale pre-offline snapshot (a snapshot equality
+would have been the vacuous-green GL-5 warns about); (b) `deleteRoom()`
+deliberately NOT built — a function named like it acts on THE ROOM would lie
+about physics (deletion = each owner discarding their OWN copy); omission
+as design, documented where the function would have been; (c) `blockDevice`
+deriving survivors from the room's own live grant table rather than
+caller bookkeeping — ceremonies should read the law plane they act on.
+Accepted judgment call: constructing the peer's node object before the
+founder closes (pure local key derivation, zero network co-presence) does
+not violate the never-online-together claim; the claim is about the wire.

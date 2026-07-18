@@ -115,6 +115,14 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
      * without the exporter having to remember the room's config out-of-band. */
     get authorityPub() { return authorityPub ?? null },
 
+    /** The room's content encryption key (32-byte Buffer), or null (an
+     * unencrypted node). Read-only passthrough of the constructor option —
+     * same additive-accessor pattern as authorityPub above (MSG-D19): a DM
+     * invite (social-room.mjs's openDmInvite) needs to re-embed this room's
+     * OWN key into a fresh asymm-room2 code without the caller having to
+     * remember it out-of-band. */
+    get encryptionKey() { return encryptionKey ?? null },
+
     /** Grant another peer write access (their writerKey, hex). Validates
      * BEFORE appending — a malformed key must never enter the shared log. */
     async addWriter(writerKeyHex) {

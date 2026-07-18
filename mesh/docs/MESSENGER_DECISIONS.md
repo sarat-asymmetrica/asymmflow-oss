@@ -479,3 +479,151 @@ chaining throughout (desk only acts on the successor after decoding a
 code that provably didn't exist until the ceremony ran — a sequential
 handoff, not a concurrent fork), 3 plain reproducibility runs, digests
 identical every time.
+
+**MSG-D21 [Mirror] — Social rooms are law, not a UI mode: participant
+authority, a fold-enforced read-cursor ban, real invites under encryption,
+and blocking whose silence is structural.**
+(Constitution Art. II social rooms/DMs, Art. III §6, Art. V §2/§6, Art. XI —
+executed 2026-07-18.) The room fold already had everything a social room
+needs (Mission D's capability plane, M2's invite plane, M4's encryption);
+this wave spends none of it on new mechanism and all of it on WHO holds the
+pen and WHAT the manifest points at.
+
+**Participant authority — privacy by topology, not policy.** A social room
+is an ordinary ENFORCED room (`createMeshNode({ authorityPub, ... })`,
+`mesh/host/social-room.mjs`'s `createSocialRoom`) whose `AuthorityPub` is a
+PARTICIPANT'S OWN device key — the creator's — and whose signed manifest
+never sets `anchorType`/`anchorId`. There is no second admin identity and no
+org key anywhere in the log: `AuthorityPub` is fixed at `createMeshNode`
+time and nothing in this vocabulary lets one be added later. A DM is the
+two-person degenerate case, opened via the real M2 ceremony
+(`openDmInvite`: `inviteOfferOp` + an `asymm-room2.` code carrying the
+room's `encryptionKey`, MSG-D18) — the exact machinery reissue-room.mjs
+already trusted for org rooms, now founded by a person instead of an org.
+
+**Fold-enforced read-cursor ban, defense-in-depth (Art. III §6).**
+`applyRead` (`room_domain.go`) gained two checks ahead of its existing
+monotonicity law, in this order: (1) no manifest has folded yet → skip
+"read cursor requires a manifest" (deterministic because canonical order
+fixes what "before" means — mirrors `applyClaim`'s own manifest-check
+style); (2) the manifest is present but unanchored (`AnchorType == ""`) →
+skip "read cursors are not emitted in social rooms", the Constitution's own
+words, same skip-reason-as-law pattern MSG-D17 established for
+`room.claim`. Anchored-room read-cursor behavior is byte-for-byte
+UNCHANGED below those two checks. The ban is DOUBLE: the fold refuses to
+fold one, AND `social-room.mjs` never builds one in the first place — a
+future UI bug that tries anyway still can't make it into the log.
+
+**Flagged, not silently fixed: `TestReadCursorMonotonicity` now fails.**
+The mission brief anticipated this exact risk and its instruction was
+followed literally: that pre-existing test emits five `msg.read` ops with
+NO `room.manifest` op anywhere in its scenario — an untested gap the new
+law exposes, not a regression the new law causes. It was left completely
+untouched (not edited to add a manifest, not deleted) so the break is
+visible rather than papered over; `TestReadCursorAnchoredRoomUnchanged` was
+added alongside it, re-proving the EXACT same assertions with a manifest
+present, confirming the underlying monotonicity law itself is intact. `go
+test ./mesh/...` is therefore RED on this one pre-existing test until a
+future commit adds a manifest line to its fixture — a one-line fix,
+deliberately not made here per the brief's explicit stop-and-report
+instruction (GL-1's pattern: build the letter, flag the consequence, let
+the gate rule). Five new tests cover the new law directly:
+`TestReadSkippedInSocialRoom`, `TestReadBeforeManifestSkipped`,
+`TestReadCursorAnchoredRoomUnchanged`,
+`TestReadBeforeManifestCanonicalOrderDeterministic` (a `msg.read` and the
+`room.manifest` share the same Seq; actor sort order alone decides which
+folds first, in both physical delivery orders, with identical digests
+either way), and `TestRoomConvergence500PermutationsSocial` (seed 2206,
+500 permutations of a social-room scenario — posts, an expectation tag, a
+reaction, an attempted read, an attempted claim — both attempts skip,
+every permutation converges).
+
+**Blocking — the participant-authority primitive, and its honest
+boundary.** `blockDevice` (`social-room.mjs`) is an epoch bump
+(`epochOp`) followed by re-grants (`grantOp`) for every OTHER device
+currently holding a grant at the live epoch, read directly off the room's
+own state — no survivor list for the caller to hand-maintain. The room's
+authority needs no self-grant: `capabilityGate` (`capability.go`) already
+treats the authority as implicitly granted, so blocking a DM's only other
+member costs exactly one epoch-bump op and zero re-grants. Stated plainly
+in the module's own comments, because the function is easy to misread as
+more powerful than it is: (1) this only works for the room's OWN
+authority — call it with any other device's keys and every op it builds
+is simply rejected by the fold on every peer, it does nothing; (2) a
+NON-authority participant has NO fold-level block available (membership
+law is the same capability plane Mission D built for org rooms, and only
+the authority holds that pen) — their "block" is CLIENT-SIDE ONLY: discard
+the local copy of the room's base/key, refuse future invites from it. The
+fold cannot help a participant block someone in a room they don't govern;
+that is the honest shape of "participant authority," not a bug to route
+around. A future multi-party social room with rotating/shared authority is
+a different design. (3) NO op kind anywhere in the vocabulary signals "you
+were blocked" — the blocked device's ops simply start rejecting on every
+peer's refold with the ordinary capability wording ("is stale" / "no grant
+for device"), indistinguishable from the room having gone quiet. Silence
+is structural (Art. V §2), proven in `social-spike.mjs` by scanning every
+op kind that ever appears in the full log against a whitelist and
+asserting none of it matches `/block/i`.
+
+**True deletion is physics, not a function (Art. V §6).** `social-room.mjs`
+deliberately ships no `deleteRoom()`. "Delete the room" is each
+participant independently running `rmSync` on their own Corestore
+directory and forgetting the room's key — nothing wraps that call. A named
+wrapper here would misrepresent what happens: its name would suggest an
+operation reaching the ROOM (deleting it for the other party too), when
+what genuinely occurs is each owner discarding THEIR OWN copy — forced
+forgetting must not exist. `social-spike.mjs` step 7 demonstrates the real
+physics directly (both sides `rmSync` their own storage, directories
+verified gone) and step 7's final check demonstrates the corollary
+honestly: the mirror's copy of the room OUTLIVES both owners' deletions,
+unreadable ciphertext forever, because the mirror never held a grant or a
+key of its own (MSG-D15) — there is nothing for either owner's deletion to
+reach across the wire and act upon, and nothing the mirror itself could do
+about it even if asked.
+
+**Art. XI, restated for the standing record:** even encrypted, the mirror
+sees WHICH room keys it carries and WHEN — metadata, never content. This
+wave's spike (`social-spike.mjs`) exercises exactly that boundary twice,
+independently, per GL-5 discipline (arrival and opacity asserted
+separately, not inferred from each other): once for ana's segment (a bare,
+unkeyed Corestore forces a real block-0 request off the mirror over a
+fresh replication stream, and the returned ciphertext is checked against
+her known plaintext) and once for bela's segment (same two-part proof
+against her reply). The owner's standing veto right over DM-mirroring
+(Art. XI, "the owner may veto DM-mirroring entirely at the stage-2 gate")
+is unchanged and unexercised by this wave — this entry is the record that
+the metadata-visibility boundary was demonstrated honestly, not waived.
+
+**The DM story, hermetic, on `social-spike.mjs` / `npm run socialspike`:**
+ana creates the room (participant authority, unanchored, `K` fixture bytes)
+and opens a one-time `asymm-room2.` DM invite; pushes to the blind mirror;
+goes fully offline (store, autobase, dht all closed). bela — who is NEVER
+online at the same time as ana anywhere in this scenario — wakes later,
+pulls ana's segment through the mirror alone, redeems the invite FOR REAL
+(a rogue's attempt to reuse the same one-time code is refused
+"exhausted"), and vents: a threaded reply with an expectation tag, a
+voluntary-wave reaction, a deliberately-built `msg.read` attempt (skipped
+per the new law) and a deliberately-built `room.claim` attempt (skipped,
+MSG-D17, untouched by this mission). The next morning ana's OWN storage
+reopens (same device, same key — not a new identity) and converges to
+bela's exact state and view digest having never talked to bela directly
+either — both peers only ever spoke to the mirror. bela self-serve-exports
+a transcript from her own copy (`authorityPub` in the bundle equals ana's
+device pub, proving participant authority end-to-end through the evidence
+plane too); it verifies. ana then blocks bela; bela's next post rejects on
+both peers' refolds with no signal anywhere in the log. Both sides
+`rmSync` their storage; the mirror's copy outlives them, unreadable.
+Golden (`social_autobase.json`) pins the pre-block converged STATE digest
+plus the final `opsHashed`/`applied`/`skipped`/`rejected` counts — NOT a
+view digest, per GL-2's letter (the scenario's async segments are the
+point being proven, so the golden doesn't lean on a causal-chaining
+argument to justify pinning view order); a runtime cross-peer view-digest
+equality check (bela vs. ana-reopened) still runs, unpinned. 3 plain
+reproducibility runs, identical every time. Gate: `npm run build`, `go
+test ./mesh/... -count=1` (one pre-existing failure, flagged above, not
+caused by silent editing), `socialspike:update-golden` then 3× plain, all
+nine pre-existing spikes (`roomspike`, `invitespike`, `attachspike`,
+`mirrorspike`, `transcriptspike`, `reissuespike`, `smoke`, `wave1`,
+`missionc`, `missiond`) green UNMODIFIED — `git diff --stat
+mesh/goldens/` is empty; `social_autobase.json` is a new, untracked
+addition, not a diff to an existing golden.

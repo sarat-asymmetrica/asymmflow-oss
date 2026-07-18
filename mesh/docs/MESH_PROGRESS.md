@@ -407,6 +407,44 @@ tags/claims/evidence export have no UI yet (kernel-screen wave pending,
 owner placement ruling stands); DMs remain P2P-only until the social layer
 ships on this encrypted road (Constitution Art. XI).
 
+## Messenger wave: "The Human Layer Rides the Encrypted Road" (2026-07-18)
+
+Second orchestrated wave, same shape (Fable lead + Sonnet coders, gate
+ledger GL-5/GL-6 added). Closed the previous wave's two biggest honest-line
+items in one stroke.
+
+- **Mission A — room re-issue** (3805e25): the Art. II amendment executable.
+  `predecessorRoomKey` on the manifest (v2 third growth; view digests moved,
+  state digests byte-identical); `reissueRoom` ceremony (successor base +
+  new content key + survivor re-grants + fresh room2 codes as honest
+  key-transport envelopes; predecessor untouched — absence IS the
+  revocation); reissue-spike: the rogue keeps K1 and epoch-1 history
+  (stated physics) yet provably cannot read the successor (arrival+opacity
+  asserted separately per GL-5) and its smuggled op rejects on refold;
+  the chain navigates backward-in-history via the pointer.
+- **Mission B — social rooms & DMs** (this commit): privacy by topology
+  live. Social room = enforced room whose AuthorityPub is a PARTICIPANT's
+  device (org key structurally absent), manifest unanchored; Art. III §6 is
+  now FOLD LAW (read cursors skip in social rooms + require a manifest —
+  which exposed and fixed a pre-existing untested fixture gap, GL-6); DM =
+  the real M2 invite ceremony under encryption (offer → room2 code →
+  proof-bound redeem → writer grant, one-use exhaustion proven); the
+  MIDNIGHT VENT: ana and bela never share an online moment, the encrypted
+  DM delivers through the blind office mirror which provably cannot read
+  it; evidence export VERIFIES in the human layer (authority = ana's own
+  device); blocking = authority epoch bump with NO signal op anywhere
+  (silence is structural); true deletion demonstrated as physics (rmSync +
+  forgotten key — deliberately no deleteRoom() function that could lie).
+- **Regression floor**: 13 gates green (11 spikes + smoke chain + go suite),
+  legacy goldens byte-identical; only social_autobase.json added.
+
+**The honest line:** blocking by a NON-authority DM participant is
+client-side only (discard + refuse — the fold can't help inside a room you
+don't govern); the mirror carrying a DM sees WHICH room keys it carries and
+WHEN (metadata, never content) — the owner's veto right on DM-mirroring
+stands (Art. XI); social rooms have no UI yet; forward-secrecy boundary
+from MSG-D18 unchanged (re-issue closes it for rooms that re-key).
+
 ---
 
 ## Residue / notes for the next session

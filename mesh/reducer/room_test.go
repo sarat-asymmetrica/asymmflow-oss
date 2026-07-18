@@ -204,8 +204,14 @@ func TestReactToggleLastWins(t *testing.T) {
 // ---------- read cursors ----------
 
 func TestReadCursorMonotonicity(t *testing.T) {
+	// Gate fix (GL-6): this fixture predates the Art. III §6 fold law and
+	// emitted msg.read with no manifest — an untested gap the social-room
+	// mission exposed. The test's INTENT is monotonicity law, so it now runs
+	// in an anchored room (manifest first); the social-room skip has its own
+	// dedicated tests.
 	rs := roomFold(t, []Op{
-		post(1, "hub", 100, "one"),
+		{Seq: 1, Actor: "hub", TS: 50, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"},
+		post(2, "hub", 100, "one"),
 		{Seq: 2, Actor: "ana", TS: 200, Kind: "msg.read", UpToActor: "hub", UpToSeq: 1},
 		{Seq: 3, Actor: "ana", TS: 300, Kind: "msg.read", UpToActor: "hub", UpToSeq: 5},
 		{Seq: 4, Actor: "ana", TS: 400, Kind: "msg.read", UpToActor: "hub", UpToSeq: 3},  // lower → skip
@@ -749,6 +755,127 @@ func TestRoomInputImmutability(t *testing.T) {
 	after, _ := json.Marshal(ops)
 	if string(snapshot) != string(after) {
 		t.Fatalf("ApplyRoom mutated its input")
+	}
+}
+
+// ---------- social-room read-cursor ban (Constitution Art. III §6, MSG-D21) ----------
+
+func TestReadSkippedInSocialRoom(t *testing.T) {
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "chai break ☕"}, // no AnchorType — social
+		post(2, "hub", 200, "vent incoming"),
+		{Seq: 3, Actor: "ana", TS: 300, Kind: "msg.read", UpToActor: "hub", UpToSeq: 2},
+	})
+	if len(rs.ReadCursors) != 0 {
+		t.Fatalf("read cursor must not fold in a social room: %+v", rs.ReadCursors)
+	}
+	if !hasSkip(rs, "msg.read", "read cursors are not emitted in social rooms") {
+		t.Fatalf("social-room read must skip with the Constitution's own words: %+v", rs.Skipped)
+	}
+}
+
+func TestReadBeforeManifestSkipped(t *testing.T) {
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "ana", TS: 100, Kind: "msg.read", UpToActor: "hub", UpToSeq: 1}, // no manifest has folded yet
+	})
+	if len(rs.ReadCursors) != 0 {
+		t.Fatalf("read cursor before any manifest must not fold: %+v", rs.ReadCursors)
+	}
+	if !hasSkip(rs, "msg.read", "read cursor requires a manifest") {
+		t.Fatalf("pre-manifest read must skip: %+v", rs.Skipped)
+	}
+}
+
+// TestReadCursorAnchoredRoomUnchanged re-proves TestReadCursorMonotonicity's
+// exact assertions with a manifest present — anchored-room read-cursor
+// behavior is UNCHANGED by the social-room law above. (TestReadCursorMonotonicity
+// itself is left untouched per the mission brief: it emits msg.read with no
+// manifest at all, so it now fails under the new law — that is a flagged,
+// reported finding, not silently patched here. See the mission report.)
+func TestReadCursorAnchoredRoomUnchanged(t *testing.T) {
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 50, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"},
+		post(2, "hub", 100, "one"),
+		{Seq: 3, Actor: "ana", TS: 200, Kind: "msg.read", UpToActor: "hub", UpToSeq: 2},
+		{Seq: 4, Actor: "ana", TS: 300, Kind: "msg.read", UpToActor: "hub", UpToSeq: 5},
+		{Seq: 5, Actor: "ana", TS: 400, Kind: "msg.read", UpToActor: "hub", UpToSeq: 3},  // lower → skip
+		{Seq: 6, Actor: "ana", TS: 500, Kind: "msg.read", UpToActor: "hub", UpToSeq: 5},  // equal → skip
+		{Seq: 7, Actor: "bob", TS: 600, Kind: "msg.read", UpToActor: "hub", UpToSeq: 2},  // independent reader
+		{Seq: 8, Actor: "bob", TS: 700, Kind: "msg.read", UpToSeq: 2},                    // missing writer
+		{Seq: 9, Actor: "bob", TS: 800, Kind: "msg.read", UpToActor: "hub", UpToSeq: -1}, // nonsense
+	})
+	if rs.ReadCursors["ana"]["hub"] != 5 || rs.ReadCursors["bob"]["hub"] != 2 {
+		t.Fatalf("cursors wrong: %+v", rs.ReadCursors)
+	}
+	stale := 0
+	for _, s := range rs.Skipped {
+		if strings.Contains(s.Reason, "stale read cursor") {
+			stale++
+		}
+	}
+	if stale != 2 {
+		t.Fatalf("lower AND equal cursors must both skip as stale, got %d: %+v", stale, rs.Skipped)
+	}
+	if !hasSkip(rs, "msg.read", "requires upToActor") || !hasSkip(rs, "msg.read", "positive upToSeq") {
+		t.Fatalf("malformed cursors must skip: %+v", rs.Skipped)
+	}
+}
+
+// TestReadBeforeManifestCanonicalOrderDeterministic: a msg.read and the
+// room.manifest share Seq 1 — actor "ana" < "hub" sorts the read FIRST in
+// canonical order regardless of physical delivery order, so the read always
+// sees no manifest yet and always skips, on every peer, every time.
+func TestReadBeforeManifestCanonicalOrderDeterministic(t *testing.T) {
+	build := func() []Op {
+		return []Op{
+			{Seq: 1, Actor: "ana", TS: 100, Kind: "msg.read", UpToActor: "hub", UpToSeq: 1},
+			{Seq: 1, Actor: "hub", TS: 50, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"},
+		}
+	}
+	orderA := roomFold(t, build())
+	reversed := build()
+	reversed[0], reversed[1] = reversed[1], reversed[0]
+	orderB := roomFold(t, reversed)
+	if orderA.Digest != orderB.Digest {
+		t.Fatalf("delivery order must not matter: %s != %s", orderA.Digest, orderB.Digest)
+	}
+	if orderA.Manifest == nil || orderA.Manifest.AnchorID != "PO-2201" {
+		t.Fatalf("manifest must still fold despite the read op sorting canonically first: %+v", orderA.Manifest)
+	}
+	if !hasSkip(orderA, "msg.read", "read cursor requires a manifest") {
+		t.Fatalf("the canonically-earlier read must skip pre-manifest, regardless of delivery order: %+v", orderA.Skipped)
+	}
+}
+
+// socialRoomScenarioOps: an unanchored (social) room's full vocabulary —
+// posts, an expectation tag, a reaction, an attempted read, an attempted
+// claim — both attempts skip. Permutation grinder for MSG-D21.
+func socialRoomScenarioOps() []Op {
+	return []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "chai break ☕"}, // no AnchorType — social
+		{Seq: 2, Actor: "hub", TS: 200, Kind: "msg.post", Body: "you up?", Expectation: "whenever"},
+		{Seq: 3, Actor: "ana", TS: 300, Kind: "msg.post", Body: "always for chai", ReplyTo: "hub:2"},
+		{Seq: 4, Actor: "ana", TS: 400, Kind: "msg.react", MsgID: "hub:2", Emoji: "👋", On: true},
+		{Seq: 5, Actor: "hub", TS: 500, Kind: "msg.read", UpToActor: "ana", UpToSeq: 3}, // social → skip
+		{Seq: 6, Actor: "hub", TS: 600, Kind: "room.claim", Assignee: "hub"},            // work concept → skip
+	}
+}
+
+func TestRoomConvergence500PermutationsSocial(t *testing.T) {
+	canonical := roomFold(t, socialRoomScenarioOps())
+	if !hasSkip(canonical, "msg.read", "read cursors are not emitted in social rooms") {
+		t.Fatalf("scenario anchor wrong: read must skip: %+v", canonical.Skipped)
+	}
+	if !hasSkip(canonical, "room.claim", "claims are a work concept") {
+		t.Fatalf("scenario anchor wrong: claim must skip: %+v", canonical.Skipped)
+	}
+	rng := rand.New(rand.NewSource(2206)) // seeded: the test itself must be deterministic
+	for i := range 500 {
+		shuffled := socialRoomScenarioOps()
+		rng.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
+		if got := roomFold(t, shuffled); got.Digest != canonical.Digest {
+			t.Fatalf("permutation %d diverged: %s != %s", i, got.Digest, canonical.Digest)
+		}
 	}
 }
 

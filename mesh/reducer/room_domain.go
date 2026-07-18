@@ -542,7 +542,24 @@ func applyReact(rs *RoomState, op Op) string {
 	return "" // off-toggle is idempotent: clearing an unset reaction is a no-op, not an error
 }
 
+// applyRead folds msg.read (Constitution Art. III §6, MSG-D21): read cursors
+// are an OPERATIONAL FACT owed to anchored (work) rooms only — in a social
+// room the op is never appended, by fold law here AND by host convention
+// (social-room.mjs never builds one). Two checks precede the existing
+// monotonicity law, in this order (mirrors applyClaim's manifest-check
+// style): (1) no manifest yet → nothing to check the room's anchor against,
+// so there is nothing to own a cursor either — deterministic because
+// canonical order fixes what "before" means, the same way it fixes claim
+// ordering; (2) manifest present but unanchored (AnchorType == "") → the
+// Constitution's own words, defense-in-depth alongside the host never
+// emitting the op. Anchored-room read-cursor behavior is UNCHANGED below.
 func applyRead(rs *RoomState, op Op) string {
+	if rs.Manifest == nil {
+		return "read cursor requires a manifest"
+	}
+	if rs.Manifest.AnchorType == "" {
+		return "read cursors are not emitted in social rooms"
+	}
 	if op.UpToActor == "" {
 		return "read cursor requires upToActor"
 	}
