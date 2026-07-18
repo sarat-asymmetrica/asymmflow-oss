@@ -114,7 +114,7 @@ export function createCommandLayer(ctx) {
       const state = await ctx.client.request('roomState', { roomKey: match.roomKey })
       ctx.log(`opened "${state.manifest?.title ?? ''}" — ${state.messages.length} message(s)`)
       for (const m of state.messages.slice(-10)) {
-        ctx.log(`  [${m.expectation || '-'}] ${m.actor}: ${m.body}${m.attachment ? ` 📎 ${m.attachment.name}` : ''}`)
+        ctx.log(`  #${m.seq} [${m.expectation || '-'}] ${m.actor}: ${m.body}${m.attachment ? ` 📎 ${m.attachment.name}  (get it: /fetch ${m.seq} <savePath>)` : ''}`)
       }
       return { roomKey: match.roomKey, state }
     },
@@ -153,9 +153,21 @@ export function createCommandLayer(ctx) {
       return res
     },
 
-    async fetch(ref, savePath) {
-      if (!ref || !savePath) throw new Error('usage: /fetch <ref-json> <savePath>')
+    async fetch(refOrSeq, savePath) {
+      if (!refOrSeq || !savePath) throw new Error('usage: /fetch <seq> <savePath>   (the #N shown next to the 📎 line)')
       const roomKey = this.requireCurrent()
+      let ref = refOrSeq
+      // Kitchen-table UX: the ref is an opaque JSON locator (hostile to type,
+      // full of quotes) — so the human-facing handle is the message SEQ shown
+      // in /open. A plain integer resolves to that message's attachment ref;
+      // anything else is treated as a raw ref (kit-spike still drives that).
+      if (/^\d+$/.test(String(refOrSeq).trim())) {
+        const seq = Number(refOrSeq)
+        const state = await ctx.client.request('roomState', { roomKey })
+        const msg = state.messages.find((m) => m.seq === seq && m.attachment)
+        if (!msg) throw new Error(`no attachment on message #${seq} — /open to see the 📎 lines`)
+        ref = msg.attachment.ref
+      }
       const res = await ctx.client.request('fetchAttachment', { roomKey, ref, savePath })
       ctx.log(`fetched -> ${res.path}\n  sha256 ${res.sha256}  verified: ${res.verified}`)
       return res
@@ -263,7 +275,7 @@ commands:
   /claim [assignee]         claim the open room (defaults to you)
   /release                  release your claim
   /attach <path> [text]     attach a real file to the open room
-  /fetch <ref-json> <path>  fetch an attachment by its ref, verify + save
+  /fetch <seq> <path>       fetch the 📎 on message #seq, verify + save
   /invite                   mint a DM invite code for the open room
   /join <invite-code>       redeem an invite; prints YOUR pairing code
   /addwriter <pairing-code> (founder) admit a joiner's device into the room
