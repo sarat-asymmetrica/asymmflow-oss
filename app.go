@@ -2093,6 +2093,12 @@ func migrateDatabaseFileForContract(path string) error {
 	}
 	defer func() {
 		if sqlDB, dbErr := db.DB(); dbErr == nil {
+			// Flush the WAL back into the main file BEFORE closing so the atomic
+			// swap (which deletes the -wal/-shm siblings) can never drop committed
+			// migration data. TRUNCATE is the strongest checkpoint; a clean close
+			// would checkpoint anyway, but this makes the guarantee explicit on a
+			// data-loss-critical path.
+			_, _ = sqlDB.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
 			_ = sqlDB.Close()
 		}
 	}()
