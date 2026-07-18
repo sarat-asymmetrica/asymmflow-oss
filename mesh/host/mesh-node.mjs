@@ -46,8 +46,10 @@ function isOp(v) {
  *   authorityPub — optional hex Ed25519 mesh-authority key: turns ON Mission D
  *                  capability enforcement in the reducer (signed ops + grants).
  *                  Mesh-genesis data, distributed like the bootstrap key.
+ *   mode         — optional reducer fold: '' (default) = business; 'room' =
+ *                  Messenger room fold (Wave 1). A room is its OWN Autobase.
  */
-export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub } = {}) {
+export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub, mode = '' } = {}) {
   // unsafe:true only acknowledges the PINNED primaryKey (test determinism);
   // production nodes omit primaryKey and get random identities.
   const store = new Corestore(storage, primaryKey ? { primaryKey, unsafe: true } : {})
@@ -118,9 +120,10 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
     },
 
     /** Materialized state via the Go/WASM kernel reducer (capability
-     * enforcement on when the node was created with authorityPub). */
+     * enforcement on when the node was created with authorityPub; room
+     * nodes fold through the Messenger room law instead). */
     async state() {
-      return applyViaWasm(await node.ops(), authorityPub ? { authorityPub } : undefined)
+      return applyViaWasm(await node.ops(), authorityPub ? { authorityPub } : undefined, mode)
     },
 
     /** One replication wire to another in-process node. Returns an unreplicate(). */

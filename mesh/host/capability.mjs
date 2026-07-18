@@ -13,7 +13,7 @@
 import hcrypto from 'hypercore-crypto'
 import { createHash } from 'node:crypto'
 
-/** Fixed field order — MIRROR of mesh/reducer/capability.go signable(). */
+/** Fixed field order — MIRROR of mesh/reducer/capability.go signableV1(). */
 const FIELDS = [
   (op) => String(op.seq ?? 0),
   (op) => op.actor ?? '',
@@ -39,10 +39,39 @@ const FIELDS = [
   (op) => op.devicePub ?? '',
 ]
 
-/** The canonical signed payload: "meshop.v1" + netstring per field. */
+/**
+ * Room fields appended for the "meshop.v2" payload — MIRROR of signableV2().
+ * Selected by kind (room.manifest / msg.*), so every legacy kind keeps its
+ * exact v1 bytes and Mission A-D signatures/goldens stay untouched (MSG-D2).
+ */
+const FIELDS_V2 = [
+  ...FIELDS,
+  (op) => op.msgId ?? '',
+  (op) => op.body ?? '',
+  (op) => op.replyTo ?? '',
+  (op) => op.emoji ?? '',
+  (op) => (op.on ? 'true' : 'false'),
+  (op) => op.upToActor ?? '',
+  (op) => String(op.upToSeq ?? 0),
+  (op) => op.title ?? '',
+  (op) => op.anchorType ?? '',
+  (op) => op.anchorId ?? '',
+  (op) => (op.observersAllowed ? 'true' : 'false'),
+  (op) => op.draft ?? '',
+  (op) => op.attachment ?? '',
+]
+
+export function isRoomKind(kind) {
+  // Exact mirror of Go: kind == "room.manifest" || (len > 4 && prefix "msg.").
+  return kind === 'room.manifest' ||
+    (typeof kind === 'string' && kind.length > 4 && kind.startsWith('msg.'))
+}
+
+/** The canonical signed payload: version prefix + netstring per field. */
 export function signable(op) {
-  const parts = [Buffer.from('meshop.v1')]
-  for (const get of FIELDS) {
+  const v2 = isRoomKind(op.kind)
+  const parts = [Buffer.from(v2 ? 'meshop.v2' : 'meshop.v1')]
+  for (const get of v2 ? FIELDS_V2 : FIELDS) {
     const f = Buffer.from(get(op), 'utf8')
     parts.push(Buffer.from(`${f.length}:`), f, Buffer.from(','))
   }

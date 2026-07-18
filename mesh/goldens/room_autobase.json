@@ -1,0 +1,92 @@
+{
+  "viewLength": 16,
+  "viewDigest": "17c7c8277eee9e833f980993f4f5bd82671589133b411d05078dc6fa51091c55",
+  "stateDigest": "8740d81d1c1496cb1f43011dd66232e7264d1cc06e58b96248156e985700ba26",
+  "state": {
+    "manifest": {
+      "title": "PO-2201 — Steel Coils",
+      "anchorType": "po",
+      "anchorId": "PO-2201",
+      "observersAllowed": true,
+      "actor": "hub",
+      "ts": 100
+    },
+    "messages": [
+      {
+        "msgId": "desk:5",
+        "actor": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "ts": 500,
+        "body": "Can we ship the coils Thursday?"
+      },
+      {
+        "msgId": "phone:6",
+        "actor": "phone",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "ts": 600,
+        "body": "Thursday afternoon works better",
+        "replyTo": "desk:5",
+        "edited": true,
+        "editTs": 700
+      },
+      {
+        "msgId": "butler:10",
+        "actor": "butler",
+        "actorType": "agent",
+        "devicePub": "c853ad0f0cd2b619aea92ceec4fd56a24d6499d584ce79257e45cfd8139b60a7",
+        "ts": 1000,
+        "body": "Drafted the PO-2201 approval — needs a human decision",
+        "draft": "{\"kind\":\"approval.decide\",\"subject\":\"posting:PO-2201\",\"subjectType\":\"posting_draft\",\"decision\":\"approved\"}"
+      },
+      {
+        "msgId": "desk:12",
+        "actor": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "ts": 1200,
+        "deleted": true,
+        "deletedBy": "desk"
+      }
+    ],
+    "reactions": {
+      "phone:6": {
+        "👍": {
+          "desk": true
+        }
+      }
+    },
+    "readCursors": {
+      "desk": {
+        "phone": 7
+      },
+      "phone": {
+        "desk": 5
+      }
+    },
+    "skipped": [],
+    "rejected": [
+      {
+        "seq": 15,
+        "actor": "rogue",
+        "kind": "msg.post",
+        "reason": "capability: no grant for device 332ebe8d…"
+      }
+    ],
+    "applied": 15,
+    "digest": "8740d81d1c1496cb1f43011dd66232e7264d1cc06e58b96248156e985700ba26",
+    "opsHashed": 16,
+    "grants": {
+      "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd": {
+        "role": "writer",
+        "epoch": 0
+      },
+      "c853ad0f0cd2b619aea92ceec4fd56a24d6499d584ce79257e45cfd8139b60a7": {
+        "role": "writer",
+        "epoch": 0
+      },
+      "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0": {
+        "role": "writer",
+        "epoch": 0
+      }
+    }
+  }
+}

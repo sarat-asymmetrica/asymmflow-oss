@@ -206,6 +206,53 @@ over the public DHT, driven by human hands from the ceremony kit
 Next ladder rung when convergence cutover approaches: the PH office machine
 as the always-on mesh peer (owner ruling 2026-07-15).
 
+## Messenger Wave 1 — MISSION M1, the room fold (2026-07-18) · ✅ GREEN
+
+The Messenger campaign's first build (`FABLE_CAMPAIGN_MESSENGER.md` §6):
+"a conversation and a ledger are the same object." Chat is now a domain of
+the same law engine — decisions mirrored in `MESSENGER_DECISIONS.md`
+(MSG-D1..D10).
+
+- **`mesh/reducer/room_domain.go`** — `ApplyRoom`: the deterministic room
+  fold. Vocabulary: `room.manifest` (authority-signed, anchors the room to a
+  business object), `msg.post/edit/delete/react/read`, `msg.draft-op` (the
+  graduation seam — an agent's business-op draft carried as INERT opaque
+  cargo; nothing flows room→business without a human-signed op THERE).
+  Taxonomy split is structural: chat-rule failures → `skipped[]` (typed,
+  never fatal); capability/kernel law → `rejected[]` (Mission D vocabulary).
+  msgId = `{actor}:{seq}` derived, tombstones keep structure + blank content,
+  reactions toggle-and-prune, read cursors per-(reader,writer) monotonic.
+- **Envelope**: room fields ride the existing signed op; the signable payload
+  is now VERSIONED BY KIND (`meshop.v2` for room kinds, exact v1 bytes for
+  everything else) — zero legacy signatures/goldens moved (MSG-D2).
+  `capabilityGate()` extracted (pure motion) so each room Autobase carries
+  its OWN per-room grant plane — membership IS a Mission D grant (MSG-D10).
+- **Tests** (`room_test.go`): schema round-trip, manifest-uniqueness (+
+  authority-required when enforced), msgId law, edit-authorship/last-wins,
+  tombstone, react-toggle, cursor monotonicity, draft inertness, the two
+  folds staying strangers both directions, skipped-vs-rejected taxonomy,
+  **revocation-mid-conversation** (epoch bump between two messages: first
+  folds, second rejected, everywhere), 2×500-permutation convergence
+  (plain + enforced), input immutability, no internal index on the wire.
+- **Gate (`npm run roomspike`)**: 3 real peers (authority hub + desk +
+  phone), genuine offline fork, full conversation (posts, threaded reply,
+  edit, tombstone, react on+off, read cursors, the Butler's `msg.draft-op`
+  via a granted agent DEVICE riding desk's writer core, a rogue device
+  bounced on every peer while its bytes replicate) → byte-identical views
+  + room states, goldened (`goldens/room_autobase.json`, reproducible).
+  13/13 checks green on first run; cross-runtime v2 signing proven (JS
+  signs → Go/WASM verifies).
+- **Regression floor**: `go test ./mesh/...` + smoke + wave1 + missionc +
+  missiond + BOTH holesail stages — all green, legacy goldens untouched.
+
+**The honest line (what Wave 1 does NOT prove):** invites/blind-pairing (M2),
+attachments beyond the reserved envelope field (M3), mirrors/push/mobile
+(M4–M6), any UI (owner placement call still open), any graduation EXECUTION
+into the business base, delivery states beyond replication, and no two-machine
+room ceremony yet (the machinery is the ceremony-proven Mission D stack; the
+room-specific dress rehearsal is a rung for later). Refold-per-read is still
+O(n) — fine for the spike, priced at M3/M4 per campaign §8.
+
 ## Wave 4+ — Mission E (next)
 
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).

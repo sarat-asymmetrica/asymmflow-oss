@@ -27,7 +27,8 @@ import (
 )
 
 type input struct {
-	Config reducer.Config `json:"config"` // Mission D: authorityPub enables capability enforcement
+	Mode   string         `json:"mode,omitempty"` // "" = business fold; "room" = Messenger room fold
+	Config reducer.Config `json:"config"`         // Mission D: authorityPub enables capability enforcement
 	Ops    []reducer.Op   `json:"ops"`
 }
 
@@ -46,7 +47,18 @@ func main() {
 		}
 	}
 
-	state := reducer.ApplyWithConfig(in.Config, in.Ops)
+	// One wasm, two folds (Messenger Wave 1): the mode selects which law runs.
+	// Rooms are separate Autobases, so a given instance only ever folds one.
+	var state any
+	switch in.Mode {
+	case "":
+		state = reducer.ApplyWithConfig(in.Config, in.Ops)
+	case "room":
+		state = reducer.ApplyRoom(in.Config, in.Ops)
+	default:
+		fmt.Fprintln(os.Stderr, "reducer: unknown mode "+in.Mode)
+		os.Exit(5)
+	}
 
 	out, err := json.Marshal(state)
 	if err != nil {

@@ -34,20 +34,25 @@ function loadModule() {
 }
 
 /**
- * applyViaWasm(ops, config?) -> converged State object.
+ * applyViaWasm(ops, config?, mode?) -> converged State object.
  * ops: [{ seq, actor, ts, kind?, ...domain fields }]
  * config: { authorityPub } enables Mission D capability enforcement (signed
  *         ops + current-epoch grants); omit for legacy (A+C) behavior.
- * Returns: { stock, ar, approvals, policies, rejected, applied, digest, ... }
+ * mode: '' (default) = business fold; 'room' = Messenger room fold (Wave 1).
+ * Returns: { stock, ar, ... } (business) or { manifest, messages, ... } (room)
  */
-export function applyViaWasm(ops, config = undefined) {
+export function applyViaWasm(ops, config = undefined, mode = '') {
   const mod = loadModule()
 
   const id = `${process.pid}-${_counter++}`
   const inPath = join(tmpdir(), `mesh-reducer-in-${id}.json`)
   const outPath = join(tmpdir(), `mesh-reducer-out-${id}.json`)
 
-  writeFileSync(inPath, JSON.stringify(config ? { config, ops } : { ops }))
+  writeFileSync(inPath, JSON.stringify({
+    ...(mode ? { mode } : {}),
+    ...(config ? { config } : {}),
+    ops,
+  }))
   // Pre-create the output file so we can hand WASI a writable fd for stdout.
   writeFileSync(outPath, '')
 
