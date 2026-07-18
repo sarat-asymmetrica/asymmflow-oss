@@ -264,14 +264,17 @@ standalone minimal script (isolate the mechanism, then find the logic bug —
 method worth copying), and fixed by identity diff (Set of derived msgIds,
 membership not offset — immune by construction). In this codebase, ANY
 "what's new" computation over a fold view must diff by identity, never by
-position or count. (b) **The gate hold**: the mid-mission brief addendum
-(live display, owner field request) was neither acknowledged nor mentioned
-in the delivery report — caught only because the report's spike tally didn't
-contain the addendum's required check. Standard, both directions: a coder
-receiving a mid-mission addendum ACKNOWLEDGES it in the next report
-(built/not-built/not-received — silence is indistinguishable from a drop);
-a lead reconciles the report against EVERY deliverable including addenda
-before ruling. (c) **The preserve-guard was proven by reality**: the owner's
+position or count. (b) **The gate hold** (corrected record, post-close): the F1/F2 delivery
+report did not mention the mid-mission addendum (live display, owner field
+request), so the lead held the gate on a missing deliverable — the coder's
+separate delta report covering it had in fact been SENT and crossed the hold
+in flight; the work was already built, and the gate ultimately ran on that
+delta. The standard stands with sharper wording: a report delivered while an
+addendum is in progress says so ("addendum received, building — delta report
+follows"), because a report that enumerates deliverables is read as the
+complete set; and the lead reconciles against EVERY deliverable including
+addenda before ruling — the spike-tally mismatch is the reconciliation that
+triggered the (correct-at-the-time) hold. (c) **The preserve-guard was proven by reality**: the owner's
 live kit process (locked native addons) crashed the first blanket-rmSync
 draft mid-rebuild — the exact scenario the guard exists for, encountered
 live, mid-mission; fixed with skip-and-report semantics and re-proven twice.
