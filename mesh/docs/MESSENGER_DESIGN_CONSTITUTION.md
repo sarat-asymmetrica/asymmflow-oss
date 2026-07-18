@@ -56,6 +56,13 @@ participant discarding the base and forgetting the key is true deletion of the *
   resentment — being watched in the human layer — is solved by the social class.
 - ⚖️ Owner ruling: work-related record is owed to the organization; the human layer
   belongs to its owners. Both, structurally, at once.
+- ⚖️ **Amendment (owner-approved 2026-07-18):** a room's *identity* may span a
+  SEQUENCE of Autobases. Because a content encryption key cannot rotate mid-base
+  (MSG-D18, source-verified), a revocation-driven re-key mints a successor Autobase
+  (new bootstrap key + new encryption key) whose `room.manifest` carries a
+  `predecessorRoomKey` pointer — the room is a chain of crypto-epoch containers,
+  its history discoverable across the chain, its live container always the newest.
+  "One room, one Autobase" holds *within* an epoch, not across a re-key.
 
 ## Article III — The Correspondence Model (async law)
 
@@ -220,7 +227,12 @@ DM-mirroring entirely at the stage-2 gate.
 ## Article XII — Amendment
 
 Only the owner amends this constitution. Engineering may propose; articles change by
-explicit ruling, recorded here with date. Stop-and-asks currently open at the owner's
+explicit ruling, recorded here with date.
+
+**Amendment log:**
+- 2026-07-18 — Art. II: room identity = a sequence of crypto-epoch Autobase
+  containers linked by `predecessorRoomKey` (rotate-on-revoke = room re-issue;
+  proposed from MSG-D18's rotation findings, owner-approved same day). Stop-and-asks currently open at the owner's
 desk: mirror encryption/room-key distribution doctrine (M4 stage 2, now prerequisite
 for the social layer per Article XI), mailbox-vs-pure-mirror, ops packaging for the
 office-machine mirror, kernel-screen UI wave, M5+ ladder (mobile/push/calls).
