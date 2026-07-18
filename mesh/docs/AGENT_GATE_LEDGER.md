@@ -177,3 +177,25 @@ target branch — mission briefs must confirm workspace preconditions (the
 files/dirs the mission reads and writes exist on the branch it names) before
 dispatch. A wrong precondition burns a full agent round-trip even when the
 agent behaves perfectly.
+
+**GL-8 [W-UI-1 Mission U2: Correspondence screen] — A mock that paraphrases the fold is a mock of a different system.**
+Two gate fixes on otherwise-clean work (gates all green, five gaps flagged
+GL-1-style). The finding worth the entry: the mock bridge's skip reasons were
+INVENTED wordings ("Skipped: claim is an anchored-room concept — …") instead
+of the fold's verbatim strings ("claims are a work concept",
+"unknown expectation tag", "post requires a body or an attachment" —
+room_domain.go). The report even claimed verbatim-ness, believing the intent
+had been met because the VM passed the mock's string through untouched. But
+verbatim-through-the-VM is only half the law: **the mock IS a stand-in for
+the fold, so its emitted strings must be the fold's own, or the real-transport
+swap silently changes user-visible behavior.** Standard, now law: any mock
+that simulates a law plane copies that plane's exact reason strings from the
+authoritative source (cite file:line in a comment). **Patterns to repeat:**
+(a) the composer-default conflict (brief said '' — constitution Art. III §3
+says whenever) was built to the brief's letter and flagged for ruling rather
+than silently "fixed" — correct; ruling: the constitution wins, lead applied
+the one-line change; (b) declining the tempting ChatTranscript primitive
+because its typing-dots pending state is banned by name (Art. III/IV) — reuse
+that would smuggle in banned semantics is not reuse, it's contraband; (c)
+protocol-complete bridge with UI-less methods (createSocialRoom/redeemInvite/
+exportTranscript) left wired-but-unused rather than inventing unrequested UI.
