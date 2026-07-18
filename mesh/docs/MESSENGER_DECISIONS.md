@@ -374,3 +374,108 @@ runs byte-identical, all seven pre-existing spikes (`roomspike`,
 `invitespike`, `attachspike`, `mirrorspike`, `smoke`, `wave1`, `missionc`,
 `missiond`) green unmodified, `git diff --stat mesh/goldens/` showing only
 the new `transcript_autobase.json` addition.
+
+**MSG-D20 [Mirror] — Rotation is re-issue, made real: room identity is a
+CHAIN of Autobases, the fold records the link and never follows it.**
+(Constitution Art. II amendment 2026-07-18; executes the MSG-D18 GATE
+RULING's doctrine — option (1), room re-issue — which had been ruled but
+not built.) `Op` gains `PredecessorRoomKey` (`mesh/reducer/reducer.go`),
+appended at the END of the v2 field list — MSG-D16's field-list pattern,
+THIRD growth — and in the same relative slot in v3 (right before the
+invite fields, since v3 is defined as "v2 + invite fields"). `RoomManifest`
+carries it exactly as signed; `applyManifest` (`room_domain.go`) copies the
+field with **zero additional fold semantics**: no validation beyond what
+already exists (an empty or garbage pointer is just the authority's own
+signed statement — the fold is not a registry and cannot verify a claim
+about a base it has never seen), and critically **the fold never
+dereferences it**. Following the chain — opening the base a manifest
+points at — is entirely a HOST concern (`reissue-spike.mjs` step 5 does
+exactly this, reading the pointer off decoded state rather than ever
+hardcoding a predecessor key). This mirrors MSG-D8's opaque-cargo
+discipline (`draft`) applied to a different field: the fold's job is to
+carry the fact forward untouched, not to act on it.
+
+**The ceremony (`mesh/host/reissue-room.mjs`, `reissueRoom(...)`).** A
+revocation wave MINTS A SUCCESSOR: a fresh Autobase (new bootstrap key, new
+`encryptionKey`), whose manifest is authority-signed, copies the
+predecessor's title/anchorType/anchorId, and stamps the predecessor's OWN
+base key as `predecessorRoomKey`; then every surviving device gets a
+direct `cap.grant` at epoch 0 of the NEW room. The predecessor is **never
+touched** — no tombstone, no close, no write of any kind — it stays a
+fully readable historical container for whoever already holds its key
+(Art. V's append-only-history-is-owed-to-the-room's-own-past honesty
+class); a second "superseded" op on the OLD base would just be an
+unrequested mutation of history nobody asked for, and the successor's
+manifest pointer is the only linkage the design needs. The function
+returns one fresh `asymm-room2.` code per survivor (MSG-D18's key-rides-
+the-invite envelope, reused verbatim). **Honest framing, load-bearing:**
+the capability grant is ALREADY direct (`cap.grant`, appended before any
+code is built) — the invite plane's `inviteSeed`/`inviteId` fields riding
+inside each code are NOT a redeemable offer (there is no `invite.offer`
+anywhere in a re-issued room; nobody ever calls `invite.redeem` against
+them). They are the KEY-TRANSPORT envelope only — "here is the new room
+and the new content key" for a device whose capability already lives in
+the op log — reusing the one proven bearer-secret string shape rather than
+inventing a second one.
+
+**The gate ruling's stated boundary, verified live, both directions
+(`reissue-spike.mjs` step 4, two independent probes).** Probe A bypasses
+Autobase entirely — a bare Corestore with no encryption option forces an
+explicit block-0 request over a real replication stream — proving bytes
+genuinely cross the wire (so a downstream failure can't be dismissed as
+"never even connected", the same discipline MSG-D18's mirror-spike
+third-node probe established) and that the raw block never contains the
+known plaintext. Probe B bootstraps a full room-mode `MeshNode` on the
+successor's base key with the OLD key (K1) as its `encryptionKey` and
+reports the observed failure shape honestly: in this run, Autobase's own
+linearizer never materializes a view for a wrong-keyed peer at all (no
+thrown error, no timeout — `ops()` resolves fast with an empty view) —
+arguably a STRONGER protection than "returns garbage", stated as an
+observation, not a guaranteed API contract. The OTHER direction is
+equally asserted: a probe bootstrapped on the PREDECESSOR's key with K1 —
+reached by literally reading `predecessorRoomKey` off the successor's own
+manifest, never hardcoded — reads the old conversation cleanly, because
+K1 is honestly still good for the container it was actually issued for
+(desk was a genuine epoch-1 member; Constitution Art. V's physics-stated-
+plainly class, same sentence class as "the fired employee keeps their
+local copy"). **What this does NOT claim:** forward secrecy against a
+device that already held the OLD key against the OLD container — that was
+never on the table (MSG-D18's stated boundary stands, unchanged) — what
+re-issue buys is that the revoked device holds no grant AND no usable key
+for anything NEW.
+
+**Rogue holds no grant in the successor — proven the strongest honest
+way available.** Any writer can append any signed VALUE past Autobase's
+own `apply()` (it only screens the envelope shape); the capability plane
+is a FOLD-time law, not a replication-time one (the same distinction
+MSG-D10/room-spike.mjs already prove for a rogue riding another peer's
+writer core). `reissue-spike.mjs` step 3 therefore SMUGGLES a rogue-signed
+op straight into the successor's raw log and watches the refold reject it
+("no grant for device") on top of the grant table's plain absence — this
+is the strongest available proof precisely because it doesn't rely on
+anything ever being physically prevented from being written; it proves
+the rejection is a property of the law re-run on every peer.
+
+**Field-list growth, re-golden discipline.** Exactly as MSG-D16 predicted,
+every kind that signs v2 or v3 now produces different signature BYTES
+even when the new field is unset, so the four room-family view-pinning
+goldens regenerate this wave (`room_autobase.json`, `invite_autobase.json`,
+`mirror_autobase.json`, `transcript_autobase.json`) — verified: each
+regenerates via `--update-golden`, then reproduces byte-identically on a
+plain re-run (transcript, the shape GL-2 flags for real per-node
+causal-chain proof, x3). `attach_autobase.json` shows a genuine ZERO diff,
+explained rather than silently accepted: its golden was scoped (GL-4c) to
+state digest + deep state projection only, never a raw view digest, so a
+signature-byte-only change is structurally invisible to it — the same
+"absent diff, explained" discipline GL-3(b) established for the mirror
+golden under encryption. `stateDigest` is byte-identical on every
+regenerated golden too, confirming the new field carries zero fold
+semantics in every PRE-EXISTING scenario (none of them ever set
+`predecessorRoomKey`). The four legacy gates (`smoke`, `wave1`,
+`missionc`, `missiond`) pass unmodified — no legacy kind ever selects v2/
+v3. New spike: `reissue-spike.mjs` / `npm run reissuespike`, golden
+`reissue_autobase.json` — single-authority-writer-per-node causal
+chaining throughout (desk only acts on the successor after decoding a
+code that provably didn't exist until the ceremony ran — a sequential
+handoff, not a concurrent fork), 3 plain reproducibility runs, digests
+identical every time.

@@ -571,6 +571,102 @@ func TestObserverCannotClaim(t *testing.T) {
 	}
 }
 
+// ---------- predecessor room pointer (Constitution Art. II amendment, MSG-D20) ----------
+
+func TestManifestPredecessorRoomKeyFolds(t *testing.T) {
+	predecessor := "aa" + strings.Repeat("bb", 31) // 64 hex chars, a plausible base key shape
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201", PredecessorRoomKey: predecessor},
+	})
+	if rs.Manifest == nil || rs.Manifest.PredecessorRoomKey != predecessor {
+		t.Fatalf("predecessor pointer must fold onto the manifest exactly as signed: %+v", rs.Manifest)
+	}
+	baseline := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"},
+	})
+	if rs.Digest == baseline.Digest {
+		t.Fatalf("a manifest carrying a predecessor pointer must digest differently than one without")
+	}
+}
+
+func TestManifestPredecessorNoValidationByDesign(t *testing.T) {
+	// Gate-adopted from the coder's own flag (MSG-D20): the fold records the
+	// pointer, it does NOT validate or dereference it — a garbage pointer is
+	// the authority's own signed statement, and the fold is not a registry.
+	// This test pins the ABSENCE of validation as intent, so a future "helpful"
+	// length/hex check shows up as a deliberate law change, not a drive-by fix.
+	garbage := "not-a-key-at-all 🤷"
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201", PredecessorRoomKey: garbage},
+	})
+	if rs.Manifest == nil || rs.Manifest.PredecessorRoomKey != garbage {
+		t.Fatalf("a garbage predecessor pointer must fold exactly as signed (no validation by design): %+v", rs.Manifest)
+	}
+	if len(rs.Skipped) != 0 || len(rs.Rejected) != 0 {
+		t.Fatalf("no skip/reject for pointer shape — the fold is not a registry: %+v %+v", rs.Skipped, rs.Rejected)
+	}
+}
+
+func TestManifestWithoutPredecessorUnchanged(t *testing.T) {
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"},
+	})
+	if rs.Manifest == nil || rs.Manifest.PredecessorRoomKey != "" {
+		t.Fatalf("first-epoch manifest must have an empty predecessor pointer: %+v", rs.Manifest)
+	}
+	b, err := json.Marshal(rs.Manifest)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if strings.Contains(string(b), "predecessorRoomKey") {
+		t.Fatalf("empty predecessor pointer must not appear on the wire (omitempty): %s", b)
+	}
+}
+
+func TestOpSchemaRoundTripPredecessorRoomKey(t *testing.T) {
+	predecessor := "cc" + strings.Repeat("dd", 31)
+	op := Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", PredecessorRoomKey: predecessor}
+	b, err := json.Marshal(op)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	var back Op
+	if err := json.Unmarshal(b, &back); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if back != op {
+		t.Fatalf("round-trip mismatch:\n  want %+v\n  got  %+v", op, back)
+	}
+	legacy, _ := json.Marshal(Op{Seq: 1, Actor: "a", TS: 1, SKU: "TX", Delta: 2})
+	if strings.Contains(string(legacy), "predecessorRoomKey") {
+		t.Fatalf("legacy op JSON leaked the predecessor room field: %s", legacy)
+	}
+}
+
+// mixedRoomOpsWithPredecessor: mixedRoomOps' manifest re-issued with a
+// predecessor pointer — the permutation grinder for MSG-D20 (new convergence
+// seed 2205, per the mission brief).
+func mixedRoomOpsWithPredecessor() []Op {
+	ops := mixedRoomOps()
+	ops[0].PredecessorRoomKey = "ee" + strings.Repeat("ff", 31)
+	return ops
+}
+
+func TestRoomConvergence500PermutationsPredecessor(t *testing.T) {
+	canonical := roomFold(t, mixedRoomOpsWithPredecessor())
+	if canonical.Manifest == nil || canonical.Manifest.PredecessorRoomKey == "" {
+		t.Fatalf("scenario anchor wrong: predecessor pointer missing from %+v", canonical.Manifest)
+	}
+	rng := rand.New(rand.NewSource(2205)) // seeded: the test itself must be deterministic
+	for i := range 500 {
+		shuffled := mixedRoomOpsWithPredecessor()
+		rng.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
+		if got := roomFold(t, shuffled); got.Digest != canonical.Digest {
+			t.Fatalf("permutation %d diverged: %s != %s", i, got.Digest, canonical.Digest)
+		}
+	}
+}
+
 // ---------- determinism ----------
 
 // mixedRoomOps: the full vocabulary in one scenario, unenforced (envelope-only),

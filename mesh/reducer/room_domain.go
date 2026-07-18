@@ -41,6 +41,13 @@ type RoomManifest struct {
 	Observers  bool   `json:"observersAllowed"`
 	Actor      string `json:"actor"` // who declared the room
 	TS         int64  `json:"ts"`
+	// PredecessorRoomKey (Constitution Art. II amendment, MSG-D20): set only
+	// on a room re-issued after a revocation wave, carrying the PREVIOUS
+	// epoch's Autobase base key. Stored exactly as signed — the fold records
+	// this pointer, it does not validate or dereference it (an offline
+	// verifier/peer cannot follow another base; navigation is a host
+	// concern). Empty for a first-epoch room.
+	PredecessorRoomKey string `json:"predecessorRoomKey,omitempty"`
 }
 
 // RoomMessage is one converged message. Deleted messages keep their id and
@@ -367,12 +374,13 @@ func applyManifest(rs *RoomState, cfg Config, enforce bool, op Op) string {
 		return "manifest already declared (first in canonical order wins)"
 	}
 	rs.Manifest = &RoomManifest{
-		Title:      op.Title,
-		AnchorType: op.AnchorType,
-		AnchorID:   op.AnchorID,
-		Observers:  op.Observers,
-		Actor:      op.Actor,
-		TS:         op.TS,
+		Title:              op.Title,
+		AnchorType:         op.AnchorType,
+		AnchorID:           op.AnchorID,
+		Observers:          op.Observers,
+		Actor:              op.Actor,
+		TS:                 op.TS,
+		PredecessorRoomKey: op.PredecessorRoomKey,
 	}
 	return ""
 }

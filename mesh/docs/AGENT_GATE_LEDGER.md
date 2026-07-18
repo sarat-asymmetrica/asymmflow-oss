@@ -111,3 +111,26 @@ limits, not just its successes. **Confirmed on review (the coder's flagged
 uncertainty):** `createMeshNode` with no `authorityPub` IS the correct
 social-room shape (unenforced fold, no admin in the room — Art. II / MSG-D17
 vocabulary); the from-scratch construction was right.
+
+**GL-5 [W-human-3 Mission A: room re-issue] — Distrust your own passing test; the ambiguous green is the dangerous one.**
+Third consecutive zero-fix gate on the coder's code. **Pattern to repeat,
+the headline:** the coder's first wrong-key probe PASSED (`ops.length === 0`)
+and it flagged its own green as ambiguous — "can't decrypt" and "never
+replicated anything" produce the same empty result — then rebuilt the probe
+to force a real block over a real replication stream and assert both
+arrival AND opacity separately. A test that cannot distinguish success from
+vacuous success is not a test; interrogating your own green is senior
+behavior. Also repeat-worthy: (a) the self-caught seq-restart bug (canonical
+order sorts by Seq first — a successor room's ops must CONTINUE the
+ceremony's counter, not restart at 1; inline-commented so it can't
+regress silently); (b) observed-vs-contract honesty in probe B (Autobase's
+fail-closed empty view reported as an observation of this version, not
+asserted as an API guarantee); (c) the honest-envelope framing of reusing
+`asymm-room2.` codes as pure key transport when the grant is already
+direct — reusing one proven bearer-string format beats inventing a second.
+**Gate adoptions:** the coder's flagged what-about-garbage-pointers idea
+became `TestManifestPredecessorNoValidationByDesign` — pinning the ABSENCE
+of validation as law so a future "helpful" shape-check reads as a
+deliberate change; its in-process-hermetic interpretation (no DHT/mirror
+when the mission proves ceremony+crypto, not delivery) was accepted as
+correct scope discipline.

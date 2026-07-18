@@ -108,6 +108,8 @@ func signableV1(op Op) []byte {
 // Expectation/Assignee (MSG-D16) are appended at the END of the field list —
 // the v2 field list GROWS, but every earlier field keeps its position, so
 // this is the only re-golden this wave causes (room goldens only).
+// PredecessorRoomKey (MSG-D20) is the field list's THIRD growth, appended
+// after Assignee for the same reason.
 // MIRROR: mesh/host/capability.mjs FIELDS_V2 must match byte-for-byte.
 func signableV2(op Op) []byte {
 	fields := []string{
@@ -150,6 +152,8 @@ func signableV2(op Op) []byte {
 		// expectation tags + claim/assign (MSG-D16, appended at the end)
 		op.Expectation,
 		op.Assignee,
+		// predecessor room pointer (MSG-D20, appended at the end — third growth)
+		op.PredecessorRoomKey,
 	}
 	return netstrings("meshop.v2", fields)
 }
@@ -198,6 +202,9 @@ func signableV3(op Op) []byte {
 		// expectation tags + claim/assign (MSG-D16, appended at the end of v2)
 		op.Expectation,
 		op.Assignee,
+		// predecessor room pointer (MSG-D20, same relative slot as v2: right
+		// before the invite fields, since v3 = "v2 + invite fields")
+		op.PredecessorRoomKey,
 		// invite fields (Mission M2)
 		op.InviteID,
 		op.InvitePub,

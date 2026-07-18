@@ -105,6 +105,15 @@ type Op struct {
 	Expectation string `json:"expectation,omitempty"` // msg.post: ""/"whenever"/"today"/"urgent" (default "" = whenever); ignored on msg.edit
 	Assignee    string `json:"assignee,omitempty"`    // room.claim: actor to assign; "" = release
 
+	// room.manifest ONLY (Constitution Art. II amendment 2026-07-18, MSG-D20:
+	// room identity = a sequence of crypto-epoch Autobase containers). The
+	// successor room's manifest carries the predecessor's OWN base key — the
+	// fold records this pointer, it does not follow it (navigation across
+	// bases is a host concern, not fold law). Appended at the END of the v2
+	// field list (MSG-D16's pattern, third growth); same relative slot in v3,
+	// before the invite fields (v3 is defined as "v2 + invite fields").
+	PredecessorRoomKey string `json:"predecessorRoomKey,omitempty"`
+
 	// invite.offer / invite.redeem / invite.revoke (Mission M2 — invites are
 	// signed grant OFFERS, enforced by the fold: expiry, use-count, revocation.
 	// Covered by the "meshop.v3" signable, selected by kind (MSG-D11).

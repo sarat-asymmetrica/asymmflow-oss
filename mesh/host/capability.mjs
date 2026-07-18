@@ -62,11 +62,17 @@ const FIELDS_V2 = [
   // expectation tags + claim/assign (MSG-D16, appended at the end)
   (op) => op.expectation ?? '',
   (op) => op.assignee ?? '',
+  // predecessor room pointer (MSG-D20, appended at the end — third growth;
+  // room.manifest ONLY, but the signable includes it unconditionally like
+  // every other room field)
+  (op) => op.predecessorRoomKey ?? '',
 ]
 
 /**
  * Invite fields appended for the "meshop.v3" payload — MIRROR of signableV3().
  * Selected ONLY by invite.* kinds (MSG-D11): v1 AND v2 bytes stay untouched.
+ * predecessorRoomKey rides along inside FIELDS_V2's spread, in the same
+ * relative slot as v2 — right before the invite fields.
  */
 const FIELDS_V3 = [
   ...FIELDS_V2,
