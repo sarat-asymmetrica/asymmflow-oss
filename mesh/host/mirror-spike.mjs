@@ -1,4 +1,4 @@
-// mirror-spike.mjs — Mission M4 stage 1: offline delivery via a blind mirror.
+// mirror-spike.mjs — Mission M4 stage 2: the mirror goes BLIND.
 //
 // The receptionist-machine story: desk writes into the PO room and goes HOME.
 // The phone was off the whole time. When it wakes, the desk is gone — but the
@@ -7,17 +7,24 @@
 // ever being online together. That is the property WhatsApp buys with Meta's
 // servers; here it is one Apache-2.0 process the office owns.
 //
-// Honesty first (stage-1 scope): these cores are PLAINTEXT, so this mirror
-// could read what it holds. True blindness = encrypted autobase cores
-// (Autobase encryptionKey) — deliberately stage 2, because key distribution
-// for rooms is a Commander doctrine conversation (campaign §5), not a default
-// an engineer should pick. What stage 1 proves is the DELIVERY mechanics:
-// mirror-mediated replication of a capability-enforced room, end to end.
+// Stage 2 (owner-ratified doctrine, 2026-07-18: "key rides the invite,
+// rotate-on-revoke"): the room's Autobase carries an `encryptionKey`
+// (mesh-node.mjs; verified against the installed autobase source —
+// autobase/index.js:341-368, autobase/lib/store.js:246-252 — that this
+// encrypts the oplog AND every named view core end-to-end, not just
+// transport). The key travels with the room key inside a SINGLE
+// `asymm-room2.` invite code (invite-code.mjs) — one paste, capability AND
+// content key together. The mirror now holds real ciphertext: it still
+// delivers the room (blind-peering never needed to read it — that was
+// always the point of "blind" peering), but it can no longer make sense of
+// what it's carrying. What stage 1 proved was the DELIVERY mechanics;
+// stage 2 proves the mirror is honestly blind while still doing its job.
 //
 // Topology (all on a LOCAL testnet DHT — hermetic, no public network):
 //   mirror — blind-peer server (rocksdb + hyperswarm, its own keypair)
-//   desk   — mesh room node + BlindPeering client → pushes the room
-//   phone  — comes online AFTER desk is fully closed; same mirror key;
+//   desk   — mesh room node (encrypted) + BlindPeering client → pushes the room
+//   phone  — comes online AFTER desk is fully closed; same mirror key AND
+//            the same room2 invite code (decoded, not hand-copied);
 //            pulls the room through wakeup + mirror replication
 //
 // Run: npm run mirrorspike
@@ -26,8 +33,10 @@ import HyperDHT from 'hyperdht'
 import BlindPeer from 'blind-peer'
 import BlindPeering from 'blind-peering'
 import Wakeup from 'protomux-wakeup'
+import Corestore from 'corestore'
 import { createMeshNode, waitFor } from './mesh-node.mjs'
 import { deviceKeys, signOp, grantOp } from './capability.mjs'
+import { encodeInviteCode, decodeInviteCode } from './invite-code.mjs'
 import { readFileSync, writeFileSync, existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
@@ -47,11 +56,17 @@ const PK = (b) => Buffer.alloc(32, b)
 const AUTH = deviceKeys(Buffer.alloc(32, 0xd4))
 const DESK = deviceKeys(Buffer.alloc(32, 0xe5))
 
-console.log('Messenger M4 stage 1 — mirror gate: the room outlives the sender\n')
+console.log('Messenger M4 stage 2 — the mirror goes blind\n')
 
 const tmp = mkdtempSync(join(tmpdir(), 'mesh-mirror-'))
 const testnet = await createTestnet(3)
 const bootstrap = testnet.bootstrap
+
+// Synthetic fixture bytes for the room's content encryption key (canon rule,
+// MSG-D13's precedent: fixtures are synthetic patterns, not real secrets).
+// Deterministic on purpose — this spike proves the CEREMONY (encode on desk,
+// decode on phone, key rides the invite), not key-generation randomness.
+const ROOM_ENCRYPTION_KEY = Buffer.alloc(32, 0x77)
 
 // ── The always-on mirror ──
 const mirror = new BlindPeer(join(tmp, 'mirror-rocks'), { bootstrap })
@@ -60,11 +75,12 @@ await mirror.listen()
 const MIRROR_KEY = mirror.publicKey
 console.log(`  mirror up: ${MIRROR_KEY.toString('hex').slice(0, 16)}… (local testnet)\n`)
 
-// ── Desk: writes the room, pushes it to the mirror, goes home ──
+// ── Desk: writes the room (ENCRYPTED), pushes it to the mirror, goes home ──
 const deskWakeup = new Wakeup()
 const desk = await createMeshNode({
   storage: join(tmp, 'desk'), primaryKey: PK(0x2b),
   authorityPub: AUTH.pubHex, mode: 'room', wakeup: deskWakeup,
+  encryptionKey: ROOM_ENCRYPTION_KEY,
 })
 const ROOM_KEY = desk.key
 
@@ -99,11 +115,30 @@ await desk.close()
 await deskDht.destroy()
 check('desk is fully offline (store, autobase, dht all closed)', true)
 
-// ── Phone: wakes AFTER the desk is gone ──
+// ── The key rides the invite: desk encodes ONE asymm-room2 code carrying
+// the room key, the authority, AND the content encryption key. The invite
+// plane's own fields (inviteSeed/inviteId) are along for the ride here —
+// this spike proves the KEY ceremony, not grant redemption (invite-spike.mjs
+// owns that). ──
+const INVITE_SEED = Buffer.alloc(32, 0x9a) // synthetic fixture, unused beyond the code envelope here
+const roomInviteCode = encodeInviteCode({
+  baseKey: ROOM_KEY, authorityPub: AUTH.pubHex, inviteSeed: INVITE_SEED, inviteId: 'hub:99',
+  encryptionKey: ROOM_ENCRYPTION_KEY,
+})
+check('key-rides-the-invite: the code is versioned asymm-room2 (encrypted room)', roomInviteCode.startsWith('asymm-room2.'))
+
+const decodedInvite = decodeInviteCode(roomInviteCode)
+check('key-rides-the-invite: decode recovers the room key + authority unchanged',
+  decodedInvite.baseKey === ROOM_KEY && decodedInvite.authorityPub === AUTH.pubHex)
+check('key-rides-the-invite: decode recovers the exact content encryption key',
+  Buffer.compare(decodedInvite.encryptionKey, ROOM_ENCRYPTION_KEY) === 0)
+
+// ── Phone: wakes AFTER the desk is gone, joins using ONLY the decoded invite ──
 const phoneWakeup = new Wakeup()
 const phone = await createMeshNode({
   storage: join(tmp, 'phone'), primaryKey: PK(0x3c),
-  bootstrap: ROOM_KEY, authorityPub: AUTH.pubHex, mode: 'room', wakeup: phoneWakeup,
+  bootstrap: decodedInvite.baseKey, authorityPub: decodedInvite.authorityPub, mode: 'room', wakeup: phoneWakeup,
+  encryptionKey: decodedInvite.encryptionKey,
 })
 const phoneDht = new HyperDHT({ bootstrap })
 const phoneBlind = new BlindPeering(phoneDht, phone.store, { wakeup: phoneWakeup, keys: [MIRROR_KEY] })
@@ -123,12 +158,44 @@ check('the conversation arrived intact (reply threading survives the mirror)',
 check('capability plane crossed the mirror too (grant table + epoch)',
   phoneState.grants?.[DESK.pubHex]?.epoch === 0 && phoneState.applied === TOTAL)
 
-// ── The honest blindness check (stage-1 truth, not a boast) ──
+// ── The honest blindness check (stage-2 truth — this is what flips) ──
+// Stage 1 asserted the mirror's raw blocks WERE plaintext. Stage 2 must prove
+// the opposite: the mirror holds real ciphertext, and even a fresh peer that
+// pulls those exact bytes without the key gets nothing readable.
+const KNOWN_PLAINTEXT = Buffer.from('Shipment cleared')
+
 const mirrorCore = mirror.store.get(Buffer.from(ROOM_KEY, 'hex'))
 await mirrorCore.ready()
 const rawBlock = await mirrorCore.get(0, { wait: false }).catch(() => null)
-check('honesty: stage-1 mirror holds PLAINTEXT blocks (encryption = stage 2, Commander doctrine)',
-  rawBlock !== null)
+check('honesty: the mirror still HOLDS the block (delivery mechanics unchanged, MSG-D15)', rawBlock !== null)
+check("honesty: the mirror's raw block does NOT contain the known plaintext (real blindness, not stage-1's boast)",
+  rawBlock !== null && !rawBlock.includes(KNOWN_PLAINTEXT))
+
+// A THIRD node — no encryptionKey at all — pulls the SAME bytes directly off
+// the mirror's store via plain in-process replication (the mesh-node.mjs
+// connect() pattern) and still cannot see the plaintext. This is the
+// strongest "keyless probe" the installed APIs allow: it is not reading
+// mirror.store's cache, it independently downloads the block over the wire.
+const probeStore = new Corestore(join(tmp, 'probe'), { primaryKey: PK(0x4d), unsafe: true })
+const probeCore = probeStore.get(Buffer.from(ROOM_KEY, 'hex')) // deliberately NO encryption option
+await probeCore.ready()
+const probeS1 = mirror.store.replicate(true)
+const probeS2 = probeStore.replicate(false)
+probeS1.pipe(probeS2).pipe(probeS1)
+// wait:true (default) actively requests block 0 over the fresh replication
+// stream — contiguousLength alone never moves without a real block request.
+const probeTimeout = new Promise((_, reject) =>
+  setTimeout(() => reject(new Error('keyless probe: block 0 never arrived')), 15000))
+const probeBlock = await Promise.race([probeCore.get(0), probeTimeout])
+check('honesty: a keyless THIRD node, independently pulling the same room, also cannot see the plaintext',
+  probeBlock !== null && !probeBlock.includes(KNOWN_PLAINTEXT))
+probeS1.destroy(); probeS2.destroy()
+await probeStore.close()
+
+// And the peer that DOES hold the key reads it fine — encryption is real,
+// not merely "the mirror never bothered to decode."
+check('the phone (holding the decoded key) reads the known plaintext just fine',
+  phoneState.messages.some((m) => m.body === 'Shipment cleared customs at 16:40.'))
 
 if (UPDATE_GOLDEN || !existsSync(GOLDEN)) {
   writeFileSync(GOLDEN, JSON.stringify({ viewLength: TOTAL, viewDigest: deskView, stateDigest: deskState.digest, state: deskState }, null, 2) + '\n')

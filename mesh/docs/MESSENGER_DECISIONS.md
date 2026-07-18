@@ -195,3 +195,121 @@ predecessor. (4) Last claim in canonical order wins, exactly like
 devices cannot claim: no new code — the existing role-floor check in
 `ApplyRoom` runs before the kind switch, proven by a dedicated test rather
 than assumed.
+
+**MSG-D18 [Mirror] — The mirror goes blind: Autobase's own `encryptionKey`, the key rides the invite, rotation is NOT free.**
+(M4 stage 2, owner-ratified doctrine 2026-07-18: "key rides the invite +
+rotate-on-revoke".) Verified in the INSTALLED `autobase@7.11.x` source
+before writing a line: the constructor accepts `handlers.encryptionKey` (a
+32-byte Buffer) — `autobase/index.js:341-368` (`_runPreOpen`) threads it
+into `boot()` (`autobase/lib/boot.js:104-157`), which persists it in the
+local/bootstrap core's userData and turns on an `EncryptionView` for the
+local writer AND the primary bootstrap core (`index.js:365-369`). Critically,
+`ViewStore.getEncryption()` (`lib/store.js:246-252`) applies the SAME base
+encryption to every NAMED view core, not just the oplog — so `createMeshNode`
+(`mesh-node.mjs`)'s `encryptionKey` option encrypts the linearized view
+(`inventory-ops` core) as well as the writer oplogs, end to end. No
+Hypercore-level per-core `encryption:{key}` option was needed; Autobase's
+own handler is the real, complete mechanism — no workaround required. A
+node that omits the option never sets `this.encrypted`; it neither asserts
+nor decrypts, it just can't make sense of the ciphertext it replicates.
+
+**Key rides the invite (room2).** `invite-code.mjs` gained a second wire
+version: `asymm-room2.` (6 dot-separated z32 parts, the room's
+`encryptionKey` appended as the 6th) alongside the untouched `asymm-room1.`
+(5 parts). `encodeInviteCode` picks room2 only when an `encryptionKey` is
+passed; `decodeInviteCode` accepts both and always returns an
+`encryptionKey` field (Buffer for room2, `null` for room1). The existing
+invite-spike scenario (unencrypted rooms) never passes the option and stays
+on the room1 path byte-for-byte — proven by the untouched gate passing
+unmodified. One code is now capability AND content key together; the module
+takes no position on how the string travels (MSG-D11's transport-≠-capability
+stance, unchanged by encryption riding along) — that stays the human's
+choice, documented in the module's own header comment as a bearer-secret
+warning.
+
+**The mirror goes honestly blind (mirror-spike.mjs stage 2).** Desk creates
+the room with a synthetic fixture key (`Buffer.alloc(32, 0x77)` — canon rule,
+MSG-D13's precedent), encodes a real `asymm-room2.` code, and phone joins
+using ONLY the decoded fields (`baseKey`, `authorityPub`, `encryptionKey`) —
+the ceremony is the proof, not a hand-copied constant. The stage-1 assertion
+("the mirror holds plaintext") FLIPS: the gate now asserts the mirror's raw
+block does NOT contain the known plaintext substring, AND adds a genuinely
+independent keyless probe — a THIRD node, fresh storage, no encryption
+option, pulling the identical bytes directly off the mirror over its own
+replication stream — which also can't see the plaintext. The phone, holding
+the decoded key, reads it fine. Delivery mechanics are unchanged (the mirror
+still demonstrably holds the block — MSG-D15's contiguousLength check
+stays). Golden note, honestly recorded: the pinned `viewDigest`/`stateDigest`
+in `mirror_autobase.json` are computed over DECODED op values
+(`node.ops()`/`node.state()`), and encryption is transparent to a peer that
+holds the key — so regenerating the golden under encryption produced BYTES
+IDENTICAL to the pre-existing stage-1 golden (`git diff` on
+`mesh/goldens/` is empty across the whole gate run, mirror included).
+Encryption is a storage/transport property, not a value-shape property; the
+golden correctly can't see it, and that is the right invariant, not a
+missed regeneration. Reproducibility: 3 plain runs post-update, digests
+identical every time (GL-2 standard; this scenario is single-writer/
+causally-chained, so a view-digest golden is valid per GL-2's letter).
+
+**Rotation — investigated, NOT implemented (stop-and-report, per the
+brief).** The installed source has no API to change an Autobase's content
+`encryptionKey` mid-life: `boot.js:104-113` reads the key back from the
+local core's OWN userData on every subsequent boot and reuses it
+unconditionally, regardless of what's passed to the constructor; the only
+"rotation" that exists in this version is `blindEncryption`'s re-wrap flow
+(`boot.js:128-141`, `index.js:452-461`), which re-encrypts the STORED
+encryptionKey blob under a new wrapping/envelope key — it never changes the
+actual content-encryption key devices need to read messages. Grep for
+`rotat` across `autobase/index.js` and `autobase/lib/*.js` turns up nothing
+else; `_rotateLocalWriter` is an unrelated writer-core-swap mechanism. The
+consequence, undecorated: today, a revoked device that already holds the
+room's `encryptionKey` can still decrypt every message that ever crosses
+the mirror in that room, forever — the existing capability-epoch bump
+(Mission D) revokes WRITE law but not READ, because read law here is a
+symmetric key, not a signature check. Options for the lead's ruling, in
+order of how much this mission's constraints (no reducer changes, no new
+deps) would tolerate: (1) **Room re-issue as the epoch boundary** — a
+revocation wave means minting a NEW Autobase (new bootstrap key, new
+`encryptionKey`), carrying a `predecessorRoomKey` pointer in
+`room.manifest` so history is discoverable but the live room is a fresh
+crypto container; every surviving grant gets re-issued via a fresh
+`asymm-room2.` code. This fits the owner's own phrase
+("rotate-on-revoke = epoch bump = new key redistributed with re-issued
+grants") most literally, costs no reducer change to BUILD (the manifest
+field is additive, deferred to whichever wave actually implements it), but
+means "the room" is no longer one eternal Autobase — a topology change the
+Constitution doesn't currently anticipate. (2) **Application-layer
+per-message envelope encryption**, independent of Autobase's own
+`encryptionKey` (which would then just be defense-in-depth, left constant)
+— message bodies get their own rotatable symmetric key distributed via
+re-issued grants, so revocation truly forward-secures new content. This is
+the only option that gives real forward secrecy without a new base, but it
+is a real new mechanism touching the signable/reducer boundary (new
+encrypted-body fields need to exist in the v2/v3 payload) — explicitly the
+kind of reducer change this mission was told to stop and flag rather than
+build. (3) **Accept the gap as documented, not solved** — ship room2 as
+"confidentiality against the mirror and new joiners," explicitly NOT
+"forward secrecy against a device that already had the key," and let the
+Constitution (Article XI/XII) record that as the stated boundary until a
+future wave picks (1) or (2). No implementation attempted for any of these;
+this entry exists so the next agent inherits the finding instead of
+rediscovering it.
+
+**GATE RULING (technical lead, 2026-07-18): option (1) is doctrine; option
+(3) is the honest interim truth.** Rotation = ROOM RE-ISSUE: a revocation
+wave mints a new Autobase (new bootstrap key + new `encryptionKey`), the
+successor's `room.manifest` carries a `predecessorRoomKey` pointer, and
+surviving grants are re-issued via fresh `asymm-room2.` codes — the room
+becomes a sequence of crypto-epoch containers, which is the owner's ratified
+phrase ("epoch bump = new key redistributed with re-issued grants") taken at
+its word. Option (2) (application-layer envelope crypto) is REJECTED for
+now: it invents a second encryption mechanism and touches the signable
+boundary while (1) satisfies the doctrine with machinery we already trust.
+Until re-issue is implemented (future wave), room2's stated boundary is
+option (3)'s sentence verbatim: confidentiality against the mirror and new
+joiners, NOT forward secrecy against a device that already held the key —
+same honesty class as "the fired employee keeps their local copy of
+history" (Constitution Art. V: physics, stated plainly). The room-as-
+sequence topology touches Constitution Art. II's "one eternal room" framing
+— flagged to the owner for an Art. XII amendment; engineering proposes,
+only the owner amends.

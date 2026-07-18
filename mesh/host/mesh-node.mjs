@@ -51,8 +51,24 @@ function isOp(v) {
  *   wakeup       — optional shared protomux-wakeup instance (Mission M4):
  *                  pass the SAME instance to BlindPeering so mirror sockets
  *                  carry the autobase's wakeup/announce protocol.
+ *   encryptionKey — optional 32-byte Buffer (Mission M4 stage 2): threaded
+ *                  straight into Autobase's own `handlers.encryptionKey`.
+ *                  Verified in the installed source (autobase/index.js:341-368,
+ *                  `_runPreOpen`) that this key is NOT a wrapper around our op
+ *                  values — it drives `boot()` (autobase/lib/boot.js:104-157)
+ *                  to persist the key in the local/bootstrap core userData and
+ *                  turn on `EncryptionView` for the local writer AND the
+ *                  primary bootstrap core; `ViewStore.getEncryption()`
+ *                  (autobase/lib/store.js:246-252) applies the SAME base
+ *                  encryption to every NAMED view core too (not just the
+ *                  oplog) — so both the linearized oplog and the
+ *                  `inventory-ops` view this node opens below are encrypted
+ *                  end-to-end. A node that omits this option never sets
+ *                  `this.encrypted`, so it neither asserts nor decrypts —
+ *                  it just can't make sense of the ciphertext it replicates
+ *                  (that is what makes the mirror blind, part C).
  */
-export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub, mode = '', wakeup } = {}) {
+export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub, mode = '', wakeup, encryptionKey } = {}) {
   // unsafe:true only acknowledges the PINNED primaryKey (test determinism);
   // production nodes omit primaryKey and get random identities.
   const store = new Corestore(storage, primaryKey ? { primaryKey, unsafe: true } : {})
@@ -61,6 +77,7 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
   const base = new Autobase(store, boot, {
     valueEncoding: 'json',
     ...(wakeup ? { wakeup } : {}),
+    ...(encryptionKey ? { encryptionKey } : {}),
     ackInterval: 100, // eager acks help the linearizer merge causal forks
     open(viewStore) {
       return viewStore.get('inventory-ops', { valueEncoding: 'json' })

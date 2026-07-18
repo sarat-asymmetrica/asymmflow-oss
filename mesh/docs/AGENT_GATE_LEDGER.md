@@ -69,3 +69,25 @@ asserts the view is CONVERGED across peers, not what order it converged to.
 3+ runs, not 2. **Watch-class:** room-spike (lines ~109-111) and invite-spike
 share the concurrent-fork structure and still pin view digests; stable across
 dozens of runs so far — if either EVER flakes, apply this fix, don't debug.
+
+**GL-3 [W-mirror-2 Mission 2: encryption] — Source-citation discipline at its best; the report IS part of the deliverable.**
+**Patterns to repeat, all three:** (a) every third-party API claim carried a
+file+line citation from the INSTALLED source, read BEFORE the README was
+cross-checked — including the load-bearing find (`ViewStore.getEncryption`,
+store.js:246-252) proving named view cores encrypt too, and the negative
+finding (no content-key rotation API exists; boot.js:104-113 reuses the
+persisted key unconditionally). (b) When the mirror golden regenerated
+BYTE-IDENTICAL under encryption, the coder didn't let it silently look like
+a missed step — it documented WHY (goldens pin decoded values; encryption is
+a storage/transport property, invisible to a keyed peer). Explaining an
+absent diff is as important as explaining a present one. (c) The
+rotate-on-revoke task was investigate-and-report; the coder resisted
+building any of its three options and ranked them honestly, including
+labeling its own ranking as judgment rather than fact. **Anti-pattern:** the
+agent went idle WITHOUT sending its final report and had to be pinged — the
+code was done, the mission wasn't. The report is a first-class deliverable:
+a gate cannot run on an unexplained diff, and an idle agent with undelivered
+findings is indistinguishable from a crashed one. Deliver the report, THEN
+go idle. **Gate outcome:** zero code changes required by the lead — first
+mission this wave to pass the gate untouched; rotation ruled (room re-issue
+doctrine, MSG-D18 addendum) from the coder's findings.
