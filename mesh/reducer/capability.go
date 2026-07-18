@@ -49,7 +49,26 @@ type GrantState struct {
 // JS and Go must produce byte-identical payloads and JSON gives neither stable
 // key order nor identical escaping across the two runtimes.
 // MIRROR: mesh/host/capability.mjs signable() must match this byte-for-byte.
+//
+// VERSIONING (MSG-D2): the payload version is selected by op.Kind. Room kinds
+// (room.manifest / msg.*) sign "meshop.v2" = the v1 field list PLUS the room
+// fields appended. Every legacy kind keeps the exact v1 bytes, so Mission A-D
+// signatures, test vectors, and goldens are untouched. Room fields present on
+// a NON-room op are therefore unsigned — and ignored: no legacy handler reads
+// them, and the room fold only ever sees room kinds.
 func signable(op Op) []byte {
+	if isRoomKind(op.Kind) {
+		return signableV2(op)
+	}
+	return signableV1(op)
+}
+
+// isRoomKind reports whether kind belongs to the Messenger room vocabulary.
+func isRoomKind(kind string) bool {
+	return kind == "room.manifest" || (len(kind) > 4 && kind[:4] == "msg.")
+}
+
+func signableV1(op Op) []byte {
 	fields := []string{
 		strconv.FormatInt(op.Seq, 10),
 		op.Actor,
@@ -74,7 +93,55 @@ func signable(op Op) []byte {
 		strconv.FormatInt(op.Epoch, 10),
 		op.DevicePub,
 	}
-	buf := []byte("meshop.v1")
+	return netstrings("meshop.v1", fields)
+}
+
+// signableV2 = the v1 field list + the room fields, prefix "meshop.v2".
+// MIRROR: mesh/host/capability.mjs FIELDS_V2 must match byte-for-byte.
+func signableV2(op Op) []byte {
+	fields := []string{
+		strconv.FormatInt(op.Seq, 10),
+		op.Actor,
+		strconv.FormatInt(op.TS, 10),
+		op.Kind,
+		op.SKU,
+		strconv.FormatInt(op.Delta, 10),
+		op.Customer,
+		strconv.FormatInt(op.AmountMinor, 10),
+		strconv.FormatInt(op.LimitMinor, 10),
+		op.Currency,
+		op.Subject,
+		op.SubjectType,
+		op.Decision,
+		op.Reason,
+		op.CorrelationID,
+		op.ActorType,
+		strconv.Itoa(op.Authority),
+		op.PolicyID,
+		op.Device,
+		op.Role,
+		strconv.FormatInt(op.Epoch, 10),
+		op.DevicePub,
+		// room fields (Messenger Wave 1)
+		op.MsgID,
+		op.Body,
+		op.ReplyTo,
+		op.Emoji,
+		strconv.FormatBool(op.On),
+		op.UpToActor,
+		strconv.FormatInt(op.UpToSeq, 10),
+		op.Title,
+		op.AnchorType,
+		op.AnchorID,
+		strconv.FormatBool(op.Observers),
+		op.Draft,
+		op.Attachment,
+	}
+	return netstrings("meshop.v2", fields)
+}
+
+func netstrings(prefix string, fields []string) []byte {
+	buf := []byte(prefix)
 	for _, f := range fields {
 		buf = append(buf, strconv.Itoa(len(f))...)
 		buf = append(buf, ':')
@@ -115,6 +182,15 @@ func shortKey(hexKey string) string {
 // whether an op beats a revocation is decided by the same total order every
 // peer already agrees on, never by wall-clock or arrival time (MESH-D13).
 func checkCapability(st *State, cfg Config, op Op) (handled bool, reason string) {
+	return capabilityGate(st.Grants, &st.CapEpoch, cfg, op)
+}
+
+// capabilityGate is the shared enforcement core, parameterized over whichever
+// fold's grant table it guards — the business State (Missions C/D) or a
+// RoomState (Messenger Wave 1: each room Autobase carries its own per-room
+// grant plane, same law). Pure code motion from checkCapability (2026-07-18);
+// the Mission D unit tests + goldens are the proof it did not move semantics.
+func capabilityGate(grants map[string]GrantState, capEpoch *int64, cfg Config, op Op) (handled bool, reason string) {
 	// 1. Every op must carry a valid signature from its claimed device key.
 	if op.DevicePub == "" || op.Sig == "" {
 		return false, "capability: unsigned op (devicePub+sig required when an authority is configured)"
@@ -137,25 +213,25 @@ func checkCapability(st *State, cfg Config, op Op) (handled bool, reason string)
 		if role == "" {
 			role = "writer"
 		}
-		st.Grants[op.Device] = GrantState{Role: role, Epoch: op.Epoch}
+		grants[op.Device] = GrantState{Role: role, Epoch: op.Epoch}
 		return true, ""
 
 	case "cap.epoch":
 		if !isAuthority {
 			return true, "capability: epoch bumps must be signed by the mesh authority"
 		}
-		if op.Epoch <= st.CapEpoch {
+		if op.Epoch <= *capEpoch {
 			return true, "capability: epoch must increase (have " +
-				strconv.FormatInt(st.CapEpoch, 10) + ", got " + strconv.FormatInt(op.Epoch, 10) + ")"
+				strconv.FormatInt(*capEpoch, 10) + ", got " + strconv.FormatInt(op.Epoch, 10) + ")"
 		}
-		st.CapEpoch = op.Epoch
+		*capEpoch = op.Epoch
 		return true, ""
 
 	case "cap.revoke":
 		if !isAuthority {
 			return true, "capability: revocations must be signed by the mesh authority"
 		}
-		delete(st.Grants, op.Device)
+		delete(grants, op.Device)
 		return true, ""
 	}
 
@@ -164,13 +240,13 @@ func checkCapability(st *State, cfg Config, op Op) (handled bool, reason string)
 	if isAuthority {
 		return false, ""
 	}
-	grant, ok := st.Grants[op.DevicePub]
+	grant, ok := grants[op.DevicePub]
 	if !ok {
 		return false, "capability: no grant for device " + shortKey(op.DevicePub)
 	}
-	if grant.Epoch != st.CapEpoch {
+	if grant.Epoch != *capEpoch {
 		return false, "capability: grant epoch " + strconv.FormatInt(grant.Epoch, 10) +
-			" is stale (current epoch " + strconv.FormatInt(st.CapEpoch, 10) +
+			" is stale (current epoch " + strconv.FormatInt(*capEpoch, 10) +
 			") — device " + shortKey(op.DevicePub) + " was not re-issued"
 	}
 	return false, ""

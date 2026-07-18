@@ -82,6 +82,23 @@ type Op struct {
 	Role   string `json:"role,omitempty"`   // granted role; "" defaults to "writer"
 	Epoch  int64  `json:"epoch,omitempty"`  // grant/bump epoch
 
+	// room.manifest / msg.* (Messenger Wave 1 — room_domain.go). These fields
+	// ride the SAME envelope but are covered by the "meshop.v2" signable —
+	// selected by kind — so legacy op signatures stay byte-stable (MSG-D2).
+	MsgID      string `json:"msgId,omitempty"`      // derived {actor}:{seq} — never random (MSG-D3)
+	Body       string `json:"body,omitempty"`       // message text (msg.post / msg.edit)
+	ReplyTo    string `json:"replyTo,omitempty"`    // msgId being replied to (threading)
+	Emoji      string `json:"emoji,omitempty"`      // msg.react
+	On         bool   `json:"on,omitempty"`         // msg.react toggle state
+	UpToActor  string `json:"upToActor,omitempty"`  // msg.read: writer whose log was read
+	UpToSeq    int64  `json:"upToSeq,omitempty"`    // msg.read: seq read up to (per-writer)
+	Title      string `json:"title,omitempty"`      // room.manifest
+	AnchorType string `json:"anchorType,omitempty"` // room.manifest: business-object type ("po", …)
+	AnchorID   string `json:"anchorId,omitempty"`   // room.manifest: business-object id
+	Observers  bool   `json:"observersAllowed,omitempty"`
+	Draft      string `json:"draft,omitempty"`      // msg.draft-op: INERT business-op JSON, opaque string
+	Attachment string `json:"attachment,omitempty"` // msg.post: INERT blob-reference JSON (M3 fills it)
+
 	// Capability envelope (every op, when enforcement is on): the signing
 	// device's public key + Ed25519 signature over sha256(signable(op)).
 	DevicePub string `json:"devicePub,omitempty"`
@@ -174,6 +191,13 @@ func canonicalLess(a, b Op) bool {
 	}
 	if a.Device != b.Device {
 		return a.Device < b.Device
+	}
+	// Room-domain tiebreaks (empty on every legacy op — legacy order unchanged).
+	if a.MsgID != b.MsgID {
+		return a.MsgID < b.MsgID
+	}
+	if a.Emoji != b.Emoji {
+		return a.Emoji < b.Emoji
 	}
 	return a.TS < b.TS
 }
