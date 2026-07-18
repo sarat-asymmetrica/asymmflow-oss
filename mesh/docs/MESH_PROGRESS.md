@@ -294,6 +294,34 @@ join time) and the REPL `invite`/`join-code` ceremony commands are the M2
 stage-2 rung, not yet built. UI (kernel screen direction ratified) untouched
 by design.
 
+## Messenger Wave 3 — MISSION M3, attachments + voice (2026-07-18) · ✅ GREEN
+
+Files and voice notes, content-addressed over Hyperblobs — the cheapest media
+win on the recon ladder, culturally the highest-value one in Gulf trade.
+ZERO reducer changes: the Wave-1 `attachment` reservation paid off exactly as
+designed. Decisions: MSG-D13 (ref-is-the-promise pipeline) + MSG-D14
+(reactor measured-not-built: 376ms/10k-op refold, no bottleneck yet).
+
+- **`mesh/host/attachments.mjs`**: one blob core per writer; put → ref
+  (blobKey + locator + name + contentType + byteLength + sha256); get →
+  P2P stream + END-TO-END sha verification (the ref pins the sender's
+  promise, independent of transport integrity).
+- **Gate (`npm run attachspike`)**: 3 peers, offline fork; desk attaches a
+  48KB document, phone a 96KB audio/webm voice note (synthetic fixtures);
+  every peer — including the hub that sent nothing — streams BOTH blobs and
+  verifies byte-identity; the room log stays 2.4KB (bytes never inlined);
+  flipped-byte and forged-ref tampering both die loudly. 9/9 + goldened
+  (`goldens/attach_autobase.json`), reproducible. Refold bench rode along
+  (1k/5k/10k = 129/196/376ms via wasm).
+- **Regression floor**: roomspike + invitespike + smoke + wave1 + missionc
+  + missiond + full go suite — all green, all prior goldens untouched.
+
+**The honest line (M3 scope):** no progress-rollup events (put/get are
+awaited wholes — streaming progress is a UI-wave concern), no thumbnails/MIME
+sniffing, no blob garbage collection (append-only stores grow; pruning policy
+is an M4+/ops question), voice CAPTURE untested (MediaRecorder is UI-side —
+the mesh half is proven with fixture bytes).
+
 ## Wave 4+ — Mission E (next)
 
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).

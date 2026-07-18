@@ -100,6 +100,29 @@ full: every room op from an observer device rejects (not even read cursors —
 campaign M2's "observer (read-only)" taken literally); replication is
 untouched (pipe open, capability scoped).
 
+**MSG-D13 [Mirror] — Attachments: the ref is the promise; the bytes never enter the log.**
+(M3.) The reducer was never touched — `attachment` stays the opaque string
+reserved at Wave 1 (MSG-D8). The pipeline is host-side (`attachments.mjs`):
+each writer owns ONE blob core (`room-blobs`) in its corestore; a message
+carries a REF `{blobKey, id(locator), name, contentType, byteLength, sha256}`;
+receivers stream P2P (Hypercore Merkle proofs guard transport) and verify the
+ref's sha256 END-TO-END before the bytes reach anyone — the ref pins what the
+SENDER promised, so a forged ref or flipped byte dies loudly regardless of
+transport honesty. A voice note is just an attachment with `audio/webm` —
+zero live-media stack; capture is a UI concern. Fixtures are synthetic
+patterns (canon rule). Gate proof includes the leanness invariant: 2.4KB of
+room log carrying 147KB of blobs. (Lesson paid: never pass a key array as a
+JSON.stringify replacer — it filters recursively and gutted the nested blob
+locator on the first run.)
+
+**MSG-D14 [Mirror] — The incremental reactor stays UNBUILT: measured, not assumed.**
+(Owner pre-authorization 2026-07-18: build only on measured need, gated by
+byte-equivalence.) Bench through the real wasm boundary (attach-spike):
+refold of 1k/5k/10k-op rooms = ~129/196/376ms. State materialization runs
+per convergence-check, not per keystroke — no current caller is bottlenecked.
+Verdict: numbers on the record, reactor deferred until a real surface (M4
+mirror requiring frequent refolds, or the kernel-screen UI) crosses ~1s.
+
 **MSG-D10 [Mirror] — The room capability plane is Mission D's, verbatim.**
 `capabilityGate()` extracted from `checkCapability` by pure code motion (the
 Mission D unit tests + goldens prove no semantic drift) and pointed at the

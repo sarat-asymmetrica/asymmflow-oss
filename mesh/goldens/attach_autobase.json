@@ -1,0 +1,49 @@
+{
+  "viewLength": 5,
+  "viewDigest": "08a4b143b81fb0ea992294e60a919a1d02e0ecf101e8c42b5a1e05e7e4f14723",
+  "stateDigest": "ec23eb92ca445a115fb88fc2a7e1fcdbf2b9cd15d323ee16d8f83c87121456e2",
+  "state": {
+    "manifest": {
+      "title": "PO-2201 — Steel Coils",
+      "anchorType": "po",
+      "anchorId": "PO-2201",
+      "observersAllowed": false,
+      "actor": "hub",
+      "ts": 100
+    },
+    "messages": [
+      {
+        "msgId": "desk:4",
+        "actor": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "ts": 400,
+        "body": "Spec sheet attached — please review before Thursday.",
+        "attachment": "{\"blobKey\":\"a0727c84b451a46d099d5f4a0b07ec8b46dc0855e181dcd09b8815eee23039dc\",\"byteLength\":49152,\"contentType\":\"application/octet-stream\",\"id\":{\"byteOffset\":0,\"blockOffset\":0,\"blockLength\":1,\"byteLength\":49152},\"name\":\"PO-2201-spec-sheet.bin\",\"sha256\":\"8e14743130bb98684ac87941f7c04813cad506ee9d796faf28a0dedac445c6dd\"}"
+      },
+      {
+        "msgId": "phone:5",
+        "actor": "phone",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "ts": 500,
+        "attachment": "{\"blobKey\":\"5956787c17c70cc666cefb25fa009aba6851dec53c8e7b91d2e2deb58d43489d\",\"byteLength\":98308,\"contentType\":\"audio/webm\",\"id\":{\"byteOffset\":0,\"blockOffset\":0,\"blockLength\":2,\"byteLength\":98308},\"name\":\"site-update.webm\",\"sha256\":\"f4b825d3fe5803a4b8061e63b4612bca7a6dbfcec9759934173cf2baf9cbb7b2\"}"
+      }
+    ],
+    "reactions": {},
+    "readCursors": {},
+    "skipped": [],
+    "rejected": [],
+    "applied": 5,
+    "digest": "ec23eb92ca445a115fb88fc2a7e1fcdbf2b9cd15d323ee16d8f83c87121456e2",
+    "opsHashed": 5,
+    "grants": {
+      "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd": {
+        "role": "writer",
+        "epoch": 0
+      },
+      "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0": {
+        "role": "writer",
+        "epoch": 0
+      }
+    }
+  }
+}
