@@ -389,6 +389,188 @@ func TestManifestRequiresAuthorityWhenEnforced(t *testing.T) {
 	}
 }
 
+// ---------- expectation tags (Constitution Art. III §3, MSG-D16) ----------
+
+func postTagged(seq int64, actor string, ts int64, body, expectation string) Op {
+	return Op{Seq: seq, Actor: actor, TS: ts, Kind: "msg.post", Body: body, Expectation: expectation}
+}
+
+func TestExpectationRoundTrip(t *testing.T) {
+	withTag := roomFold(t, []Op{postTagged(1, "hub", 100, "ship today?", "today")})
+	withoutTag := roomFold(t, []Op{post(1, "hub", 100, "ship today?")})
+	msg := msgByID(withTag, "hub:1")
+	if msg == nil || msg.Expectation != "today" {
+		t.Fatalf("expectation must round-trip onto the message: %+v", msg)
+	}
+	if withTag.Digest == withoutTag.Digest {
+		t.Fatalf("expectation must participate in the digest (it rides the v2 signable, MSG-D16)")
+	}
+}
+
+func TestUnknownExpectationTagSkipped(t *testing.T) {
+	rs := roomFold(t, []Op{postTagged(1, "hub", 100, "ship today?", "asap")})
+	if len(rs.Messages) != 0 {
+		t.Fatalf("message with an unknown expectation tag must not fold: %+v", rs.Messages)
+	}
+	if !hasSkip(rs, "msg.post", "unknown expectation tag") {
+		t.Fatalf("unknown expectation tag must skip with the exact reason: %+v", rs.Skipped)
+	}
+}
+
+func TestExpectationIgnoredOnEdit(t *testing.T) {
+	rs := roomFold(t, []Op{
+		postTagged(1, "hub", 100, "v1", "urgent"),
+		{Seq: 2, Actor: "hub", TS: 200, Kind: "msg.edit", MsgID: "hub:1", Body: "v2", Expectation: "whenever"},
+	})
+	msg := msgByID(rs, "hub:1")
+	if msg == nil || msg.Body != "v2" || msg.Expectation != "urgent" {
+		t.Fatalf("edit must update the body but leave the original expectation tag untouched: %+v", msg)
+	}
+}
+
+// ---------- claim/assign (Constitution Art. VI, MSG-D17) ----------
+
+func TestClaimHappyPathAuthorityAssignsMember(t *testing.T) {
+	rs := ApplyRoom(roomCfg(), []Op{
+		roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+		roomAuthority.sign(Op{Seq: 2, Actor: "hub", TS: 200, Kind: "cap.grant", Device: deskDevice.pub, Epoch: 0}),
+		roomAuthority.sign(Op{Seq: 3, Actor: "hub", TS: 300, Kind: "room.claim", Assignee: "desk"}),
+	})
+	if rs.Claim == nil || rs.Claim.Assignee != "desk" || rs.Claim.ByActor != "hub" || rs.Claim.AtSeq != 3 {
+		t.Fatalf("authority must be able to assign a member: %+v", rs.Claim)
+	}
+}
+
+func TestClaimSelfOKOthersSkip(t *testing.T) {
+	rs := ApplyRoom(roomCfg(), []Op{
+		roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+		roomAuthority.sign(Op{Seq: 2, Actor: "hub", TS: 200, Kind: "cap.grant", Device: deskDevice.pub, Epoch: 0}),
+		deskDevice.sign(Op{Seq: 3, Actor: "desk", TS: 300, Kind: "room.claim", Assignee: "desk"}),
+		deskDevice.sign(Op{Seq: 4, Actor: "desk", TS: 400, Kind: "room.claim", Assignee: "phone"}),
+	})
+	if rs.Claim == nil || rs.Claim.Assignee != "desk" || rs.Claim.ByActor != "desk" {
+		t.Fatalf("self-claim by a member must succeed: %+v", rs.Claim)
+	}
+	if !hasSkip(rs, "room.claim", "may only claim for self") {
+		t.Fatalf("a member claiming for another actor must skip: %+v", rs.Skipped)
+	}
+}
+
+func TestClaimSkippedInUnanchoredRoom(t *testing.T) {
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "social room"}, // no anchorType
+		{Seq: 2, Actor: "hub", TS: 200, Kind: "room.claim", Assignee: "hub"},
+	})
+	if rs.Claim != nil {
+		t.Fatalf("claim must not fold in a social (unanchored) room: %+v", rs.Claim)
+	}
+	if !hasSkip(rs, "room.claim", "claims are a work concept") {
+		t.Fatalf("unanchored claim must skip with the Constitution's own words: %+v", rs.Skipped)
+	}
+}
+
+func TestClaimBeforeManifestSkipped(t *testing.T) {
+	rs := roomFold(t, []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.claim", Assignee: "hub"},
+	})
+	if rs.Claim != nil {
+		t.Fatalf("claim before any manifest must not fold: %+v", rs.Claim)
+	}
+	if !hasSkip(rs, "room.claim", "claim requires a manifest") {
+		t.Fatalf("claim before manifest must skip: %+v", rs.Skipped)
+	}
+}
+
+func TestClaimRelease(t *testing.T) {
+	rs := ApplyRoom(roomCfg(), []Op{
+		roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+		roomAuthority.sign(Op{Seq: 2, Actor: "hub", TS: 200, Kind: "room.claim", Assignee: "hub"}),
+		roomAuthority.sign(Op{Seq: 3, Actor: "hub", TS: 300, Kind: "room.claim", Assignee: ""}),
+	})
+	if rs.Claim == nil || rs.Claim.Assignee != "" || rs.Claim.ByActor != "hub" || rs.Claim.AtSeq != 3 {
+		t.Fatalf("an empty Assignee must release the claim: %+v", rs.Claim)
+	}
+}
+
+func TestClaimMemberReleasesOwnClaim(t *testing.T) {
+	// Gate ruling on MSG-D17: a member may drop work they picked up without
+	// going through the authority — release is self-service for your own claim.
+	rs := ApplyRoom(roomCfg(), []Op{
+		roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+		roomAuthority.sign(Op{Seq: 2, Actor: "hub", TS: 200, Kind: "cap.grant", Device: deskDevice.pub, Epoch: 0}),
+		deskDevice.sign(Op{Seq: 3, Actor: "desk", TS: 300, Kind: "room.claim", Assignee: "desk"}),
+		deskDevice.sign(Op{Seq: 4, Actor: "desk", TS: 400, Kind: "room.claim", Assignee: ""}),
+	})
+	if rs.Claim == nil || rs.Claim.Assignee != "" || rs.Claim.ByActor != "desk" || rs.Claim.AtSeq != 4 {
+		t.Fatalf("a member must be able to release their OWN claim: %+v", rs.Claim)
+	}
+	if len(rs.Skipped) != 0 {
+		t.Fatalf("self-release must not skip: %+v", rs.Skipped)
+	}
+}
+
+func TestClaimMemberCannotReleaseOthersOrNothing(t *testing.T) {
+	rs := ApplyRoom(roomCfg(), []Op{
+		roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+		roomAuthority.sign(Op{Seq: 2, Actor: "hub", TS: 200, Kind: "cap.grant", Device: deskDevice.pub, Epoch: 0}),
+		roomAuthority.sign(Op{Seq: 3, Actor: "hub", TS: 300, Kind: "cap.grant", Device: phoneDevice.pub, Epoch: 0}),
+		// nothing claimed yet — a member's release has nothing of theirs to drop
+		deskDevice.sign(Op{Seq: 4, Actor: "desk", TS: 400, Kind: "room.claim", Assignee: ""}),
+		// authority assigns phone; desk tries to release phone's claim
+		roomAuthority.sign(Op{Seq: 5, Actor: "hub", TS: 500, Kind: "room.claim", Assignee: "phone"}),
+		deskDevice.sign(Op{Seq: 6, Actor: "desk", TS: 600, Kind: "room.claim", Assignee: ""}),
+	})
+	if rs.Claim == nil || rs.Claim.Assignee != "phone" || rs.Claim.AtSeq != 5 {
+		t.Fatalf("phone's claim must survive desk's release attempts: %+v", rs.Claim)
+	}
+	skips := 0
+	for _, s := range rs.Skipped {
+		if s.Kind == "room.claim" && s.Reason == "may only release own claim" {
+			skips++
+		}
+	}
+	if skips != 2 {
+		t.Fatalf("both illegal releases must skip with the typed reason, got %d: %+v", skips, rs.Skipped)
+	}
+}
+
+func TestClaimLastInCanonicalOrderWins(t *testing.T) {
+	build := func() []Op {
+		return []Op{
+			roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+			roomAuthority.sign(Op{Seq: 2, Actor: "hub", TS: 200, Kind: "cap.grant", Device: deskDevice.pub, Epoch: 0}),
+			roomAuthority.sign(Op{Seq: 3, Actor: "hub", TS: 300, Kind: "room.claim", Assignee: "hub"}),
+			roomAuthority.sign(Op{Seq: 4, Actor: "hub", TS: 400, Kind: "room.claim", Assignee: "desk"}),
+		}
+	}
+	orderA := ApplyRoom(roomCfg(), build())
+	reversed := build()
+	reversed[2], reversed[3] = reversed[3], reversed[2] // deliver the two claims out of order
+	orderB := ApplyRoom(roomCfg(), reversed)
+	if orderA.Digest != orderB.Digest {
+		t.Fatalf("permuted delivery of the claims must still converge: %s != %s", orderA.Digest, orderB.Digest)
+	}
+	if orderA.Claim == nil || orderA.Claim.Assignee != "desk" || orderA.Claim.AtSeq != 4 {
+		t.Fatalf("the last claim in CANONICAL (seq) order must win, not delivery order: %+v", orderA.Claim)
+	}
+}
+
+func TestObserverCannotClaim(t *testing.T) {
+	observer := newTestDevice(0x71)
+	rs := ApplyRoom(roomCfg(), []Op{
+		roomAuthority.sign(Op{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"}),
+		offerOp(2, 200, inviteObs, "observer", 0, 1),
+		redeemOp(3, "auditor", 300, "hub:2", inviteObs, observer),
+		observer.sign(Op{Seq: 4, Actor: "auditor", TS: 400, Kind: "room.claim", Assignee: "auditor"}),
+	})
+	if rs.Claim != nil {
+		t.Fatalf("an observer device must not be able to claim: %+v", rs.Claim)
+	}
+	if !hasReject(rs, "auditor", "observer grant is read-only") {
+		t.Fatalf("observer claim must be rejected read-only: %+v", rs.Rejected)
+	}
+}
+
 // ---------- determinism ----------
 
 // mixedRoomOps: the full vocabulary in one scenario, unenforced (envelope-only),
@@ -432,6 +614,34 @@ func TestRoomConvergence500PermutationsEnforced(t *testing.T) {
 		rng.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
 		if got := ApplyRoom(roomCfg(), shuffled); got.Digest != canonical.Digest {
 			t.Fatalf("enforced permutation %d diverged: %s != %s", i, got.Digest, canonical.Digest)
+		}
+	}
+}
+
+// mixedClaimScenarioOps: expectation tags + claims mixed with the ordinary
+// vocabulary, unenforced (envelope-only, same style as mixedRoomOps) — the
+// permutation grinder for MSG-D16/D17.
+func mixedClaimScenarioOps() []Op {
+	return []Op{
+		{Seq: 1, Actor: "hub", TS: 100, Kind: "room.manifest", Title: "PO-2201 room", AnchorType: "po", AnchorID: "PO-2201"},
+		{Seq: 2, Actor: "hub", TS: 200, Kind: "msg.post", Body: "Can we ship Thursday?", Expectation: "today"},
+		{Seq: 3, Actor: "ana", TS: 300, Kind: "msg.post", Body: "on it", Expectation: "urgent"},
+		{Seq: 4, Actor: "hub", TS: 400, Kind: "msg.post", Body: "bad tag", Expectation: "asap"}, // unknown tag → skip
+		{Seq: 5, Actor: "hub", TS: 500, Kind: "room.claim", Assignee: "hub"},
+		{Seq: 6, Actor: "ana", TS: 600, Kind: "room.claim", Assignee: "ana"}, // self-claim reassigns
+		{Seq: 7, Actor: "bob", TS: 700, Kind: "room.claim", Assignee: "ana"}, // non-self claim → skip
+		{Seq: 8, Actor: "ana", TS: 800, Kind: "room.claim", Assignee: ""},    // release by a non-authority → skip (unenforced: nobody is authority)
+	}
+}
+
+func TestRoomConvergence500PermutationsExpectationAndClaim(t *testing.T) {
+	canonical := roomFold(t, mixedClaimScenarioOps())
+	rng := rand.New(rand.NewSource(2204)) // seeded: the test itself must be deterministic
+	for i := range 500 {
+		shuffled := mixedClaimScenarioOps()
+		rng.Shuffle(len(shuffled), func(a, b int) { shuffled[a], shuffled[b] = shuffled[b], shuffled[a] })
+		if got := roomFold(t, shuffled); got.Digest != canonical.Digest {
+			t.Fatalf("permutation %d diverged: %s != %s", i, got.Digest, canonical.Digest)
 		}
 	}
 }

@@ -59,6 +59,9 @@ const FIELDS_V2 = [
   (op) => (op.observersAllowed ? 'true' : 'false'),
   (op) => op.draft ?? '',
   (op) => op.attachment ?? '',
+  // expectation tags + claim/assign (MSG-D16, appended at the end)
+  (op) => op.expectation ?? '',
+  (op) => op.assignee ?? '',
 ]
 
 /**
@@ -75,8 +78,9 @@ const FIELDS_V3 = [
 ]
 
 export function isRoomKind(kind) {
-  // Exact mirror of Go: kind == "room.manifest" || (len > 4 && prefix "msg.").
-  return kind === 'room.manifest' ||
+  // Exact mirror of Go: kind == "room.manifest" || kind == "room.claim" ||
+  // (len > 4 && prefix "msg.").
+  return kind === 'room.manifest' || kind === 'room.claim' ||
     (typeof kind === 'string' && kind.length > 4 && kind.startsWith('msg.'))
 }
 

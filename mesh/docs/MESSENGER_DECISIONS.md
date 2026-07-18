@@ -148,3 +148,50 @@ per-room, no second permission system (campaign invariant 1). Proven live:
 revocation-mid-conversation (first message folds, the post-bump one is
 rejected identically everywhere) and the rogue device bounced on all peers
 while its bytes replicate fine.
+
+**MSG-D16 [Mirror] — The v2 signable field list GROWS again; only the room-family goldens re-golden.**
+(Owner-ratified 2026-07-18.) `Expectation` (Constitution Art. III §3) and
+`Assignee` (Art. VI) are appended at the END of the v2 field list — every
+earlier field, in both v1 and v2, keeps its exact byte position, so this is
+the MSG-D2 pattern's second growth. `signableV3` carries the same two fields
+in the same relative slot (right before the invite fields) since v3 is
+defined as "v2 + invite fields". Consequence, exactly as MSG-D2 predicted:
+every kind that signs v2 or v3 — `room.manifest`, `msg.*`, `invite.*` — now
+produces different signature bytes even when neither new field is set, so
+the four room-family goldens regenerate this wave (`room_autobase.json`,
+`invite_autobase.json`, `attach_autobase.json`, `mirror_autobase.json`); the
+legacy v1 goldens (smoke, wave1, missionc, missiond) do not, because no
+business kind ever selects v2/v3. Verified: all four regenerate via
+`--update-golden`, then reproduce byte-identically re-run without it; all
+four legacy gates pass unmodified. `msg.post` validates the tag vocabulary
+(`""`/`"whenever"`/`"today"`/`"urgent"`, unknown = skip "unknown expectation
+tag" — chat-domain law, MSG-D4's skipped[] half); every other kind carries
+the field unvalidated, its presence in the signable alone prevents unsigned
+drift. `msg.edit` never reads `Expectation` — a message's tag is set once,
+at post time, and survives every edit untouched.
+
+**MSG-D17 [Mirror] — `room.claim`: anchored-only, authority-or-self, self-release, last-wins.**
+(Constitution Art. VI, owner-ratified 2026-07-18; release semantics = gate
+ruling same day.) A new room kind, `isRoomKind`-extended identically on both
+mirrors. Law, checked in order: (1) no manifest yet → skip "claim requires a
+manifest" (there is nothing to own); (2) `Manifest.AnchorType == ""` (a
+social room) → skip "claims are a work concept", the Constitution's own
+words — ownership is a work concept that does not exist in the human layer;
+(3) the room AUTHORITY (mirrors `applyManifest`/`applyDelete`'s
+`enforce && op.DevicePub == cfg.AuthorityPub` pattern exactly — unenforced
+rooms therefore have no authority at all, so only self-claims/releases ever
+land there) may assign or release anyone; every other device may claim only
+for itself (`op.Assignee == op.Actor`, else skip "may only claim for self")
+— OR release its OWN standing claim (`Assignee == ""` while
+`Claim.Assignee == Actor`): the gate ruled that a member who picked up work
+may drop it without authority mediation. A release of someone else's claim,
+or of nothing, skips "may only release own claim". The state-dependence of
+self-release is deterministic because the standing claim is itself
+canonical-order-resolved — every peer evaluates the release against the same
+predecessor. (4) Last claim in canonical order wins, exactly like
+`msg.edit` — no special merge logic. `RoomState.Claim` is a
+`*RoomClaim{Assignee, ByActor, AtSeq}`, nil until the first accepted claim
+(the `Manifest`/`Invites` pointer-when-materialized pattern). Observer
+devices cannot claim: no new code — the existing role-floor check in
+`ApplyRoom` runs before the kind switch, proven by a dedicated test rather
+than assumed.

@@ -99,6 +99,12 @@ type Op struct {
 	Draft      string `json:"draft,omitempty"`      // msg.draft-op: INERT business-op JSON, opaque string
 	Attachment string `json:"attachment,omitempty"` // msg.post: INERT blob-reference JSON (M3 fills it)
 
+	// msg.post / room.claim (Constitution Articles III + VI). Ride the same
+	// "meshop.v2" signable as the rest of the room fields — appended at the
+	// END of the v2 field list (MSG-D16) so v1 legacy bytes are untouched.
+	Expectation string `json:"expectation,omitempty"` // msg.post: ""/"whenever"/"today"/"urgent" (default "" = whenever); ignored on msg.edit
+	Assignee    string `json:"assignee,omitempty"`    // room.claim: actor to assign; "" = release
+
 	// invite.offer / invite.redeem / invite.revoke (Mission M2 — invites are
 	// signed grant OFFERS, enforced by the fold: expiry, use-count, revocation.
 	// Covered by the "meshop.v3" signable, selected by kind (MSG-D11).

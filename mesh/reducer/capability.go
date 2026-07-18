@@ -68,7 +68,7 @@ func signable(op Op) []byte {
 
 // isRoomKind reports whether kind belongs to the Messenger room vocabulary.
 func isRoomKind(kind string) bool {
-	return kind == "room.manifest" || (len(kind) > 4 && kind[:4] == "msg.")
+	return kind == "room.manifest" || kind == "room.claim" || (len(kind) > 4 && kind[:4] == "msg.")
 }
 
 // isInviteKind reports whether kind belongs to the M2 invite vocabulary.
@@ -105,6 +105,9 @@ func signableV1(op Op) []byte {
 }
 
 // signableV2 = the v1 field list + the room fields, prefix "meshop.v2".
+// Expectation/Assignee (MSG-D16) are appended at the END of the field list —
+// the v2 field list GROWS, but every earlier field keeps its position, so
+// this is the only re-golden this wave causes (room goldens only).
 // MIRROR: mesh/host/capability.mjs FIELDS_V2 must match byte-for-byte.
 func signableV2(op Op) []byte {
 	fields := []string{
@@ -144,6 +147,9 @@ func signableV2(op Op) []byte {
 		strconv.FormatBool(op.Observers),
 		op.Draft,
 		op.Attachment,
+		// expectation tags + claim/assign (MSG-D16, appended at the end)
+		op.Expectation,
+		op.Assignee,
 	}
 	return netstrings("meshop.v2", fields)
 }
@@ -189,6 +195,9 @@ func signableV3(op Op) []byte {
 		strconv.FormatBool(op.Observers),
 		op.Draft,
 		op.Attachment,
+		// expectation tags + claim/assign (MSG-D16, appended at the end of v2)
+		op.Expectation,
+		op.Assignee,
 		// invite fields (Mission M2)
 		op.InviteID,
 		op.InvitePub,

@@ -1,7 +1,7 @@
 {
-  "viewLength": 16,
-  "viewDigest": "17c7c8277eee9e833f980993f4f5bd82671589133b411d05078dc6fa51091c55",
-  "stateDigest": "8740d81d1c1496cb1f43011dd66232e7264d1cc06e58b96248156e985700ba26",
+  "viewLength": 18,
+  "viewDigest": "4d6e4cf54d7101104b3d6b01a22b42d87c8f883886d90e108ea6acc689d42f70",
+  "stateDigest": "74523010325c2be8deae9b583545ee68f096a765d9377e6b5dc937ab0e185c63",
   "state": {
     "manifest": {
       "title": "PO-2201 — Steel Coils",
@@ -11,13 +11,19 @@
       "actor": "hub",
       "ts": 100
     },
+    "claim": {
+      "assignee": "desk",
+      "byActor": "desk",
+      "atSeq": 17
+    },
     "messages": [
       {
         "msgId": "desk:5",
         "actor": "desk",
         "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
         "ts": 500,
-        "body": "Can we ship the coils Thursday?"
+        "body": "Can we ship the coils Thursday?",
+        "expectation": "urgent"
       },
       {
         "msgId": "phone:6",
@@ -71,9 +77,9 @@
         "reason": "capability: no grant for device 332ebe8d…"
       }
     ],
-    "applied": 15,
-    "digest": "8740d81d1c1496cb1f43011dd66232e7264d1cc06e58b96248156e985700ba26",
-    "opsHashed": 16,
+    "applied": 17,
+    "digest": "74523010325c2be8deae9b583545ee68f096a765d9377e6b5dc937ab0e185c63",
+    "opsHashed": 18,
     "grants": {
       "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd": {
         "role": "writer",

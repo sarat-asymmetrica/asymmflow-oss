@@ -137,13 +137,21 @@ for (const n of [1_000, 5_000, 10_000]) {
   console.log(`  ⏱ refold ${n} ops through the wasm boundary: ${ms.toFixed(1)}ms (applied ${st.applied})`)
 }
 
+// GATE FIX (GL-2): this scenario forks desk and phone CONCURRENTLY (both
+// append while disconnected), so Autobase may legitimately linearize the two
+// heads in either order — the VIEW digest is not run-deterministic here and
+// pinning it made this gate flaky. The STATE digest is order-independent by
+// construction (the canonical fold is the whole point), so the golden pins
+// state only; the view is asserted as CONVERGED (byte-identical across
+// peers) above, which is the actual guarantee. A view golden is only valid
+// in a spike whose appends are causally chained (single writer or barriered).
 if (UPDATE_GOLDEN || !existsSync(GOLDEN)) {
-  writeFileSync(GOLDEN, JSON.stringify({ viewLength: TOTAL, viewDigest: da, stateDigest: sa.digest, state: sa }, null, 2) + '\n')
+  writeFileSync(GOLDEN, JSON.stringify({ viewLength: TOTAL, stateDigest: sa.digest, state: sa }, null, 2) + '\n')
   console.log(`\n  (golden ${UPDATE_GOLDEN ? 'updated' : 'created'}: ${GOLDEN})`)
 } else {
   const golden = JSON.parse(readFileSync(GOLDEN, 'utf8'))
-  check('golden: converged view matches pinned golden', golden.viewDigest === da)
   check('golden: room state digest matches pinned golden', golden.stateDigest === sa.digest)
+  check('golden: state projection matches pinned golden (deep)', JSON.stringify(golden.state) === JSON.stringify(sa))
 }
 
 console.log(`\nview digest:  ${da}`)

@@ -56,16 +56,23 @@ const A_OPS = [
   signOp({ seq: 2, actor: 'hub', ts: 200, kind: 'cap.grant', device: DESK.pubHex, epoch: 0 }, AUTH),
   signOp({ seq: 3, actor: 'hub', ts: 300, kind: 'cap.grant', device: PHONE.pubHex, epoch: 0 }, AUTH),
   signOp({ seq: 4, actor: 'hub', ts: 400, kind: 'cap.grant', device: BUTLER.pubHex, epoch: 0 }, AUTH),
+  // authority claims the room for phone first — desk's later self-claim (B_OPS,
+  // seq 17) reassigns it. Seq 5 ties with desk's first post; actor 'desk' <
+  // 'hub' breaks the tie, so this still lands after the manifest/grants and
+  // well before the seq-17 reassignment.
+  signOp({ seq: 5, actor: 'hub', ts: 1800, kind: 'room.claim', assignee: 'phone' }, AUTH),
 ]
 // Written BLIND on peer B during the fork (desk's side of the conversation;
 // the butler's draft rides desk's writer core with its OWN device signature).
 const B_OPS = [
-  signOp({ seq: 5, actor: 'desk', ts: 500, kind: 'msg.post', body: 'Can we ship the coils Thursday?' }, DESK),
+  signOp({ seq: 5, actor: 'desk', ts: 500, kind: 'msg.post', body: 'Can we ship the coils Thursday?', expectation: 'urgent' }, DESK),
   signOp({ seq: 8, actor: 'desk', ts: 800, kind: 'msg.react', msgId: 'phone:6', emoji: '👍', on: true }, DESK),
   signOp({ seq: 10, actor: 'butler', actorType: 'agent', ts: 1000, kind: 'msg.draft-op', body: 'Drafted the PO-2201 approval — needs a human decision', draft: DRAFT }, BUTLER),
   signOp({ seq: 11, actor: 'desk', ts: 1100, kind: 'msg.read', upToActor: 'phone', upToSeq: 7 }, DESK),
   signOp({ seq: 12, actor: 'desk', ts: 1200, kind: 'msg.post', body: 'typo — ignore this' }, DESK),
   signOp({ seq: 13, actor: 'desk', ts: 1300, kind: 'msg.delete', msgId: 'desk:12' }, DESK),
+  // desk self-claims, reassigning off the authority's earlier assignment (below)
+  signOp({ seq: 17, actor: 'desk', ts: 1700, kind: 'room.claim', assignee: 'desk' }, DESK),
 ]
 // Written BLIND on peer C during the same fork (supplier's side; the rogue's
 // knock rides phone's writer core and must die on every peer).
@@ -129,6 +136,18 @@ check('reactions: 👍 lands; the toggled-off 🔥 is pruned',
   sa.reactions?.['phone:6']?.['👍']?.desk === true && !sa.reactions?.['desk:5'])
 check('read cursors: per-writer, both directions',
   sa.readCursors?.desk?.phone === 7 && sa.readCursors?.phone?.desk === 5)
+
+// ── Expectation tags (Constitution Art. III §3, MSG-D16) ──
+check('expectation: the sender-side tag rides the message',
+  msg('desk:5')?.expectation === 'urgent')
+
+// ── Claim/assign (Constitution Art. VI, MSG-D17): authority assigns phone
+// first (seq 5), desk's later self-claim (seq 17) reassigns — last in
+// canonical order wins, on every peer ──
+check('claim: desk\'s self-claim reassignment wins over the authority\'s earlier assignment',
+  sa.claim?.assignee === 'desk' && sa.claim?.byActor === 'desk' && sa.claim?.atSeq === 17)
+check('claim: converges identically on all peers',
+  sb.claim?.assignee === 'desk' && sc.claim?.assignee === 'desk')
 
 // ── The graduation seam (campaign distinction #4) ──
 check('draft-op: the agent draft folds as INERT cargo, marked actorType agent',

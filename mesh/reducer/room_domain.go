@@ -60,6 +60,26 @@ type RoomMessage struct {
 	EditTS     int64  `json:"editTs,omitempty"` // op data, never a clock
 	Deleted    bool   `json:"deleted,omitempty"`
 	DeletedBy  string `json:"deletedBy,omitempty"`
+	// Expectation is the sender-side tag (Constitution Art. III §3): ""
+	// (default, treated as "whenever" by the UI), "whenever", "today", or
+	// "urgent". Stored exactly as signed — the fold never normalizes "" to
+	// "whenever" in state, only the UI does that presentational step. A
+	// msg.edit never changes it (edit only carries body; expectation on an
+	// edit op is ignored by the fold — see applyEdit).
+	Expectation string `json:"expectation,omitempty"`
+}
+
+// RoomClaim is the current owner of an anchored room's work item
+// (Constitution Art. VI): last claim in canonical order wins, and an empty
+// Assignee is a release. A nil Claim means the room has never seen an
+// accepted room.claim op — kept a pointer (the Manifest/Invites pattern) so
+// claim-free rooms hash byte-identically; the room goldens regenerate this
+// wave regardless (MSG-D16), but the discipline is kept for future waves
+// that don't force a re-golden.
+type RoomClaim struct {
+	Assignee string `json:"assignee"` // "" = released/unassigned
+	ByActor  string `json:"byActor"`  // who made this claim/release
+	AtSeq    int64  `json:"atSeq"`    // the claiming op's seq (canonical-order provenance)
 }
 
 // Skip records a chat op the fold declined with a typed reason — the CRDT half
@@ -77,6 +97,7 @@ type Skip struct {
 // agree iff their digests match (same contract as the business State).
 type RoomState struct {
 	Manifest *RoomManifest `json:"manifest,omitempty"`
+	Claim    *RoomClaim    `json:"claim,omitempty"` // Constitution Art. VI; nil until the first accepted room.claim
 	Messages []RoomMessage `json:"messages"`
 	// Reactions: msgId → emoji → set of actors currently toggled ON. A toggle
 	// OFF removes the actor; empty sets are pruned (only live reactions hash).
@@ -188,6 +209,8 @@ func ApplyRoom(cfg Config, ops []Op) RoomState {
 			skipReason = applyReact(&rs, op)
 		case "msg.read":
 			skipReason = applyRead(&rs, op)
+		case "room.claim":
+			skipReason = applyClaim(&rs, cfg, enforce, op)
 		case "cap.grant", "cap.epoch", "cap.revoke":
 			skipReason = "capability op in a room with no authority configured"
 		case "invite.offer", "invite.redeem", "invite.revoke":
@@ -368,17 +391,26 @@ func applyPost(rs *RoomState, op Op) string {
 	if op.Kind == "msg.post" && op.Body == "" && op.Attachment == "" {
 		return "post requires a body or an attachment"
 	}
+	if op.Kind == "msg.post" {
+		switch op.Expectation {
+		case "", "whenever", "today", "urgent":
+			// valid — "" is the default, treated as "whenever" by the UI
+		default:
+			return "unknown expectation tag"
+		}
+	}
 	rs.msgIndex[id] = len(rs.Messages)
 	rs.Messages = append(rs.Messages, RoomMessage{
-		MsgID:      id,
-		Actor:      op.Actor,
-		ActorType:  op.ActorType,
-		DevicePub:  op.DevicePub,
-		TS:         op.TS,
-		Body:       op.Body,
-		ReplyTo:    op.ReplyTo, // dangling replies allowed: offline peers thread first, converge later
-		Draft:      op.Draft,
-		Attachment: op.Attachment,
+		MsgID:       id,
+		Actor:       op.Actor,
+		ActorType:   op.ActorType,
+		DevicePub:   op.DevicePub,
+		TS:          op.TS,
+		Body:        op.Body,
+		ReplyTo:     op.ReplyTo, // dangling replies allowed: offline peers thread first, converge later
+		Draft:       op.Draft,
+		Attachment:  op.Attachment,
+		Expectation: op.Expectation, // msg.draft-op carries it unvalidated (host convention: empty); msg.post is the only kind that enforces the vocabulary
 	})
 	return ""
 }
@@ -401,6 +433,38 @@ func applyEdit(rs *RoomState, enforce bool, op Op) string {
 	msg.Body = op.Body
 	msg.Edited = true
 	msg.EditTS = op.TS // last edit in canonical order wins
+	// op.Expectation is deliberately NOT read here: edit only carries body,
+	// so the message's original expectation tag survives every edit.
+	return ""
+}
+
+// applyClaim folds room.claim (Constitution Art. VI, MSG-D17): anchored rooms
+// only ("claims are a work concept" in a social room), the room authority may
+// assign or release anyone, a non-authority member may claim for themselves
+// (op.Assignee == op.Actor) or RELEASE their own current claim (Assignee ""
+// while the standing claim is theirs — gate ruling: you can drop work you
+// picked up without asking the authority). Releasing someone else's claim, or
+// a release when nothing is claimed, is skipped. State-dependence here is
+// safe: the standing claim is itself canonical-order deterministic, so every
+// peer evaluates the release against the same predecessor.
+// Last claim in canonical order wins — reassignment is normal, not an error.
+func applyClaim(rs *RoomState, cfg Config, enforce bool, op Op) string {
+	if rs.Manifest == nil {
+		return "claim requires a manifest"
+	}
+	if rs.Manifest.AnchorType == "" {
+		return "claims are a work concept"
+	}
+	isAuthority := enforce && op.DevicePub == cfg.AuthorityPub
+	if !isAuthority && op.Assignee != op.Actor {
+		if op.Assignee != "" || rs.Claim == nil || rs.Claim.Assignee != op.Actor {
+			if op.Assignee == "" {
+				return "may only release own claim"
+			}
+			return "may only claim for self"
+		}
+	}
+	rs.Claim = &RoomClaim{Assignee: op.Assignee, ByActor: op.Actor, AtSeq: op.Seq}
 	return ""
 }
 
@@ -513,6 +577,7 @@ func roomDigest(rs RoomState) string {
 	}
 	proj := struct {
 		Manifest    *RoomManifest `json:"manifest,omitempty"`
+		Claim       *RoomClaim    `json:"claim,omitempty"`
 		Messages    []RoomMessage `json:"messages"`
 		Reactions   []reactionKV  `json:"reactions"`
 		ReadCursors []cursorKV    `json:"readCursors"`
@@ -526,6 +591,7 @@ func roomDigest(rs RoomState) string {
 		Invites []inviteKV `json:"invites,omitempty"`
 	}{
 		Manifest:    rs.Manifest,
+		Claim:       rs.Claim,
 		Messages:    rs.Messages,
 		Reactions:   make([]reactionKV, 0),
 		ReadCursors: make([]cursorKV, 0),
