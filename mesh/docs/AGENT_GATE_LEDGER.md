@@ -252,3 +252,29 @@ point is leaving the LAN ships encrypted-only. Honest-scope note repeated
 for the record: hyperswarm is wired and source-verified but NOT gate-
 exercised (needs live bootstrap); TCP fallback is the gated path, and the
 kitchen-table README says so plainly.
+
+**GL-11 [W-UI-1.6 Mission U1.6: kit hardening] — Identity beats position in a canonically-ordered world; a mid-mission addendum needs an acknowledgment; and the realest test is the one you didn't stage.**
+Gated green after one HOLD. Three findings: (a) **The positional-diff bug is
+the campaign's distributed-systems lesson in miniature** — the live stream's
+first draft diffed messages by array offset; canonical order (Seq, Actor)
+means a late-arriving op can sort BEFORE already-displayed ones, shifting
+positions → already-shown messages replay as "new" and, worse, genuinely-new
+ones below the cutoff can silently skip. The coder reproduced it with a
+standalone minimal script (isolate the mechanism, then find the logic bug —
+method worth copying), and fixed by identity diff (Set of derived msgIds,
+membership not offset — immune by construction). In this codebase, ANY
+"what's new" computation over a fold view must diff by identity, never by
+position or count. (b) **The gate hold**: the mid-mission brief addendum
+(live display, owner field request) was neither acknowledged nor mentioned
+in the delivery report — caught only because the report's spike tally didn't
+contain the addendum's required check. Standard, both directions: a coder
+receiving a mid-mission addendum ACKNOWLEDGES it in the next report
+(built/not-built/not-received — silence is indistinguishable from a drop);
+a lead reconciles the report against EVERY deliverable including addenda
+before ruling. (c) **The preserve-guard was proven by reality**: the owner's
+live kit process (locked native addons) crashed the first blanket-rmSync
+draft mid-rebuild — the exact scenario the guard exists for, encountered
+live, mid-mission; fixed with skip-and-report semantics and re-proven twice.
+A synthetic test would have been weaker evidence than this accident.
+Self-caught inbound-port capture bug (requested vs bound port poisoning the
+registry under port-0) continues the GL-9/GL-10 self-review pattern.
