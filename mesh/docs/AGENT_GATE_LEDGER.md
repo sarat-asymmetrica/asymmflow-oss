@@ -158,3 +158,22 @@ caller bookkeeping — ceremonies should read the law plane they act on.
 Accepted judgment call: constructing the peer's node object before the
 founder closes (pure local key derivation, zero network co-presence) does
 not violate the never-online-together claim; the claim is about the wire.
+
+**GL-7 [W-UI-1 Mission U2: workspace gap] — An environment mismatch is a STOP, not an improvisation; and brief-writing must verify workspace preconditions.**
+The coder's entire file zone (frontend-lab/) did not exist on the branch —
+exp/sovereign-mesh predated the K6 flip that graduated the kernel frontend to
+main. The coder verified the absence (git history check, not just ls), located
+where the tree actually lived, connected it to MESH-D5's isolation intent,
+laid out the two plausible self-service resolutions WITH their consequences,
+and stopped without touching a file. **Pattern to repeat:** both halves — the
+diagnosis (proving the gap is structural, naming the design decision that
+created it) and the refusal to pick between consequential resolutions that
+were the lead's to choose. Either self-service option would have been wrong
+(building on a legacy branch with foreign uncommitted changes; vendoring
+primitives into drift). Actual fix was a third option only the lead could
+take: merge main into the mesh branch (345ef15). **Lead-side lesson, equally
+binding:** the brief asserted a file zone without verifying it existed on the
+target branch — mission briefs must confirm workspace preconditions (the
+files/dirs the mission reads and writes exist on the branch it names) before
+dispatch. A wrong precondition burns a full agent round-trip even when the
+agent behaves perfectly.
