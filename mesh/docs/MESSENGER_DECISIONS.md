@@ -707,3 +707,16 @@ named in bold in the kit: the office machine hosts the live legacy PH DB —
 the kit is a self-contained folder, touches NOTHING outside itself,
 synthetic canon only. build-kit must never clobber an existing machine
 folder's data/.
+
+## MSG-D26 — Field round 2: FULL E2E CONFIRMED — 2026-07-18
+
+Second kitchen-table run on the U1.6 kit (owner "sam" + spouse "dee", two
+real machines, LAN): the complete ceremony worked in one sitting — /create →
+/invite → pairing → /addwriter → LIVE bidirectional messaging (own echo +
+incoming prints, no manual /open), expectation tag folding ([urgent] shown
+end-to-end), and the campaign's open proof CLOSED: /fetch <seq> with zero
+path → data\downloads\ → sha256 verified: true → "FILE VERIFIED END-TO-END
+✅" on a file authored on the other machine. Every MSG-D25 failure is
+retired. The messenger substrate (M1-M4 + human layer + bridge + kit) is
+FIELD-CONFIRMED over a real network. Cleared: the Receptionist Test (SPOC
+call, phone-script README) at the owner's scheduling. Next dev: W-UI-2.
