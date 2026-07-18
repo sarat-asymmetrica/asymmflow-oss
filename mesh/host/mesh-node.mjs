@@ -48,8 +48,11 @@ function isOp(v) {
  *                  Mesh-genesis data, distributed like the bootstrap key.
  *   mode         — optional reducer fold: '' (default) = business; 'room' =
  *                  Messenger room fold (Wave 1). A room is its OWN Autobase.
+ *   wakeup       — optional shared protomux-wakeup instance (Mission M4):
+ *                  pass the SAME instance to BlindPeering so mirror sockets
+ *                  carry the autobase's wakeup/announce protocol.
  */
-export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub, mode = '' } = {}) {
+export async function createMeshNode({ storage, bootstrap = null, primaryKey, authorityPub, mode = '', wakeup } = {}) {
   // unsafe:true only acknowledges the PINNED primaryKey (test determinism);
   // production nodes omit primaryKey and get random identities.
   const store = new Corestore(storage, primaryKey ? { primaryKey, unsafe: true } : {})
@@ -57,6 +60,7 @@ export async function createMeshNode({ storage, bootstrap = null, primaryKey, au
 
   const base = new Autobase(store, boot, {
     valueEncoding: 'json',
+    ...(wakeup ? { wakeup } : {}),
     ackInterval: 100, // eager acks help the linearizer merge causal forks
     open(viewStore) {
       return viewStore.get('inventory-ops', { valueEncoding: 'json' })

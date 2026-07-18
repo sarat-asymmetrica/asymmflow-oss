@@ -1,0 +1,49 @@
+{
+  "viewLength": 5,
+  "viewDigest": "709ed8bc862ec46c7953adffd8583e74ad07357601f72580d0f4e9443392fcab",
+  "stateDigest": "550fbb75660a86e9bff80e0f1b3ad55a40a87a28eedbd5c62c7b964334a63048",
+  "state": {
+    "manifest": {
+      "title": "PO-2201 — Steel Coils",
+      "anchorType": "po",
+      "anchorId": "PO-2201",
+      "observersAllowed": false,
+      "actor": "hub",
+      "ts": 100
+    },
+    "messages": [
+      {
+        "msgId": "desk:3",
+        "actor": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "ts": 300,
+        "body": "Shipment cleared customs at 16:40."
+      },
+      {
+        "msgId": "desk:4",
+        "actor": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "ts": 400,
+        "body": "Original BL is with the forwarder — collecting tomorrow.",
+        "replyTo": "desk:3"
+      }
+    ],
+    "reactions": {},
+    "readCursors": {
+      "desk": {
+        "desk": 4
+      }
+    },
+    "skipped": [],
+    "rejected": [],
+    "applied": 5,
+    "digest": "550fbb75660a86e9bff80e0f1b3ad55a40a87a28eedbd5c62c7b964334a63048",
+    "opsHashed": 5,
+    "grants": {
+      "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd": {
+        "role": "writer",
+        "epoch": 0
+      }
+    }
+  }
+}

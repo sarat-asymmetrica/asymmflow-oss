@@ -123,6 +123,22 @@ per convergence-check, not per keystroke — no current caller is bottlenecked.
 Verdict: numbers on the record, reactor deferred until a real surface (M4
 mirror requiring frequent refolds, or the kernel-screen UI) crosses ~1s.
 
+**MSG-D15 [Mirror] — The mirror is delivery infrastructure, not a member; blindness is stage 2.**
+(M4 stage 1.) blind-peer (Apache-2.0) is the receptionist machine: clients
+push the room's Autobase via blind-peering (`addAutobase`, shared
+protomux-wakeup instance threaded through BOTH the Autobase handlers and the
+BlindPeering client — one wakeup, two consumers), the mirror holds + serves
+cores, and a later-waking peer converges byte-identically without ever
+sharing an online moment with the sender. The mirror holds NO device key, NO
+grant, NO authority — it cannot write a lawful op; it is transport that
+happens to have a disk. STAGE-1 HONESTY, asserted in the gate itself: cores
+are PLAINTEXT, so this mirror COULD read what it holds. True blindness =
+Autobase encryptionKey, deliberately deferred — room-key distribution is a
+Commander doctrine conversation (campaign §5), not an engineering default.
+Gate runs on a hermetic LOCAL testnet DHT (hyperdht/testnet) — no public
+network in CI-shaped runs; the public-DHT ceremony is the Mission D pattern
+when the office machine takes the role.
+
 **MSG-D10 [Mirror] — The room capability plane is Mission D's, verbatim.**
 `capabilityGate()` extracted from `checkCapability` by pure code motion (the
 Mission D unit tests + goldens prove no semantic drift) and pointed at the

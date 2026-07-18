@@ -13,6 +13,8 @@
     "wave1:holesail": "npm run build && node host/wave1-holesail.mjs",
     "missionc": "npm run build && node host/missionc-mesh.mjs",
     "missionc:update-golden": "npm run build && node host/missionc-mesh.mjs --update-golden",
+    "mirrorspike": "npm run build && node host/mirror-spike.mjs",
+    "mirrorspike:update-golden": "npm run build && node host/mirror-spike.mjs --update-golden",
     "attachspike": "npm run build && node host/attach-spike.mjs",
     "attachspike:update-golden": "npm run build && node host/attach-spike.mjs --update-golden",
     "invitespike": "npm run build && node host/invite-spike.mjs",
@@ -30,13 +32,17 @@
   },
   "dependencies": {
     "autobase": "^7.11.0",
+    "blind-peer": "^3.12.2",
+    "blind-peering": "^2.4.1",
     "corestore": "^7.4.0",
     "holesail": "^2.0.0",
     "hyperbee": "^2.24.0",
     "hyperblobs": "^2.12.1",
     "hypercore": "^11.10.0",
     "hypercore-id-encoding": "^1.3.0",
-    "hyperswarm": "^4.11.0"
+    "hyperdht": "^6.33.0",
+    "hyperswarm": "^4.11.0",
+    "protomux-wakeup": "^2.9.0"
   },
   "engines": {
     "node": ">=20.0.0"

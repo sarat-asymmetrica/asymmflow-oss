@@ -322,6 +322,35 @@ sniffing, no blob garbage collection (append-only stores grow; pruning policy
 is an M4+/ops question), voice CAPTURE untested (MediaRecorder is UI-side —
 the mesh half is proven with fixture bytes).
 
+## Messenger Wave 4 — MISSION M4 stage 1, the blind mirror (2026-07-18) · ✅ GREEN
+
+The receptionist machine: offline delivery through blind-peer, proven on a
+hermetic local testnet DHT. Decision: MSG-D15 (mirror = delivery infra, not
+a member; plaintext honesty; blindness-by-encryption = stage 2, Commander
+doctrine first).
+
+- **Gate (`npm run mirrorspike`)**: desk writes a capability-enforced room
+  (manifest + grant + threaded messages + cursor), pushes it to a blind-peer
+  mirror via blind-peering (shared wakeup instance across Autobase +
+  BlindPeering — the wiring lesson of the mission), then closes STORE, BASE,
+  AND DHT. Phone wakes after, knows only the room key + mirror key, and
+  converges BYTE-IDENTICALLY (view + state digests) through the mirror —
+  grant table, epoch, reply threading all intact. The gate also asserts the
+  honest limit: the stage-1 mirror holds PLAINTEXT blocks. 7/7 first run;
+  goldened (`goldens/mirror_autobase.json`), reproducible.
+- **Deps**: blind-peer 3.12 + blind-peering + protomux-wakeup + hyperdht
+  (testnet helper). All Apache-2.0/MIT-family, license posture clean.
+- **Regression floor**: ALL gates green (mirror + attach + invite + room +
+  smoke + wave1 + missionc + missiond + go suite), all goldens stable.
+
+**The honest line (M4 remaining):** encryption-at-rest on the mirror
+(Autobase encryptionKey + room-key distribution doctrine — STOP-AND-ASK),
+mailbox-vs-pure-mirror for one-shot message drops (blind-peer-encodings
+Mailbox — read before choosing), ops packaging for the office machine
+(service wrapper, disk budgets, blind-peer-cli vs embedded), gc/pruning
+policy for blob cores, and the public-DHT dress rehearsal. Push (M6) stays
+its own workstream; POC-grade upstream untouched.
+
 ## Wave 4+ — Mission E (next)
 
 - **E** — per-device ZATCA Hypercore chains (`ICV = core.length`).
