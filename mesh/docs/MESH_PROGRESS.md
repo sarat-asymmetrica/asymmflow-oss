@@ -455,3 +455,38 @@ from MSG-D18 unchanged (re-issue closes it for rooms that re-key).
   as the cross-peer convergence check.
 - Determinism landmines are documented inline in `mesh/reducer/reducer.go`; keep that
   discipline when the reducer grows to import the real kernel packages (Mission C).
+
+## 2026-07-18 — W-UI-1 + W-UI-1.5: "The Correspondence Desk" opens & the Kitchen Table Kit ships
+
+Same-day arc: owner ruled DM-mirroring ON (Art. XI closed, MSG-D22), joint
+kernel-UI design session + 3-agent ERP recon produced MSG-D23's eight rulings,
+the lead authored sidecar protocol v0 (MESSENGER_UI_CAMPAIGN.md — ndjson/TCP,
+transport swaps at DP4), and three gated missions landed:
+
+- **U1 bridge server** (52b44ed, zero-fix): protocol v0 around the proven host
+  modules; fold verdicts verbatim, zero client-side law; 30-check bridgespike.
+  Coder self-caught a GL-5-class global-seq tiebreak bug pre-delivery (GL-9 —
+  the ledger's compounding is now measurable). Cold-peer onboarding named.
+- **U2 Correspondence screen** (cb479a9, 2 lead fixes): flat inbox +
+  FilterChips + expectation float; ActivityFeed REPL thread; /-command
+  composer; claim UI structurally absent in social rooms. Gate fixes:
+  composer default `whenever` (constitution over brief) + mock skip strings
+  made fold-verbatim (GL-8: a mock that paraphrases the law plane is a mock
+  of a different system). GL-7: the workspace-gap stop (main merged in at
+  345ef15 — frontend-lab now lives on this branch).
+- **U1.5 Kitchen Table Kit** (69c8e93, zero-fix): portable two-machine field
+  kit — REPL over the real bridge, GL-9 pairing ceremony (/invite → /join →
+  pairing code → /addwriter), hyperswarm primary + gated TCP LAN fallback,
+  real-file transfer w/ sha256, process-restart survival via room registry,
+  prune-by-proof packager (GL-10). Owner smoke = the campaign's FIRST real
+  two-box replication.
+
+Honest lines: hyperswarm path wired + source-verified but not gate-exercised
+(needs live bootstrap; TCP fallback is the gated path and the README says
+so); topExpectation computed over all messages until real cursors land
+(chrome wave); frontend-lab/dist/index.html carries an uncommitted build-hash
+diff (dist/ is gitignored-but-tracked legacy — resolve at the K-side, not
+here). Next rungs: W-UI-2 (message cards + DESK pane + msg.wave reducer
+mission + real transport), W-UI-3 (embedded rooms + graduation gesture),
+W-UI-4 (EventsOn first listener); mailbox-vs-pure-mirror still open at the
+owner's desk.
