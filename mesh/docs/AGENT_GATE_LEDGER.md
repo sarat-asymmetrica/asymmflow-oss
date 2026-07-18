@@ -281,3 +281,17 @@ live, mid-mission; fixed with skip-and-report semantics and re-proven twice.
 A synthetic test would have been weaker evidence than this accident.
 Self-caught inbound-port capture bug (requested vs bound port poisoning the
 registry under port-0) continues the GL-9/GL-10 self-review pattern.
+
+**GL-12 [publish gate] — Fixture names come FROM the canon file, not from plausibility.**
+Pre-publish sweep of the mesh branch caught a real regional company name in
+Mission U2's mock fixtures (among the exact names the OSS hygiene sprint
+scrubbed) sitting beside a correctly-reused canon name from an existing
+bridge file. The failure mode: the coder reused SOME names from existing
+fixtures (correct) but invented a plausible-sounding local one for a project
+title, and plausible-in-Bahrain is exactly how real names leak. Standard:
+every company/person/place in any fixture is taken from SYNTHETIC_IDENTITY.md
+(the repo's canon file) — grep it first; if the canon lacks the flavor you
+need, add a NEW invented name to the canon file in the same change, never
+inline. Scrub applied: the name became National Petroleum Co. (NPC), the canon's
+own oil company. The publish gate greps for known-real markers before any push;
+that backstop stays, but it is the LAST line, not the standard.
