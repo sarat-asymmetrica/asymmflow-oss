@@ -199,3 +199,31 @@ because its typing-dots pending state is banned by name (Art. III/IV) — reuse
 that would smuggle in banned semantics is not reuse, it's contraband; (c)
 protocol-complete bridge with UI-less methods (createSocialRoom/redeemInvite/
 exportTranscript) left wired-but-unused rather than inventing unrequested UI.
+
+**GL-9 [W-UI-1 Mission U1: bridge server] — The ledger's compounding is now measurable; and a protocol doc is a sketch until an implementation bites it.**
+Zero-fix gate (lead re-ran all 9 spikes + go suite independently; zero golden
+drift). **The headline:** the coder self-caught a GL-5-class bug BEFORE
+delivery — its first seq counter was per-actor, but canonical order sorts
+(Seq, Actor) GLOBALLY, so a fresh device's seq-1 op could tie an earlier
+actor's seq-1 and lose the tiebreak into evaluation before its own grant had
+folded ("no grant for device"). It diagnosed via room-spike's own op script
+(the shared-seq-space convention), fixed to global max, and added a restart
+test asserting continuation against the global max. GL-5 was written from a
+coder's mistake two waves ago; this wave a different coder used it to catch
+the same class unprompted. That is the ledger doing exactly what it was built
+for. **Gate rulings on the four flagged deviations, all ACCEPTED:** (1)
+`{rooms: Map}` not `{node}` — the method list itself implies multi-room; the
+brief's signature was a sketch (lead-side note: protocol docs earn their
+precision only when an implementation bites them; expect and welcome this
+class of flag); (2) addWriter stays host-side, not a wire method — matches
+every ceremony's existing shape; the cold-peer onboarding gap is REAL and
+pre-existing, now a named design item for the field kit (the two-machine
+ceremony is where it becomes user-visible); (3) optional `ts` override so the
+spike drives the SAME code path deterministically instead of bypassing the
+bridge — the right pattern for testing live-clock infrastructure; (4)
+createSocialRoom → {roomKey} — correct reading of compressed notation.
+**Also accepted:** no bridgespike golden (GL-4c minimalism — every fold-law
+property it touches is already pinned elsewhere; an adapter golden would rot
+in duplicate); topExpectation over all messages (v0 simplification, revisit
+with real cursors at the chrome wave); members = current-epoch only ("who can
+act right now" — matches blockDevice's own survivor convention).
