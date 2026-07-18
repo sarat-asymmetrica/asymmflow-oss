@@ -287,7 +287,7 @@ func normalizeOpportunityForList(opp Opportunity) Opportunity {
 		meta := parseOneDriveFolderMeta(candidate)
 		// FolderNumber drives the canonical dedup key, so guard it carefully. A real
 		// folder number always contains a digit; never let a digit-less candidate
-		// (e.g. a bare customer word like "BAPCO" produced by the loose fallback)
+		// (e.g. a bare customer word like "NPC" produced by the loose fallback)
 		// overwrite an already-good folder number. That collapse hid ~83 pipeline
 		// opportunities and cross-linked costings to the wrong opportunity.
 		if meta.FolderNumber != "" && folderNumberHasDigit(meta.FolderNumber) &&

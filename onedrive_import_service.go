@@ -2066,7 +2066,7 @@ func folderNumberHasDigit(s string) bool {
 // digit. A real folder NUMBER always contains a digit; a digit-less token is a
 // customer name, not a folder number — accepting it as the loose fallback
 // collapsed every OneDrive opportunity for that customer onto one canonical key
-// (e.g. all of Bapco's deals keyed as "BAPCO").
+// (e.g. all of one customer's deals keyed by its short name).
 func cleanLooseOneDriveFolderNumberToken(token string) string {
 	token = strings.TrimSpace(token)
 	if token == "" {

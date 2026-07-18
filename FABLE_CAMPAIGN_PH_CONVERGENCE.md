@@ -156,7 +156,7 @@ the `5545793` promote bug: `PRAGMA foreign_keys=OFF` inside a txn is a
 no-op.
 
 **Mission D — PH's overlay + sovereign fork.** Extract PH Trading's
-reality — TRN, per-division bank details, BAPCO/Alba/EWA conventions, 10%
+reality — TRN, per-division bank details, major-customer naming conventions, 10%
 VAT, 8% min margin, `PH-{ROLE}-{6}` license format, AHS-vs-PH division
 branding — into `overlay.json` + a sovereign-fork config. This is the
 "PH Trading is now a JSON file, not a program" moment made literal. Every
