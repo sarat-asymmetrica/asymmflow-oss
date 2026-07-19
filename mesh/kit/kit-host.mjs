@@ -41,7 +41,7 @@
 import readline from 'node:readline'
 import { randomBytes } from 'node:crypto'
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { deviceKeys } from '../host/capability.mjs'
 import { createMeshNode } from '../host/mesh-node.mjs'
@@ -160,8 +160,24 @@ export async function createKitHost({
   const hello = await client.request('hello')
   log(`device ready — actor "${actor}", devicePub ${hello.devicePub.slice(0, 16)}…, bridge on 127.0.0.1:${server.port}`)
 
+  // Corridor hardening (Mission A2, Band 2 deliverable 5): tell /status
+  // whether THIS process is running the kit's own bundled node.exe (built
+  // by `build-kit.mjs --bundle-node`, sitting one directory above kit/) or
+  // whatever "node" was found on PATH — the honest, non-guessed way to
+  // answer "did the receptionist's zero-install promise actually hold" on
+  // a phone support call (I3). Never throws: a missing/odd layout just
+  // reports isBundled: false, same as running straight from the repo.
+  let bundledNode = { version: process.version, path: process.execPath, isBundled: false }
+  try {
+    const kitRoot = resolvePath(join(dirname(fileURLToPath(import.meta.url)), '..'))
+    const candidate = join(kitRoot, 'node.exe')
+    if (existsSync(candidate) && resolvePath(candidate).toLowerCase() === resolvePath(process.execPath).toLowerCase()) {
+      bundledNode = { version: process.version, path: candidate, isBundled: true }
+    }
+  } catch { /* best-effort — /status just reports the PATH fallback */ }
+
   return {
-    dataDir, keysDir, corestoreDir, actor, keys, tcpPort,
+    dataDir, keysDir, corestoreDir, actor, keys, tcpPort, bundledNode,
     server, client, net, log,
     // Kitchen-table UX (deliverable 4): the kit's real use case is ONE
     // shared room per device, so if exactly one came back at boot, open it

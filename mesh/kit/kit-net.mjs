@@ -76,6 +76,8 @@ export function createNetwork({ useHyperswarm = true } = {}) {
   const tcpServers = new Map()   // port -> net.Server
   const tcpSockets = new Set()
   const roomSockets = new Map()  // node.key -> Set<socket>, TCP only (see peerCount doc above)
+  const swarmSockets = new Set() // hyperswarm connections, swarm-wide (Mission A2 Band 3 addition)
+  let lastPeerSeenAt = null      // ms epoch of the most recent connect (either transport) — Mission A2 Band 3 addition, backs kit-repl.mjs's /status "last-seen peer" line
 
   function trackRoomSocket(node, socket) {
     if (!roomSockets.has(node.key)) roomSockets.set(node.key, new Set())
@@ -88,6 +90,9 @@ export function createNetwork({ useHyperswarm = true } = {}) {
     try {
       swarm = new Hyperswarm()
       swarm.on('connection', (socket, peerInfo) => {
+        swarmSockets.add(socket)
+        lastPeerSeenAt = Date.now()
+        socket.once('close', () => swarmSockets.delete(socket))
         const topicHexes = (peerInfo.topics || []).map((t) => t.toString('hex'))
         const matched = topicHexes.map((h) => joinedTopics.get(h)).filter(Boolean)
         // A peer that dialed us directly (joinPeer, or a topic mismatch we
@@ -117,6 +122,23 @@ export function createNetwork({ useHyperswarm = true } = {}) {
       return roomSockets.get(roomKey)?.size ?? 0
     },
 
+    /** Mission A2 Band 3 addition: hyperswarm connections are swarm-wide,
+     * not per-room (same reasoning as peerCount's own doc above — a
+     * connection isn't attributable to one room without screen-scraping
+     * peerInfo.topics, which the mission's own doctrine treats as an
+     * honesty risk not worth taking for a support/heartbeat number). */
+    swarmPeerCount() {
+      return swarmSockets.size
+    },
+
+    /** Mission A2 Band 3 addition: ms epoch of the most recent accepted
+     * connection over EITHER transport, or null if none yet. Backs
+     * kit-repl.mjs's /status "last-seen peer" line and anchor.mjs's
+     * heartbeat. */
+    get lastPeerSeenAt() {
+      return lastPeerSeenAt
+    },
+
     joinHyperswarm(roomKey, node) {
       const s = ensureSwarm()
       if (!s) return false
@@ -137,6 +159,7 @@ export function createNetwork({ useHyperswarm = true } = {}) {
       return new Promise((resolve, reject) => {
         const server = net.createServer((socket) => {
           tcpSockets.add(socket)
+          lastPeerSeenAt = Date.now()
           const untrack = trackRoomSocket(node, socket)
           const rs = node.store.replicate(false)
           socket.pipe(rs).pipe(socket)
@@ -160,6 +183,7 @@ export function createNetwork({ useHyperswarm = true } = {}) {
         socket.once('connect', () => {
           socket.off('error', reject)
           tcpSockets.add(socket)
+          lastPeerSeenAt = Date.now()
           const untrack = trackRoomSocket(node, socket)
           const rs = node.store.replicate(true)
           socket.pipe(rs).pipe(socket)
@@ -180,6 +204,7 @@ export function createNetwork({ useHyperswarm = true } = {}) {
       for (const server of tcpServers.values()) await new Promise((r) => server.close(r))
       tcpServers.clear()
       joinedTopics.clear()
+      swarmSockets.clear()
       if (swarm) { try { await swarm.destroy() } catch { /* best-effort teardown */ } }
       swarm = null
     },

@@ -10,8 +10,9 @@ layer above the pipe. It is self-contained here per the campaign
 (`../FABLE_CAMPAIGN_SOVEREIGN_MESH.md`); it references the sibling `asymm-mesh`
 repo's design but does not depend on it.
 
-**Branch:** `exp/sovereign-mesh` (worktree `C:\Projects\asymmflow\asymmflow-mesh`) —
-LOCAL-ONLY, never pushed. This is R&D, gated by the Commander on Mission A's evidence.
+**Status:** merged to `main` and public since 2026-07-18 (the sovereign-mesh + messenger
+track landed with the field-confirmed kitchen-table test). Mission A2 ("The Corridor",
+`docs/MISSION_A2_CORRIDOR_SPEC.md`) extends it toward the India↔Bahrain WAN proof.
 
 ## What's here (Wave 0 scaffold — boundary proven)
 

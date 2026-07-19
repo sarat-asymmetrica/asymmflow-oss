@@ -177,6 +177,7 @@ async function ensureTcpListen(ctx, node) {
     let boundPort
     const port = await ctx.net.listenTcp(ctx.tcpPort ?? DEFAULT_TCP_PORT, node, (remoteAddress) => {
       updateRoomRegistryPeer(ctx.keysDir, node.key, `${remoteAddress}:${boundPort}`)
+      ctx._lastSeenPeerAt = Date.now() // /status hardening (Band 2 deliverable 5)
     })
     boundPort = port
     ctx._tcpListening.add(node.key)
@@ -434,6 +435,7 @@ export function createCommandLayer(ctx) {
       // remembered so a future restart can reconnect without a human typing
       // /connect again.
       updateRoomRegistryPeer(ctx.keysDir, roomKey, `${host}:${port}`)
+      ctx._lastSeenPeerAt = Date.now() // /status hardening (Band 2 deliverable 5)
       ctx.log(`connected (LAN TCP) to ${host}:${port} — replicating this room`)
       return { host, port }
     },
@@ -466,9 +468,30 @@ export function createCommandLayer(ctx) {
       const list = await ctx.client.request('listRooms')
       ctx.log(`actor: ${ctx.actor}   device: ${ctx.keys.pubHex.slice(0, 16)}…`)
       ctx.log(`network: ${ctx.net.mode}   downloads: ${join(ctx.dataDir, 'downloads')}`)
+      // Corridor hardening (Mission A2, Band 2 deliverable 5): each line
+      // short, plain, and phone-scriptable on its own (I3) — a remote
+      // SPOC reads these one at a time without interpreting anything.
+      //
+      // Mission A2 Band 3 fix: "swarm connections" now reports the REAL
+      // hyperswarm connection count (kit-net.mjs's new swarmPeerCount(),
+      // added alongside this) rather than the TCP-fallback peer sum — the
+      // per-room "peers: N" line below already covers TCP honestly (see
+      // kit-net.mjs's own doc on why the two counts must never be
+      // conflated). last-seen-peer now takes the newer of kit-net.mjs's
+      // own lastPeerSeenAt (tracks BOTH transports at the socket-accept
+      // layer) and ctx._lastSeenPeerAt (this file's existing TCP-path
+      // stamp) — a strict improvement, never a regression of either.
+      const tcpPeers = list.reduce((sum, r) => sum + ctx.net.peerCount(r.roomKey), 0)
+      const swarmConnections = ctx.net.swarmPeerCount ? ctx.net.swarmPeerCount() : 0
+      const lastSeenPeerAt = Math.max(ctx.net.lastPeerSeenAt ?? 0, ctx._lastSeenPeerAt ?? 0) || null
+      ctx.log(`swarm connections: ${swarmConnections}   tcp peers: ${tcpPeers}`)
+      ctx.log(`last seen peer: ${lastSeenPeerAt ? new Date(lastSeenPeerAt).toLocaleString() : '(none yet)'}`)
+      ctx.log(`transport: ${ctx.net.mode}`)
+      const bn = ctx.bundledNode
+      ctx.log(`bundled node: ${bn?.version || process.version}${bn?.isBundled ? '' : ' (running from PATH, not the bundled copy)'}`)
       if (!list.length) {
         ctx.log('  (no rooms yet — /create <title> to found one, or /join <invite-code>)')
-        return { rooms: [] }
+        return { rooms: [], swarmConnections, tcpPeers, lastSeenPeerAt, transport: ctx.net.mode, bundledNodeVersion: bn?.version || process.version }
       }
       const registry = loadRoomRegistry(ctx.keysDir)
       const out = []
@@ -482,7 +505,7 @@ export function createCommandLayer(ctx) {
         ctx.log(`  "${r.title || '(untitled)'}"${current}  key: ${r.roomKey.slice(0, 12)}…  messages: ${count}  listening: ${port ?? 'no'}  peers: ${peers}  last-peer: ${entry?.lastPeer ?? '(none yet)'}`)
         out.push({ roomKey: r.roomKey, title: r.title, current: !!current, messages: count, listeningPort: port ?? null, peers, lastPeer: entry?.lastPeer ?? null })
       }
-      return { rooms: out }
+      return { rooms: out, swarmConnections, tcpPeers, lastSeenPeerAt, transport: ctx.net.mode, bundledNodeVersion: bn?.version || process.version }
     },
   }
 }
