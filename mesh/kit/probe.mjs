@@ -43,7 +43,14 @@ import { fileURLToPath } from 'node:url'
 import HyperDHT from 'hyperdht'
 import Hyperswarm from 'hyperswarm'
 import HypercoreID from 'hypercore-id-encoding'
-import Holesail from 'holesail'
+// holesail is intentionally NOT bundled in the field kit (see
+// build-kit.mjs's node_modules prune note) — it is only ever needed for the
+// OPTIONAL --holesail spot-check, so it must be a lazy import scoped inside
+// checkHolesail() below, never a top-level import here. A top-level import
+// crashed the field kit outside the repo tree with ERR_MODULE_NOT_FOUND
+// (Mission A2.1 field report FR-1a) because Node module resolution inside
+// the repo silently falls back to mesh/node_modules, masking the gap that
+// only showed up once the built kit ran from its own directory.
 
 const WATCHDOG_MS = 58000       // I: never hang >60s total
 const DHT_READY_MS = 15000      // per-check budget, well under the 60s ceiling
@@ -264,6 +271,14 @@ async function runPunch({ dht, listen, dial, say }) {
 }
 
 async function checkHolesail(say) {
+  let Holesail
+  try {
+    ;({ default: Holesail } = await import('holesail'))
+  } catch {
+    say('INFO: holesail check not included in this kit — skipping')
+    return { holesailAttempted: false, holesailOk: null, holesailRttMs: null }
+  }
+
   const echoServer = net.createServer((socket) => socket.pipe(socket))
   let serverTunnel, clientTunnel
   try {
