@@ -94,7 +94,18 @@ const ANCHOR_CLUSTER_FILES = [
   'anchor.mjs', 'install_anchor.cmd', 'uninstall_anchor.cmd', 'anchor_status.cmd', 'run_anchor.cmd',
   'install_anchor.ps1', 'uninstall_anchor.ps1',
 ]
-const CORRIDOR_OPTIONAL_FILES = [...PROBE_CLUSTER_FILES, ...ANCHOR_CLUSTER_FILES]
+// Mission A2.1, Band 6 (mesh/docs/MISSION_A2_CORRIDOR_SPEC.md addendum):
+// guide.mjs imports ONLY node: built-ins (see its own file header) and
+// resolves every other kit file at either of two relative depths — so, like
+// PROBE_CLUSTER, it travels under target/kit/ (beside probe.mjs) with no
+// import-rewrite needed (unlike anchor.mjs's one load-bearing rewrite
+// above). START_HERE.cmd itself is NOT in this list — it is an embedded
+// template (see START_HERE_CMD below), written unconditionally to the
+// built kit ROOT the same way RUN_MESH_CMD is, never copied from a source
+// file (the dev-tree mesh/kit/START_HERE.cmd is a different, same-directory
+// variant for running straight out of the repo — see its own header).
+const GUIDE_CLUSTER_FILES = ['guide.mjs']
+const CORRIDOR_OPTIONAL_FILES = [...PROBE_CLUSTER_FILES, ...ANCHOR_CLUSTER_FILES, ...GUIDE_CLUSTER_FILES]
 
 // The one load-bearing rewrite described above. Guarded: throws (fails the
 // build loudly) rather than silently shipping a broken anchor.mjs if a
@@ -223,6 +234,31 @@ ${nodeLaunchPreamble()}
 
 echo.
 echo (the kit has stopped - press any key to close this window)
+pause >nul
+`
+
+// Mission A2.1, Band 6, item 1 (mesh/docs/MISSION_A2_CORRIDOR_SPEC.md
+// addendum): the ONE entry point a receptionist ever double-clicks (owner
+// ruling R6 — never a command line, never a typed argument). Sits at the
+// BUILT KIT ROOT, beside run_mesh.cmd and node.exe, and launches
+// kit\guide.mjs (guide.mjs's own GUIDE_CLUSTER placement, alongside
+// probe.mjs) under the bundled runtime via the SAME nodeLaunchPreamble()
+// every other generated launcher in this file uses — never a second,
+// drifted copy of the node-resolution logic.
+const START_HERE_CMD = `@echo off
+setlocal
+cd /d "%~dp0"
+
+echo ==================================================
+echo   ASYMMFLOW MESH - START HERE
+echo ==================================================
+echo.
+
+${nodeLaunchPreamble()}
+"%NODE_EXE%" kit\\guide.mjs
+
+echo.
+echo (the guide has stopped - press any key to close this window)
 pause >nul
 `
 
@@ -489,6 +525,13 @@ exit /b 0
 // Mission A2, Band 2, item 3: the remote ceremony card. Rewritten for
 // phone/WhatsApp delivery (I3) — synthetic names only, from SYNTHETIC_
 // IDENTITY.md (I4): Jordan (founder, India) and Sam (receptionist, Bahrain).
+//
+// Mission A2.1, Band 6, item 6: restructured to LEAD with the guided path
+// (owner ruling R6 — a receptionist is never handed a command line). The
+// old step-by-step ceremony is kept FULLY INTACT below, moved into an
+// appendix — it is still the ground truth for exactly what to type once the
+// messenger window is open (menu option [2] just gets you there), and it is
+// still what a support call falls back to if the guide itself can't run.
 const README_CORRIDOR_TEXT = `ASYMMFLOW MESH — THE CORRIDOR (remote field kit)
 ====================================================
 
@@ -506,6 +549,35 @@ no IT ticket.
 *  - This copy already includes its OWN copy of Node.js (node.exe   *
 *    sitting right next to this file) — nothing to install.        *
 *******************************************************************
+
+START HERE
+-------------
+Double-click START_HERE.cmd and follow the questions on screen. It is the
+ONLY thing you ever run by hand — everything else is a numbered menu:
+
+  [1] Check the connection   - proves the two computers can reach each
+                                other, and reads out one word at the end:
+                                CORRIDOR GREEN, AMBER, or RED. Read that
+                                word to whoever's on the call.
+  [2] Open the messenger     - opens the same black window described in the
+                                appendix below; use it to found the room,
+                                invite the other machine, and talk.
+  [3] Make this machine the always-on anchor  - Bahrain office machine
+                                only; keeps it connected even when nobody
+                                is using it.
+  [4] Show status            - the "what do I read to support" option.
+  [5] Close
+
+On the Bahrain machine, the FIRST time you pick [1] or [2], it may ask for
+one Windows permission (a single popup) — click Yes when it appears. That
+only happens once, ever, on that machine.
+
+Everything from here down is the SAME ceremony, written out in full — this
+is what support reads you through if the guide can't run for some reason,
+or if you'd rather type the steps yourself.
+
+APPENDIX — if support asks you to do a step by hand
+========================================================
 
 Who's who in this card
 -------------------------
@@ -739,6 +811,7 @@ function assembleMachine(name) {
   }, null, 2))
 
   writeFileSync(join(target, 'run_mesh.cmd'), toCrlf(RUN_MESH_CMD))
+  writeFileSync(join(target, 'START_HERE.cmd'), toCrlf(START_HERE_CMD))
   writeFileSync(join(target, 'README_KITCHEN_TABLE.txt'), README_TEXT)
 
   // ── Mission A2, Band 2 ──────────────────────────────────────────────────
@@ -757,10 +830,11 @@ function assembleMachine(name) {
   const corridorPresence = {}
   for (const f of CORRIDOR_OPTIONAL_FILES) {
     const src = join(kitDir, f)
-    // PROBE_CLUSTER travels together under kit/ (beside probe.mjs);
-    // ANCHOR_CLUSTER travels together at the kit root (beside node.exe,
-    // data/) — see the placement note above CORRIDOR_OPTIONAL_FILES.
-    const dest = PROBE_CLUSTER_FILES.includes(f) ? join(target, 'kit', f) : join(target, f)
+    // PROBE_CLUSTER and GUIDE_CLUSTER travel together under kit/ (beside
+    // probe.mjs / guide.mjs); ANCHOR_CLUSTER travels together at the kit
+    // root (beside node.exe, data/) — see the placement note above
+    // CORRIDOR_OPTIONAL_FILES.
+    const dest = (PROBE_CLUSTER_FILES.includes(f) || GUIDE_CLUSTER_FILES.includes(f)) ? join(target, 'kit', f) : join(target, f)
     if (existsSync(src)) {
       trySync(() => {
         mkdirSync(dirname(dest), { recursive: true })
