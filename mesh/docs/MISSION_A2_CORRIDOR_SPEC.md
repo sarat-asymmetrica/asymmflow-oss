@@ -174,3 +174,66 @@ swaps at DP4" seam.
 
 C2 consumes C1/C3 outputs *by filename only* (names fixed in this spec); the gate wires the
 final built-kit verification after all bands land.
+
+---
+
+# Mission A2.1 — "Reception Grade" (field-failure addendum, RATIFIED 2026-07-19)
+
+## Field report FR-1 (first corridor attempt, 2026-07-19)
+
+The receptionist-machine dial failed with `ERR_MODULE_NOT_FOUND: Cannot find package
+'holesail'`. Root cause chain, confirmed by reproduction outside the repo tree:
+
+- **FR-1a** `probe.mjs` top-level-imports `holesail` for the OPTIONAL `--holesail`
+  spot-check; holesail is not in the kit's 97-package dependency walk.
+- **FR-1b — the gate hole.** Every spike ran the built kit from `kit/dist/` INSIDE the
+  repo, where Node module resolution escapes upward into `mesh/node_modules` and masks
+  any missing package. The spikes were hermetic in every dimension except geography.
+- **FR-1c — the UX verdict (owner ruling R6).** Even bug-free, the ceremony demanded a
+  cmd window, command-line arguments, and pasted paths. Ruling: **clients are never
+  handed a command line.** One double-click entry point, plain questions, paste-and-Enter.
+  Guiding a non-developer through cmd syntax over a video call is rejected as a process.
+
+## Band 5 — Fix + geographic hermeticity (coder F)
+
+1. `probe.mjs`: holesail becomes a LAZY `await import()` inside the `--holesail` branch
+   only; if unavailable, print a plain one-line skip ("holesail check not included in
+   this kit — skipping") and treat as not-attempted (verdict unaffected). No other
+   behavior change; self-test untouched and green.
+2. `kit2-spike.mjs`: ALL built-kit execution checks (probe self-test launch, anchor
+   import resolve, udx smoke, and a NEW plain `node kit/probe.mjs --json`-style module
+   -load check) move to a copy of Machine-B placed in an OS temp directory outside any
+   ancestor `node_modules`/repo — geography-hermetic. A leak like FR-1a must now fail
+   the gate. Keep the in-repo build step; only execution relocates.
+3. Gate G5: kit2-spike green with the relocated checks; kit-spike untouched green;
+   demonstrate the FR-1 reproduction now passes (probe runs to a verdict outside the tree).
+
+## Band 6 — The Guided Path (coder G)
+
+One entry point: **`START_HERE.cmd`** at kit root → `kit/guide.mjs` under the bundled
+node. Interactive, phone-friendly, zero arguments anywhere:
+
+1. Menu in plain words: [1] Check the connection · [2] Open the messenger ·
+   [3] Make this machine the always-on anchor · [4] Show status · [5] Close.
+2. Connection check flow: "Did the other person send you a code? PASTE it here and
+   press Enter. If YOU are starting, just press Enter." → runs dial or listen
+   accordingly; prints the one-word verdict large and says "read this word to the
+   person on the call." Codes print in groups of four.
+3. First-run firewall: if the kit's firewall rule is absent (detect via
+   `netsh advfirewall firewall show rule name=...`), explain in one sentence and offer
+   Enter-to-continue → invoke the existing `setup_firewall.cmd` elevation. Never a
+   surprise popup.
+4. Messenger + anchor options shell out to the existing `run_mesh.cmd` /
+   `install_anchor.cmd` flows (reuse, never reimplement; I1 untouched).
+5. Errors: every caught failure prints ONE plain sentence + "read this line to the
+   person on the phone" + the raw detail BELOW a fold line for support.
+6. `README_CORRIDOR.txt` (template in build-kit.mjs) leads with: "Double-click
+   START_HERE.cmd and follow the questions." Old per-step instructions move to an
+   appendix ("if support asks you to do a step by hand"). Old cmds keep working.
+7. Gate G6: guided flow drives an end-to-end hermetic ceremony via child processes
+   (scripted stdin) in the geography-hermetic location; README leads with START_HERE;
+   I3/I4 tripwires extended to guide output.
+
+Invariants I1–I7 bind both bands. Single-writer: F owns `probe.mjs` + `kit2-spike.mjs`;
+G owns `build-kit.mjs`, `guide.mjs`, `START_HERE.cmd`, README template. G's spike checks
+land inside `kit2-spike.mjs`? NO — G writes a separate `guide-spike.mjs` (single-writer).
