@@ -57,5 +57,13 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "license": "AGPL-3.0"
+  "license": "AGPL-3.0",
+  "devDependencies": {
+    "bare": "^1.30.3",
+    "bare-crypto": "^1.15.3",
+    "bare-events": "^2.9.1",
+    "bare-fs": "^4.7.4",
+    "bare-process": "^4.5.1",
+    "bare-stream": "^2.13.3"
+  }
 }
