@@ -32,7 +32,14 @@
 //
 // Run: npm run buildkit
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, cpSync, rmSync, readdirSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, cpSync, rmSync, readdirSync, statSync } from 'node:fs'
+
+// cmd.exe misparses LF-only batch files (chopped tokens, broken goto labels),
+// and the repo's .gitattributes LF baseline means any .cmd that ever passes
+// through git comes out LF. Built kits are not git checkouts, so the field
+// guarantee lives HERE: every .cmd is CRLF-normalized at write/copy time.
+// (Mission A2 gate finding, 2026-07-19.)
+const toCrlf = (s) => s.replace(/\r?\n/g, '\r\n')
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -42,6 +49,66 @@ const meshRoot = join(__dirname, '..')
 const kitDir = __dirname
 const hostDir = join(meshRoot, 'host')
 const distOut = join(kitDir, 'dist')
+
+// Mission A2 "The Corridor", Band 2 (mesh/docs/MISSION_A2_CORRIDOR_SPEC.md):
+// `--bundle-node` copies THIS running node.exe (pinned v22 LTS, I5) into
+// each machine folder so the receptionist machine needs zero installs.
+const BUNDLE_NODE = process.argv.includes('--bundle-node')
+
+// Filenames FIXED by the spec (§6) so this band can consume Band 1 (probe)
+// and Band 3 (anchor) output by name alone, built in parallel, with no
+// coordination beyond this list. Each is copied into the built kit ONLY if
+// present at build time — a band that hasn't landed yet is a graceful skip,
+// never a build failure (every band is independently testable this way).
+//
+// Split into two placement clusters — found the hard way running kit2-spike
+// (Mission A2, Band 2 audit): a blanket ".mjs -> kit/, else -> root" rule
+// (the original shape of this list) silently breaks BOTH bands, because
+// each band's own frozen .cmd/.ps1 files hardcode where their .mjs sits
+// relative to themselves, and the two bands hardcode OPPOSITE answers:
+//   - PROBE_CLUSTER: run_probe.cmd/run_probe_dial.cmd (C1, frozen) call a
+//     BARE `probe.mjs` at their own %~dp0, and separately check `..\node.exe`
+//     one level up — i.e. C1 built these assuming the whole probe trio
+//     lives together under kit/ (one level below the bundled node.exe),
+//     matching README_CORRIDOR.txt's own "kit/probe.mjs" phrasing. All
+//     three copy verbatim into target/kit/.
+//   - ANCHOR_CLUSTER: run_anchor.cmd / install_anchor.cmd / uninstall_anchor.cmd
+//     / anchor_status.cmd / install_anchor.ps1 / uninstall_anchor.ps1 (C3,
+//     frozen) all resolve node.exe, data/, and each other via THEIR OWN
+//     %~dp0 / $PSScriptRoot — i.e. C3 built the whole cluster assuming it
+//     sits at the kit ROOT, beside node.exe and data/ (install_anchor.ps1
+//     literally does `Join-Path $kitDir 'anchor.mjs'` where $kitDir is its
+//     own script directory). These copy verbatim into target root.
+//   - The one real conflict: anchor.mjs ALSO does `import ... from
+//     './kit-host.mjs'` — which only resolves if anchor.mjs sits next to
+//     kit-host.mjs, i.e. target/kit/, the OPPOSITE of where its own cmd/ps1
+//     siblings need it. Rather than edit anchor.mjs (frozen — C3's file,
+//     out of Band 2's authority) or duplicate the entire host/ closure a
+//     second time just to satisfy one import, this build script places a
+//     TRANSFORMED COPY of anchor.mjs at target root with that one import
+//     specifier rewritten to `./kit/kit-host.mjs` (see anchorSourceForRoot
+//     below) — a build-time packaging decision on the OUTPUT artifact, not
+//     an edit to the source file in mesh/kit/.
+const PROBE_CLUSTER_FILES = ['probe.mjs', 'run_probe.cmd', 'run_probe_dial.cmd']
+const ANCHOR_CLUSTER_FILES = [
+  'anchor.mjs', 'install_anchor.cmd', 'uninstall_anchor.cmd', 'anchor_status.cmd', 'run_anchor.cmd',
+  'install_anchor.ps1', 'uninstall_anchor.ps1',
+]
+const CORRIDOR_OPTIONAL_FILES = [...PROBE_CLUSTER_FILES, ...ANCHOR_CLUSTER_FILES]
+
+// The one load-bearing rewrite described above. Guarded: throws (fails the
+// build loudly) rather than silently shipping a broken anchor.mjs if a
+// future edit to the source file changes this import line's exact text —
+// a quiet mismatch here would only surface as a cryptic MODULE_NOT_FOUND
+// on the receptionist's machine, the worst possible place to find it.
+function anchorSourceForRoot(src) {
+  const needle = "from './kit-host.mjs'"
+  const replacement = "from './kit/kit-host.mjs'"
+  if (!src.includes(needle)) {
+    throw new Error(`anchor.mjs no longer contains ${JSON.stringify(needle)} — build-kit.mjs's root-copy rewrite (Mission A2 Band 2) is stale and must be updated to match anchor.mjs's real import`)
+  }
+  return src.replace(needle, replacement)
+}
 
 // ── 0. make sure the reducer is fresh ──────────────────────────────────────
 console.log('building reducer.wasm...')
@@ -121,9 +188,16 @@ const packageClosure = walkPackageClosure(rootNodeModules, seedPackages)
 console.log(`node_modules closure: ${packageClosure.size} package(s) (of ${(() => { try { return readFileSync(join(rootNodeModules, '.package-lock.json'), 'utf8').match(/"node_modules\//g)?.length ?? '?' } catch { return '?' } })()} installed)`)
 
 // ── templates (declared before use — assembleMachine below references them) ─
-const RUN_MESH_CMD = `@echo off
-setlocal
-cd /d "%~dp0"
+// Mission A2, Band 2, item 2: every generated .cmd entrypoint prefers the
+// kit's OWN bundled node.exe (sitting next to this .cmd, at %~dp0node.exe —
+// present when built with --bundle-node) over whatever "node" is on PATH.
+// A receptionist machine with nothing installed still runs the kit; a
+// developer machine with node already on PATH is unaffected either way.
+// Shared by every generated launcher .cmd (run_mesh.cmd here; kept as one
+// function so a future addition can't drift from this preference order).
+function nodeLaunchPreamble() {
+  return `set "NODE_EXE=%~dp0node.exe"
+if exist "%NODE_EXE%" goto haveNode
 
 where node >nul 2>nul
 if errorlevel 1 (
@@ -135,11 +209,20 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+set "NODE_EXE=node"
 
-node kit\\kit-host.mjs --data data
+:haveNode`
+}
+
+const RUN_MESH_CMD = `@echo off
+setlocal
+cd /d "%~dp0"
+
+${nodeLaunchPreamble()}
+"%NODE_EXE%" kit\\kit-host.mjs --data data
 
 echo.
-echo (the kit has stopped — press any key to close this window)
+echo (the kit has stopped - press any key to close this window)
 pause >nul
 `
 
@@ -337,6 +420,192 @@ Command reference
   /exit                      quit
 `
 
+// ASCII-only inside every .cmd template in this file, deliberately: a real
+// field bisection (Mission A2, Band 2) found that a single em-dash (U+2014)
+// byte sequence sitting inside a parenthesized `if (...)` block corrupts
+// cmd.exe's batch parser under a non-UTF-8 active codepage — every line
+// BEFORE the offending one starts throwing "'xyz' is not recognized" once
+// cmd pre-scans the file for a GOTO label. A Bahrain field machine is not
+// guaranteed to be running codepage 65001; plain hyphens and quotes only.
+// (README_*.txt files are plain text, never parsed by cmd.exe — safe.)
+
+// Mission A2, Band 2, item 3: setup_firewall.cmd — run-once, self-elevating,
+// idempotent (delete-then-add so a re-run never duplicates a rule), targets
+// the KIT'S OWN bundled node.exe by full path (never a blanket "allow node"
+// rule — I7-adjacent: no broader hole than this one program needs). The
+// ceremony card (README_CORRIDOR.txt) orders this BEFORE first run so the
+// receptionist never sees a Windows Firewall popup mid-ceremony.
+//
+// `--print-only`: echoes the exact netsh commands with NO elevation attempt
+// and NO actual firewall mutation — this is what kit2-spike.mjs drives (a
+// CI/gate process must never trigger a UAC prompt).
+const SETUP_FIREWALL_CMD = `@echo off
+setlocal
+cd /d "%~dp0"
+
+set "NODE_EXE=%~dp0node.exe"
+set "RULE_IN=AsymmFlow Mesh Kit (in)"
+set "RULE_OUT=AsymmFlow Mesh Kit (out)"
+
+if /I "%~1"=="--print-only" goto printOnly
+
+net session >nul 2>nul
+if not "%errorlevel%"=="0" (
+  echo This step needs administrator rights - one popup, then it finishes on its own.
+  powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs" >nul 2>nul
+  exit /b 0
+)
+
+if not exist "%NODE_EXE%" (
+  echo.
+  echo node.exe was not found next to this file - this kit was not built with
+  echo --bundle-node, or the file was moved out of the kit folder. Nothing to do.
+  echo.
+  pause
+  exit /b 1
+)
+
+rem idempotent: delete any existing rule with this name first, then add fresh
+netsh advfirewall firewall delete rule name="%RULE_IN%" >nul 2>nul
+netsh advfirewall firewall delete rule name="%RULE_OUT%" >nul 2>nul
+netsh advfirewall firewall add rule name="%RULE_IN%" dir=in action=allow program="%NODE_EXE%" enable=yes profile=any
+netsh advfirewall firewall add rule name="%RULE_OUT%" dir=out action=allow program="%NODE_EXE%" enable=yes profile=any
+
+echo.
+echo FIREWALL READY
+echo.
+pause
+exit /b 0
+
+:printOnly
+echo netsh advfirewall firewall delete rule name="%RULE_IN%"
+echo netsh advfirewall firewall delete rule name="%RULE_OUT%"
+echo netsh advfirewall firewall add rule name="%RULE_IN%" dir=in action=allow program="%NODE_EXE%" enable=yes profile=any
+echo netsh advfirewall firewall add rule name="%RULE_OUT%" dir=out action=allow program="%NODE_EXE%" enable=yes profile=any
+echo FIREWALL READY
+exit /b 0
+`
+
+// Mission A2, Band 2, item 3: the remote ceremony card. Rewritten for
+// phone/WhatsApp delivery (I3) — synthetic names only, from SYNTHETIC_
+// IDENTITY.md (I4): Jordan (founder, India) and Sam (receptionist, Bahrain).
+const README_CORRIDOR_TEXT = `ASYMMFLOW MESH — THE CORRIDOR (remote field kit)
+====================================================
+
+This is the SAME kit as the kitchen-table test, set up for two machines
+that are NOT in the same room — one in India, one in the Bahrain office.
+Everything is delivered by phone call or WhatsApp: no email, no install,
+no IT ticket.
+
+*******************************************************************
+*  READ THIS BOX FIRST                                             *
+*  - This kit is ONE self-contained folder. It touches nothing else *
+*    on this computer.                                              *
+*  - SYNTHETIC DATA ONLY — made-up names, a throwaway test file.    *
+*    Never type in a real customer or real business detail.        *
+*  - This copy already includes its OWN copy of Node.js (node.exe   *
+*    sitting right next to this file) — nothing to install.        *
+*******************************************************************
+
+Who's who in this card
+-------------------------
+  Jordan  = the founder, on a laptop in India (the "listen" side).
+  Sam     = the receptionist, on the office PC in Bahrain (the "dial" side).
+Use whatever two synthetic names you're actually given on the call —
+these are just the placeholders in the steps below.
+
+Reading codes over the phone or WhatsApp
+--------------------------------------------
+Invite codes and pairing codes are long strings of letters and numbers.
+  - On a PHONE CALL: read them in GROUPS OF FOUR characters, with a pause
+    between groups — e.g. "asymm dash room two dot... a1b2, c3d4, e5f6..."
+    Whoever is typing reads them back once, before pressing Enter.
+  - On WHATSAPP: it is much easier and less error-prone to just COPY and
+    PASTE the whole code as a message. Prefer this over reading aloud
+    whenever both people have WhatsApp open.
+
+Step 0 — BEFORE the first run, on the Bahrain machine only
+---------------------------------------------------------------
+ 0a. Double-click setup_firewall.cmd.
+ 0b. Windows will ask "Do you want to allow this app to make changes?" —
+     click Yes. (This is the ONE popup in this whole test. It only lets
+     THIS kit's own node.exe talk on the network — nothing else changes.)
+ 0c. A window prints FIREWALL READY, then closes. That's it — done once,
+     never needed again on this machine.
+ (Skip this step on Jordan's machine unless told otherwise on the call.)
+
+Step 1 — start both machines
+--------------------------------
+ 1. On EACH machine: double-click run_mesh.cmd. A black window opens.
+ 2. First run only: it asks for a synthetic actor name. Type one word
+    (e.g. jordan or sam), press Enter. Saved from then on.
+ 3. If you ever get lost, TYPE: /status  and read every line out loud —
+    that's the ONE command support needs to see your machine's state:
+    your network transport, how many peers are connected, and when a
+    peer was last seen.
+
+Step 2 — Jordan founds the room (India)
+-------------------------------------------
+ 4. TYPE:  /create corridor test
+    Prints a LAN fallback line (ignore it for a remote test — hyperswarm
+    is what carries this corridor) plus the room is now open.
+ 5. TYPE:  /invite
+    Prints a code starting with "asymm-room2." — send this to Sam over
+    WhatsApp (copy-paste) or read it in groups of four on the call.
+
+Step 3 — Sam joins (Bahrain)
+--------------------------------
+ 6. TYPE:  /join <paste Jordan's invite code here>
+    Prints Sam's PAIRING CODE — send this back to Jordan the same way.
+
+Step 4 — Jordan admits Sam
+-------------------------------
+ 7. TYPE:  /addwriter <paste Sam's pairing code here>
+    A few seconds later, Sam's window prints "joined ... — you can post
+    now" on its own — nothing else to type for this step.
+
+If hyperswarm can't find a path (rare, but the reason this card exists)
+-----------------------------------------------------------------------
+ - Run kit/probe.mjs (or its shortcuts run_probe.cmd / run_probe_dial.cmd,
+   if this kit includes them) FIRST, before step 2, to check the corridor:
+   it prints one word — CORRIDOR GREEN, CORRIDOR AMBER, or CORRIDOR RED —
+   read that word to whoever's on the call.
+ - If the Bahrain office has a port-forward + DuckDNS name set up (ask
+   SPOC), /connect <that-name>:PORT works from Jordan's side as a
+   DHT-free fallback.
+
+Now talk and test file transfer
+-----------------------------------
+ 8. Type a message, press Enter, on either machine — it should appear on
+    the other side within a few seconds.
+ 9. File test — on the machine with a test file:
+      /attach C:\\path\\to\\your\\test\\file.txt  a note about this file
+    It prints a sha256 fingerprint and a #N seq number.
+10. On the OTHER machine, look for the message with 📎, then TYPE:
+      /fetch <that #N>
+    It saves the file automatically and prints:
+      FILE VERIFIED END-TO-END ✅
+    Read that checkmark line out loud — it means the bytes crossed the
+    corridor (India <-> Bahrain) perfectly intact.
+
+/status — the universal support tool
+-----------------------------------------
+Whenever anything looks stuck, wrong, or just unfamiliar, TYPE: /status
+and read every line out loud, top to bottom. It tells the person on the
+phone: your actor name, your network transport (hyperswarm or tcp), how
+many swarm connections you have right now, when a peer was last seen,
+and which node.exe you're running (the kit's own bundled copy, or one
+already on this computer). There is nothing else to check by hand.
+
+Wrapping up
+--------------
+11. /export saves the full transcript to a file in data\\ — your own
+    offline copy.
+12. /exit on each machine closes the kit. Nothing is lost — your device
+    identity, the room, and its messages are all saved in data\\ and
+    come back automatically next time you run run_mesh.cmd.
+`
+
 // ── 3. assemble both machine folders ───────────────────────────────────────
 //
 // U1.6 preserve-guard (MSG-D25): the owner's real Machine-A has LIVE
@@ -402,8 +671,25 @@ function assembleMachine(name) {
         trySync(() => rmSync(join(target, entry.name), { recursive: true, force: true }), `remove ${entry.name}`, skipped)
       }
     }
-  } else {
-    rmSync(target, { recursive: true, force: true })
+  } else if (existsSync(target)) {
+    // Same lock-resilience as the preserveData branch above, extended to the
+    // fresh-build case (found live, Mission A2 Band 2: a leftover dist/
+    // folder from an interrupted prior build can have a directory-level
+    // handle held by an unrelated watcher/AV process even though every FILE
+    // inside is gone — a bare `rmSync(target, {recursive:true})` throws
+    // EBUSY on the top-level rmdir and crashes the whole build). Try the
+    // fast path first; on failure, best-effort per top-level entry (same
+    // as preserveData) so one stuck subtree never blocks the other, then
+    // leave the (now near-empty) target dir in place — mkdirSync below is
+    // idempotent and does not care whether target already existed.
+    try {
+      rmSync(target, { recursive: true, force: true })
+    } catch (err) {
+      skipped.push(`remove ${name}/ (top-level): ${err.code || err.message}`)
+      for (const entry of readdirSync(target, { withFileTypes: true })) {
+        trySync(() => rmSync(join(target, entry.name), { recursive: true, force: true }), `remove ${entry.name}`, skipped)
+      }
+    }
   }
   mkdirSync(target, { recursive: true })
 
@@ -452,21 +738,111 @@ function assembleMachine(name) {
     name: `asymmflow-mesh-kit-${name.toLowerCase()}`, private: true, type: 'module',
   }, null, 2))
 
-  writeFileSync(join(target, 'run_mesh.cmd'), RUN_MESH_CMD)
+  writeFileSync(join(target, 'run_mesh.cmd'), toCrlf(RUN_MESH_CMD))
   writeFileSync(join(target, 'README_KITCHEN_TABLE.txt'), README_TEXT)
+
+  // ── Mission A2, Band 2 ──────────────────────────────────────────────────
+  // item 3: the remote ceremony card + firewall pre-authorization script —
+  // unconditional, every built kit gets these regardless of --bundle-node
+  // (setup_firewall.cmd itself checks for node.exe at runtime and says so
+  // plainly if it's missing).
+  writeFileSync(join(target, 'README_CORRIDOR.txt'), README_CORRIDOR_TEXT)
+  writeFileSync(join(target, 'setup_firewall.cmd'), toCrlf(SETUP_FIREWALL_CMD))
+
+  // item 4: probe (Band 1) + item's anchor files (Band 3) — travel inside
+  // the same zip IF the parallel coder has delivered them by build time.
+  // Graceful: warn-and-skip, never fail the build. `spec` fixes these exact
+  // filenames so C1/C3's output is consumable without coordination beyond
+  // the filenames themselves (MISSION_A2_CORRIDOR_SPEC.md §6).
+  const corridorPresence = {}
+  for (const f of CORRIDOR_OPTIONAL_FILES) {
+    const src = join(kitDir, f)
+    // PROBE_CLUSTER travels together under kit/ (beside probe.mjs);
+    // ANCHOR_CLUSTER travels together at the kit root (beside node.exe,
+    // data/) — see the placement note above CORRIDOR_OPTIONAL_FILES.
+    const dest = PROBE_CLUSTER_FILES.includes(f) ? join(target, 'kit', f) : join(target, f)
+    if (existsSync(src)) {
+      trySync(() => {
+        mkdirSync(dirname(dest), { recursive: true })
+        if (f === 'anchor.mjs') {
+          // The one transformed copy (see anchorSourceForRoot) — every
+          // other file in both clusters copies verbatim (modulo the .cmd
+          // CRLF normalization below).
+          writeFileSync(dest, anchorSourceForRoot(readFileSync(src, 'utf8')))
+        } else if (f.endsWith('.cmd')) {
+          writeFileSync(dest, toCrlf(readFileSync(src, 'utf8')))
+        } else {
+          cpSync(src, dest)
+        }
+      }, `copy ${f}`, skipped)
+      corridorPresence[f] = true
+    } else {
+      console.log(`  ⚠ ${name}: ${f} not present at build time (parallel band not yet delivered) — skipped, not an error`)
+      corridorPresence[f] = false
+    }
+  }
+
+  // item 1: bundle THIS running node.exe (pinned v22 LTS) into the kit
+  // root — every generated .cmd (nodeLaunchPreamble above) prefers it over
+  // PATH. Only on Windows / when process.execPath actually looks like a
+  // node.exe; a non-Windows dev box building the kit just skips this with
+  // a clear notice rather than copying a useless binary.
+  let bundledNodeInfo = null
+  if (BUNDLE_NODE) {
+    if (process.platform !== 'win32') {
+      console.log(`  ⚠ ${name}: --bundle-node requested on ${process.platform}, not win32 — the kit ships for Windows machines; skipping the copy (build on Windows to produce a real bundle)`)
+    } else {
+      const destNode = join(target, 'node.exe')
+      const ok = trySync(() => cpSync(process.execPath, destNode), 'copy node.exe', skipped)
+      if (ok) {
+        bundledNodeInfo = { path: destNode, version: process.version }
+        console.log(`  ${name}: bundled node.exe (${process.version}, ${(statSync(destNode).size / 1e6).toFixed(1)} MB)`)
+      }
+    }
+  }
 
   if (skipped.length) {
     console.log(`  ⚠ ${name}: ${skipped.length} item(s) skipped (likely a running kit process holding a file open) — rebuild again after closing it for a full refresh:`)
     for (const s of skipped) console.log(`      - ${s}`)
   }
 
-  return target
+  return { target, bundledNodeInfo, corridorPresence }
+}
+
+// Mission A2, Band 2, item 1: verify udx-native's native prebuild resolves
+// from UNDER the bundled layout — a copied node.exe, run from the kit's
+// own root, resolving node_modules/udx-native the normal Node way (CWD +
+// module-parent walk), exactly what run_mesh.cmd's `cd /d "%~dp0"` sets up.
+// Spawns the bundled exe itself (not this build process's own node) so a
+// prebuild/ABI mismatch would actually surface here, not be silently
+// papered over by "well MY node can load it".
+function verifyBundledUdx(target, bundledNodeInfo) {
+  if (!bundledNodeInfo) return { skipped: true }
+  const probeScript = join(target, '.udx-smoke.cjs')
+  writeFileSync(probeScript, "require('udx-native'); console.log('UDX_BUNDLE_OK')\n")
+  try {
+    const out = execFileSync(bundledNodeInfo.path, [probeScript], { cwd: target, encoding: 'utf8' })
+    return { skipped: false, ok: out.includes('UDX_BUNDLE_OK'), output: out.trim() }
+  } catch (err) {
+    return { skipped: false, ok: false, output: (err.stdout || '') + (err.stderr || err.message) }
+  } finally {
+    try { rmSync(probeScript, { force: true }) } catch { /* best-effort cleanup */ }
+  }
 }
 
 const machineA = assembleMachine('Machine-A')
 const machineB = assembleMachine('Machine-B')
 
 console.log('\nbuilt:')
-for (const dir of [machineA, machineB]) {
-  console.log(`  ${dir}`)
+for (const { target } of [machineA, machineB]) {
+  console.log(`  ${target}`)
+}
+
+if (BUNDLE_NODE) {
+  console.log('\nudx-native bundled-layout smoke check:')
+  for (const [name, { target, bundledNodeInfo }] of [['Machine-A', machineA], ['Machine-B', machineB]]) {
+    const res = verifyBundledUdx(target, bundledNodeInfo)
+    if (res.skipped) console.log(`  ${name}: skipped (no bundled node.exe — see notice above)`)
+    else console.log(`  ${name}: ${res.ok ? 'OK ✅' : 'FAILED ❌'} — ${res.output}`)
+  }
 }

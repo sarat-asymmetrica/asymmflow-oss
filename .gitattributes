@@ -36,6 +36,12 @@
 .gitignore     text eol=lf
 .gitattributes text eol=lf
 
+# Windows batch files — cmd.exe misparses LF-only scripts (chopped tokens,
+# broken goto labels), so these are the ONE exception to the LF baseline.
+# (Mission A2 gate finding, 2026-07-19.)
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
 # Binary — never normalized, never diffed as text.
 *.png   binary
 *.jpg   binary
