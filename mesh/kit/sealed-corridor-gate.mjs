@@ -132,7 +132,56 @@ function hostileDir(tag) {
 // populating a fresh directory) and never retries a ceremony run or
 // reinterprets a ceremony result. A setup that cannot be completed after
 // three attempts still throws.
+// THE MISLABELLED ERROR THAT COST THIS CAMPAIGN AN HOUR — read before you
+// "fix" a staging failure by retrying harder.
+//
+// On Windows, a disk-full condition surfaces from Node's `cpSync` as:
+//     Error: EINPROGRESS, unknown error '\\?\C:\...'   errno: 112
+// `EINPROGRESS` reads like a transient race worth retrying. It is not:
+// **errno 112 is ERROR_DISK_FULL**. Node has no errno mapping for it and
+// falls back to a name that actively misleads.
+//
+// This bit twice today. The first EINPROGRESS was written off as transient
+// filesystem contention and "fixed" with a retry loop; the retry loop then
+// failed three times in a row, which was the tell — a genuine transient
+// error does not reproduce identically three times running. The disk had in
+// fact reached ZERO bytes free, because the gate harnesses in this campaign
+// each stage a ~62 MB copy of the sealed kit per run and several of them
+// leaked those copies instead of releasing them (41 abandoned directories,
+// 2.37 GB, were found and reclaimed).
+//
+// So: check FIRST and say the true thing, rather than retrying an error
+// that cannot succeed. A gate that reports "EINPROGRESS" when it means
+// "your disk is full" is a probe reporting something other than what its
+// author believed — the exact failure this campaign is about.
+function freeBytesOnTemp() {
+  try {
+    // No `node:fs`.statfs on every Node we might run under, and no extra
+    // dependency is worth it here — ask Windows directly, and treat any
+    // failure to measure as "unknown", never as "fine".
+    const out = execFileSync('cmd.exe', ['/c', 'dir', '/-c', tmpdir()], { encoding: 'utf8' })
+    const m = out.match(/(\d+)\s+bytes free/i)
+    return m ? Number(m[1]) : null
+  } catch { return null }
+}
+
+const KIT_STAGE_BYTES = 70 * 1024 * 1024   // ~62 MB kit, rounded up with headroom
+
+function assertStagingRoom(tag) {
+  const free = freeBytesOnTemp()
+  if (free === null) return           // could not measure — do not invent a verdict
+  if (free < KIT_STAGE_BYTES * 2) {
+    throw new Error(
+      `not enough free disk to stage a kit for ${tag}: ${(free / 1e6).toFixed(0)} MB free, `
+      + `each staged kit is ~${(KIT_STAGE_BYTES / 1e6).toFixed(0)} MB. `
+      + 'NOTE: Windows reports this through Node as "EINPROGRESS, unknown error" (errno 112 = '
+      + 'ERROR_DISK_FULL), which reads like a transient race and is not one. '
+      + 'Check %TEMP% for leaked kit copies from earlier gate runs.')
+  }
+}
+
 function freshKit(tag) {
+  assertStagingRoom(tag)
   let lastErr = null
   for (let attempt = 1; attempt <= 3; attempt++) {
     const d = hostileDir(tag)
@@ -141,6 +190,13 @@ function freshKit(tag) {
       return d
     } catch (err) {
       lastErr = err
+      // errno 112 is ERROR_DISK_FULL — never worth retrying, say so at once.
+      if (err?.errno === 112 || err?.code === 'EINPROGRESS') {
+        throw new Error(
+          `staging failed for ${tag}: the disk is FULL (errno 112 = ERROR_DISK_FULL, which Node `
+          + `surfaces as the misleading "EINPROGRESS"). Not retried — retrying a full disk cannot `
+          + `succeed. Free space in ${tmpdir()} and re-run. Original: ${err?.message ?? err}`)
+      }
       console.log(`  (setup retry ${attempt}/3 for ${tag}: ${err?.code ?? ''} ${err?.message ?? err})`)
     }
   }
