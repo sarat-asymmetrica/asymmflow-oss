@@ -158,6 +158,58 @@ for ($i = 1; $i -le $Runs; $i++) {
 
 Log ('D: TALLY  OK=' + $tally.OK + '/' + $Runs + '  HANG=' + $tally.HANG + '/' + $Runs + '  CONTENT_FAIL=' + $tally.CONTENT_FAIL + '/' + $Runs)
 
+# -- Phase E: OPTIONAL corridor section (Sealed Corridor, SC-4) --------------
+#
+# OFF BY DEFAULT, DELIBERATELY. The receptionist's Round-2 protocol is the
+# single-machine ceremony above and its shape is unchanged by this campaign —
+# that matters, because that protocol is already queued with a field contact
+# and re-teaching it would be a real cost for no gain.
+#
+# The genuinely two-machine corridor checks CANNOT run here at all: they need
+# a second machine and a second human. Rather than fake them, this phase runs
+# only what one machine can honestly answer, and it is opt-in:
+#
+#     set ASYMMFLOW_VERIFY_CORRIDOR=1
+#     verify_clean_machine.cmd
+#
+# E1 records whether the kit CONTAINS the corridor's native addons at all. A
+# kit missing udx-native/bare-tcp boots, renders its whole ceremony, creates
+# its room, and silently never reaches the other machine — the campaign's
+# signature broken-but-green shape. Cheap to check here, and this is the last
+# place it can be caught before a ceremony.
+#
+# E2 runs menu [1] and records the corridor verdict word. READ E2's OWN
+# CAVEAT BELOW BEFORE ACTING ON IT: a single connection check was measured
+# false-red 1 time in 7 on the development machine, with a verified negative
+# control. It is recorded as evidence for a support call, NEVER as a pass/fail
+# gate, and it deliberately does not affect this script's exit code.
+if ($env:ASYMMFLOW_VERIFY_CORRIDOR -eq '1') {
+  Log 'E: OPTIONAL corridor section enabled (ASYMMFLOW_VERIFY_CORRIDOR=1).'
+
+  $addonRoot = Join-Path $kit 'node_modules'
+  foreach ($a in @('udx-native', 'bare-tcp', 'sodium-native', 'bare-dns')) {
+    $p = Join-Path $addonRoot ($a + '\prebuilds\win32-x64\' + $a + '.bare')
+    if (Test-Path $p) {
+      Log ('E1: corridor addon present: ' + $a + '.bare (' + (Get-Item $p).Length + ' bytes)')
+    } else {
+      Log ('E1: WARNING -- corridor addon MISSING: ' + $a + '.bare. This kit can render its whole ceremony and still never reach the other machine. Do NOT run a corridor ceremony on this copy; report it.')
+    }
+  }
+
+  Log 'E2: running menu [1] "Check the connection" once, for the record...'
+  $conn = Invoke-Ceremony 'corridor-connection-check' "1`r`nskip`r`n5`r`n" $TimeoutMs
+  $verdictWord = 'NOT CAPTURED'
+  if ($conn.out -match 'CORRIDOR (GREEN|AMBER|RED)') { $verdictWord = $Matches[0] }
+  Log ('E2: connection check verdict = ' + $verdictWord)
+  Log 'E2: CAVEAT -- one check is NOT a verdict on the network. A single run was'
+  Log 'E2:   measured false-RED 1 time in 7 on the dev machine (with a verified'
+  Log 'E2:   negative control). Run it again before escalating. This line is'
+  Log 'E2:   evidence for a support call and does NOT affect the exit code.'
+  Log 'E2: the real end-to-end proof is a message crossing BOTH ways between two machines.'
+} else {
+  Log 'E: corridor section skipped (set ASYMMFLOW_VERIFY_CORRIDOR=1 to enable). Two-machine checks cannot run single-machine and are not simulated here.'
+}
+
 # -- verdict ----------------------------------------------------------------
 if ($tally.OK -eq $Runs) {
   if ($machineClean) {

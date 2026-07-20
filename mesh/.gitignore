@@ -12,6 +12,21 @@ corestore/
 # 45MB prebuilt binary lands in the repo on the next `git add -A`.
 kit/dist-bare/
 
+# Sealed Corridor addition: build-bare-kit.mjs gained `--out=<dir>` so concurrent
+# gates stop wiping each other's kit (each builder RMs its target before writing).
+# Every alternate output directory is the same 45MB+ disposable artifact as
+# dist-bare/ above, so the ignore rule has to travel with the parameter — one
+# uncovered `--out=` and a prebuilt binary lands in the repo on the next
+# `git add -A`. Convention: any sealed-kit output dir under kit/ starts with a dot.
+#
+# Generalized to a glob after a coder's ad-hoc `kit/.sc3a-manual-test/` showed
+# up untracked: enumerating each mission's output directory by hand guarantees
+# the list lags behind the next one created, and a single uncovered entry puts
+# a 62MB prebuilt binary into the repo on the next `git add -A`. The convention
+# is now load-bearing rather than descriptive: ANY sealed-kit output or scratch
+# directory under kit/ starts with `.sc`.
+kit/.sc*/
+
 # Disposable spike storage/fixture dirs (created and removed by the spikes
 # themselves; listed so an interrupted run can't leave a committable stray).
 .bare-bridge-worker-storage/

@@ -720,3 +720,49 @@ path → data\downloads\ → sha256 verified: true → "FILE VERIFIED END-TO-END
 retired. The messenger substrate (M1-M4 + human layer + bridge + kit) is
 FIELD-CONFIRMED over a real network. Cleared: the Receptionist Test (SPOC
 call, phone-script README) at the owner's scheduling. Next dev: W-UI-2.
+
+## MSG-D28 — The Sealed Corridor: two SEALED kits, one room, both ways — 2026-07-20
+
+The Sealed Ship proved one sealed Bare kit runs the local ceremony. This wave
+proves the **corridor**: two sealed kits, in two from-scratch directories, each
+driven through its **real `run_bare_mesh.cmd` launcher**, form ONE room and
+carry messages BOTH ways, content-asserted in each direction. The room is
+**encrypted** — no prior gate in this line had put an encrypted room on a wire.
+
+Ported, not invented: `kit-registry.mjs` (rooms survive a restart),
+`kit-net.mjs` (hyperswarm primary + REQUIRED direct-TCP fallback, now on
+`bare-tcp` — the one approved new dependency), the in-process `/addwriter`
+ceremony (protocol v0 still has no become-a-writer wire method — deviation #2
+stands), and the A2.1 Reception-Grade copy. **Holesail stayed banned.**
+`mesh/reducer/**`, capability, invite and protocol-v0 semantics: untouched.
+
+**Six defects found, none by a passing test.** Two would have been invisible
+until the field:
+
+- **Two people on a corridor could not read each other.** The messenger could
+  post but had no read surface; `/rooms` shows only the canonically-last
+  message, so a lower-seq arrival was structurally invisible. `/read` added.
+- **Every device called itself `guide`**, and `msgId` is `{actor}:{seq}` — two
+  machines could mint the SAME id, silently losing a message. Each device now
+  derives its actor from its own public key. Invisible to every prior gate
+  because a single device only ever collides with itself.
+- `bare-tcp`'s `listen()` defaults to `localhost` where `node:net` binds all
+  interfaces: a verbatim port would have shipped a LAN fallback deaf to every
+  machine but itself — green on one machine, broken on two.
+- A missing room folder does not throw; Corestore fabricates a phantom empty
+  room the guide would greet as "found your earlier conversation again."
+- The guide had double-spaced every line since Phase 2, invisible because every
+  gate asserts with `.includes()`.
+- `errno 112` is `ERROR_DISK_FULL`, which Node mislabels `EINPROGRESS` — it had
+  already produced a confident, wrong antivirus conclusion.
+
+**Method rule 6 (added to the Sealed Ship's five):** *assertions inherit the
+blind spots of the surface they read.* Before trusting a green result, ask not
+"did it pass" but "what could be broken and still produce this exact output?"
+
+**Still owner-reserved and untouched:** every measurement is two processes on
+ONE machine. The receptionist Round-2 verification, the two-machine LAN
+rehearsal, and the India↔Bahrain ceremony are field work, with the runbook at
+`mesh/docs/bare-corridor/CORRIDOR_RUNBOOK_SEALED.md`. The A2.1 Node kit remains
+the rollback path and that decision is made BEFORE ceremony day: a slipped gate
+is a report, a fudged gate is a failure.

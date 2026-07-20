@@ -58,7 +58,11 @@
     "harnessselftest": "node host/spawn-pipe-harness.mjs --selftest",
     "seqrace": "npm run build && node host/gate-seq-race-check.mjs",
     "stdioseam": "npm run build && node host/stdio-seam-spike.mjs",
-    "buildbarekit": "npm run build && node kit/build-bare-kit.mjs"
+    "buildbarekit": "npm run build && node kit/build-bare-kit.mjs",
+    "sc1spike": "npm run build && node kit/bare-registry-spike.mjs",
+    "sc2spike": "npm run build && node kit/bare-net-spike.mjs",
+    "sc3bspike": "npm run build && node kit/bare-connection-check-spike.mjs",
+    "sc3aspike": "npm run build && node kit/bare-corridor-spike.mjs"
   },
   "dependencies": {
     "autobase": "^7.11.0",
@@ -87,6 +91,7 @@
     "bare-process": "^4.5.1",
     "bare-readline": "^1.3.1",
     "bare-stream": "^2.13.3",
-    "bare-subprocess": "^6.1.0"
+    "bare-subprocess": "^6.1.0",
+    "bare-tcp": "^2.5.2"
   }
 }

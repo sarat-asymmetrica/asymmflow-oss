@@ -73,9 +73,13 @@ console.log('\n-- layer 2: real spawn-pipe scenarios --')
 
 function guideStdin(lines) { return lines.join('\n') + '\n' }
 
-// Full flow: open messenger (Enter past the firewall offer), post one
-// message, list rooms, leave the messenger, close the guide.
-const FULL_FLOW_STDIN = guideStdin(['2', '', 'a real spawned message', '/rooms', '/exit', '5'])
+// Full flow: open messenger (Enter past the firewall offer, Enter past the
+// SC-3a corridor fork -- "just open/start the conversation on this
+// computer" is the safe default in BOTH the room-exists and no-room states,
+// per the D3 ruling: reaching the code question at all requires typing
+// "connect" first), post one message, list rooms, leave the messenger,
+// close the guide.
+const FULL_FLOW_STDIN = guideStdin(['2', '', '', 'a real spawned message', '/rooms', '/exit', '5'])
 const fullFlowSuccess = (stdout) =>
   stdout.includes('Welcome.') &&
   stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)') &&
@@ -201,7 +205,10 @@ console.log('\n-- layer 4: the sealed, bare-pack\'d kit, from a from-scratch dir
       hostileDir = mkdtempSync(join(tmpdir(), 'bare-guide-sealed-'))
       cpSync(bundleDir, hostileDir, { recursive: true })
 
-      const CEREMONY_STDIN = guideStdin(['2', 'skip', 'a real sealed-kit message', '/rooms', '/exit', '5'])
+      // SC-3a corridor fork: 'skip' answers the firewall offer, the extra
+      // '' answers the fork question with the safe Enter-default (open/start
+      // locally, no invite, no network) -- see FULL_FLOW_STDIN's own comment.
+      const CEREMONY_STDIN = guideStdin(['2', 'skip', '', 'a real sealed-kit message', '/rooms', '/exit', '5'])
       const result = await runSpawnPipe({
         exe: join(hostileDir, 'bare.exe'), scriptPath: join(hostileDir, 'app.bundle'), cwd: hostileDir,
         runs: 2, timeoutMs: 20000, stdin: CEREMONY_STDIN,
