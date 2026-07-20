@@ -93,16 +93,41 @@ run result" are exit-code driven. **Anchor health must assert on content.**
 ## 6. Integration is a distinct gate
 
 Every component gate was green — guide 16/16, bridge 45/45, probe 15/15, anchor green, parity
-13/13 both runtimes, smoke, reactor — **and the composition failed twice**:
+13/13 both runtimes, smoke, reactor — **and the composition failed three times**:
 
 1. `isMain` cannot fire inside a bundle (`argv[1]` is the bundle; `import.meta.url` is virtual)
    → `runGuide()` never called, exit 0, zero bytes.
 2. `reducer.wasm` never offloaded (`new URL()` is invisible to `bare-pack`'s asset detector)
    → full ceremony renders, room created, **only posting fails**.
+3. `runGuide()` never called `exit()`, relying on natural termination at stdin EOF
+   → **intermittent hang, ~1 in 4 runs.**
 
-The second is the more dangerous: a kit that boots, draws its menu and says Goodbye reads as
-working. Both entry files now carry header comments explaining why the fixes must not be
-"simplified" away.
+The second is the more dangerous shape: a kit that boots, draws its menu and says Goodbye
+reads as working. Both entry files now carry header comments explaining why the fixes must
+not be "simplified" away.
+
+### The third one is a failure of THIS GATE, and is recorded as such
+
+Defect 3 is **RULE 3 violated in a second file** — the exact "let the loop drain naturally"
+shape the rules already name as producing a 10/10 hang in the bridge worker. The coder found
+it by stress-testing before reporting green, diagnosed it as the same bug class, and stated
+plainly that it happened because the Phase 2 fix had not been generalized into a rule applied
+on sight. That is the right instinct and it caught a defect nobody else had.
+
+**The gate certified Phase 3 as PASSED without catching it.** The orchestrator's samples were
+2 and 5 runs. At a ~25% failure rate, clean runs at that sample size are unremarkable — the
+verdict was luck, not evidence. Re-verified after the fix at **16/16**, a sample size that
+would make missing a 1-in-4 defect statistically negligible.
+
+The lesson generalizes past this campaign and belongs with the four probe rules in §4:
+
+5. **An intermittent defect is invisible at small N.** A pass on 2–5 samples cannot
+   distinguish "works" from "fails 25% of the time". Every rate in this campaign that turned
+   out to matter was measured over ≥30 runs; the one verdict taken on a handful of samples is
+   the one that was wrong. Where a hang or a race is even plausible, sample size IS the test.
+
+A green result from a harness that can go red is still only as strong as the number of times
+it was asked.
 
 ## 7. Corrections to the campaign spec itself
 

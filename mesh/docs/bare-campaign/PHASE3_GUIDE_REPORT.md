@@ -28,17 +28,17 @@ behind one isn't wired yet.
 Old `mesh/kit/guide.mjs`/`guide-spike.mjs` (Node line) untouched, still
 green — the rollback path stays warm, exactly as required.
 
-**SEALED KIT: YES, the full ceremony runs from hostile geography.** A real
-defect surfaced during kit integration (found by P0-B, root-caused by the
-campaign lead, fixed here) — see §1a below — is now fixed and verified: a
-`bare.exe app.bundle` built from `kit/bare-guide-entry.mjs`, copied whole
-to a from-scratch temp directory, driven over a real spawned pipe,
-correctly renders the menu, answers the firewall offer, opens the
-messenger, lists rooms, and prints the exact "Goodbye" line — 2/2 stable
-runs. One thing in that same ceremony does NOT yet work: posting a message
-through the sealed kit fails with `ENOENT ... reducer.wasm` — a SEPARATE,
-already-identified, differently-owned defect (apply-bare.mjs's asset
-resolution, not this file's to fix) — see §1a.
+**SEALED KIT: YES — a message actually posts from the sealed kit in
+hostile geography, and `dist/reducer.wasm` is in the manifest.** Three
+real defects surfaced and were fixed across this phase and one follow-up
+round (§1a-§1c); all three are now closed and independently re-verified.
+A `bare.exe app.bundle` built from `kit/bare-guide-entry.mjs`, copied whole
+to a from-scratch temp directory, driven over a real spawned pipe: renders
+the menu, answers the firewall offer, opens the messenger, POSTS a real
+message (`posted, seq 2` — a real seq number, not a mock), lists it back
+via `/rooms`, and prints the exact "Goodbye" line — then the process
+actually exits. 17/17 spike checks green, both the manifest content and
+the message-posting content are asserted, not merely reported.
 
 ### 1a. Root-caused defect, found and fixed this round
 
@@ -77,11 +77,74 @@ effect of being imported for their exports.
 
 **Gated properly, per the lead's explicit ask** — a green unbundled run
 proves nothing about the bundled artifact (the exact RULE 4 lesson,
-recurring at a new layer): §3's layer 4 now builds the real sealed kit,
-copies it to a from-scratch directory, and drives it through a real
-spawned pipe, asserting on content (menu rendered, room created, the exact
-"Goodbye" line) — never on exit code, which was 0 in both the broken and
-the working case.
+recurring at a new layer): §3's layer 4 builds the real sealed kit, copies
+it to a from-scratch directory, and drives it through a real spawned pipe,
+asserting on content — never on exit code, which was 0 in both the broken
+and the working case.
+
+### 1b. Second defect, found and fixed the same round: the wasm asset was
+never offloaded, so the sealed kit could open the messenger but never post
+
+Directly observed once §1a's fix landed (P0-B had predicted it; the lead
+confirmed it live): the ceremony now reached the reducer and reported
+`(not posted -- ENOENT: ...app.bundle\dist\reducer.wasm)`. Cause:
+`apply-bare.mjs`'s DEFAULT self-location (`new URL('../dist/reducer.wasm',
+import.meta.url)`) is invisible to `bare-pack`'s static asset detector —
+only the literal `import.meta.asset(...)` form is recognised — so the wasm
+was never offloaded, and even a present file at that `new URL(...)` path
+would resolve to a virtual, unreadable location inside a bundle anyway.
+
+**The fix, in `kit/bare-guide-entry.mjs` only** (matching
+`host/bare-entry.mjs`'s already-proven form exactly, per the lead's
+direction — `apply-bare.mjs` itself was NOT touched, its self-locating
+default stays exactly as it is for every existing spike and the whole Node
+line):
+
+```js
+import * as fs from 'bare-fs'
+import { setWasmSource } from '../host/apply-bare.mjs'
+import { runGuide } from './bare-guide.mjs'
+
+const wasmAssetPath = import.meta.asset('../dist/reducer.wasm')
+setWasmSource(fs.readFileSync(new URL(wasmAssetPath)))
+await runGuide()
+```
+
+**Verified, not assumed**: rebuilding the sealed kit now shows
+`3.96 MB  dist\reducer.wasm` in `build-bare-kit.mjs`'s own manifest
+output, and a message posted through the sealed kit from a from-scratch
+hostile directory returns `(posted, seq 2)` and shows up in that same
+process's own `/rooms` listing. `bare-guide-spike.mjs`'s layer 4 now
+ASSERTS both of these (promoted from "reported" to a real gate) — see §3.
+
+### 1c. Third defect, found by this coder's OWN stress-testing of the
+fix, before reporting: an intermittent hang, root-caused and fixed
+
+Running layer 4 repeatedly from hostile geography (not just once) surfaced
+a real bug the single successful run had hidden: **1 hang in 4 sampled
+sealed-kit runs** (`spawn-pipe-harness.mjs` correctly caught it as `HANG`,
+not a false green). Root cause, found by reading `runGuide()` again with
+the hang in hand rather than accepting the first success: nothing in
+`bare-guide.mjs` ever called `process.exit()`/`Bare.exit()`. The function
+relied on the process exiting naturally once stdin reached EOF and no
+other work was pending — precisely the "let the loop drain naturally"
+shape `PHASE0_GATE_D2_FLUSH_RACE.md`'s RULE 3 already names as producing a
+10/10 hang in a DIFFERENT file (`bare-bridge.mjs`'s worker) — the same
+bug, in a second file, because the fix for the first one was never
+generalized as a rule this coder applied on sight elsewhere.
+
+**The fix**, in `bare-guide.mjs`'s `runGuide()`: an explicit
+`Bare.exit(0)`/`process.exit(0)` call after the "Goodbye" line, guarded by
+`!io` so a future direct-import test that injects its own fake `io` (not
+a real spawned process) never has its own test-runner process killed out
+from under it.
+
+**Re-verified after the fix**: 3 full spike re-runs from hostile
+geography (6 additional sealed-kit spawn-pipe samples) — 0 hangs, 17/17
+every time. Not proof a hang can never recur (a handful of samples is not
+a statistical guarantee — same honest limit as every prior phase's
+flush-race sampling), but a real, understood, fixed root cause, not a
+suppressed symptom.
 
 ## 2. UX-law conformance table (against `PHASE0_NOTES_D_REVERIFY.md` §6)
 
@@ -129,19 +192,19 @@ and rolled its own; this phase does not repeat that).
 | 2 — real spawn-pipe, out-of-range menu choice handled gracefully, 2 runs each target | 2 | **PASS**, both targets OK=2/2 |
 | 3 — negative control A: `spawn-pipe-harness.mjs`'s own shipped `selfTest()` | 1 | **PASS** — correctly distinguishes OK/HANG/TOTAL_LOSS/PARTIAL on its own synthetic fixtures |
 | 3 — negative control B: a fixture copy of `bare-guide.mjs` with its closing "Goodbye" line deleted, driven through the SAME real spawn-pipe path as layer 2 | 1 | **PASS** — 3/3 runs correctly flagged as `TOTAL_LOSS` (not OK), proving THIS spike's own success predicate (not just the harness's generic one) can detect a broken guide |
-| 4 — the SEALED kit (`build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs`), copied to a from-scratch temp directory, driven via `bare.exe app.bundle` over a real spawned pipe, 2 runs | 2 | **PASS** — build produced `app.bundle`+`bare.exe`; OK=2/2 on menu-rendered/room-created/Goodbye. Message posting reported separately (fails with the known, differently-owned `reducer.wasm` asset bug — not asserted as pass/fail against this phase's own deliverable, see §1a) |
+| 4 — the SEALED kit (`build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs`), copied to a from-scratch temp directory, driven via `bare.exe app.bundle` over a real spawned pipe, 2 runs | 3 | **PASS** — build produced `app.bundle`+`bare.exe`; `dist/reducer.wasm` ASSERTED present in the manifest; OK=2/2 on menu-rendered/message-ACTUALLY-posted/room-listed/Goodbye, all four now gated in one predicate |
 
-**16 checks total, 0 failures.** Re-run twice more back-to-back after
-layer 4 was added (16/16 both times), plus a manual 3× stability check of
-just the sealed-kit ceremony via a raw piped `bare.exe app.bundle`
-invocation outside the spike (2/2 clean each time, same result as the
-spike's own layer 4) — stable, no flake observed. Also run from
+**17 checks total, 0 failures**, after §1c's exit-hang fix (was 16 before
+layer 4 gained the manifest check; briefly RED at 1 failure/17 when the
+hang was first caught — see §1c). Re-run 3 full spike runs from hostile
+geography after the fix (6 additional sealed-kit spawn-pipe samples, all
+clean) plus 2 more from the dev tree — 17/17 every time since the fix
+landed. Also run from
 `C:\Users\schan\AppData\Local\Temp\claude\...\scratchpad\p1a` (outside the
-repo tree, absolute script path) — same result, no leftover temp
-directories (every spawn-pipe scenario, including layer 4's sealed-kit
-copy, uses its own `mkdtempSync` cwd, cleaned up in a `finally` block;
-confirmed by listing both the hostile directory and the OS tmpdir
-post-run).
+repo tree, absolute script path) — no leftover temp directories (every
+spawn-pipe scenario, including layer 4's sealed-kit copy, uses its own
+`mkdtempSync` cwd, cleaned up in a `finally` block; confirmed by listing
+both the hostile directory and the OS tmpdir post-run).
 
 **The real end-to-end proof, stated plainly**: layer 2's "full menu flow"
 scenario is not a mock — it spawns the actual `bare-guide.mjs` over a real
@@ -184,12 +247,19 @@ neither is imported by `bare-guide.mjs`:
   (only read-and-compared against the source).
 - **A genuinely clean machine** — same standing caveat as every prior
   phase; Phase 4+'s hostile-machine rehearsal is the real gate for that.
-- **The `reducer.wasm` asset-offload defect's actual fix** — reproduced
-  and precisely diagnosed (§1a, §3 layer 4) but not fixed here; routed to
-  P0-B/packaging per the lead's direction (do not edit `apply-bare.mjs`).
-  Once fixed, layer 4's message-posting assertion should be promoted from
-  "reported" to "gated" — flagged in the spike's own code comment so this
-  isn't silently forgotten.
+- **Device identity is NOT reused across separate sealed-kit invocations
+  from the same directory** — noticed while stress-testing §1c's fix: each
+  fresh `bare.exe app.bundle` run prints "created a new room" again rather
+  than finding the room from the previous run, even though
+  `./data/keys/bare-guide-device.seed` persists correctly on disk.
+  `createBridgeCore`'s `rooms` Map starts empty every process start, and
+  nothing in `bare-guide.mjs` re-discovers a previously-created room's
+  corestore from `ROOM_STORAGE_DIR` — `createSocialRoom` always mints a new
+  `social-<random>` subdirectory. Not a regression from this round's fixes
+  (same behavior before them), not blocking (each session's messenger
+  still works correctly end-to-end), but a real limitation for anything
+  beyond a single-session demo. Flagged for whoever picks up the messenger
+  UX next, not fixed here (out of this round's scope).
 - **Device-identity persistence across a REAL machine restart** — the
   `./data/keys/bare-guide-device.seed` file is written and re-read
   correctly within a single spike run (each spawn-pipe scenario uses a
