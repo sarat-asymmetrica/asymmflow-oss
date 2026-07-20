@@ -38,7 +38,9 @@
     "missiond:join": "node host/peer.mjs join --storage ./.peer-join-d",
     "wave1:host": "node host/peer.mjs host --storage ./.peer-host",
     "wave1:join": "node host/peer.mjs join --storage ./.peer-join",
-    "test:go": "cd .. && go test ./mesh/..."
+    "test:go": "cd .. && go test ./mesh/...",
+    "bareparity": "npm run build && node host/bare-parity-spike.mjs",
+    "bareparity:bare": "npx bare host/bare-parity-spike.mjs"
   },
   "dependencies": {
     "autobase": "^7.11.0",

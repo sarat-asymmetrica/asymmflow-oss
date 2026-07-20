@@ -1,0 +1,1199 @@
+{
+  "inventory_basic": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "dev-a",
+        "sku": "TX-100",
+        "delta": 10,
+        "ts": 100
+      },
+      {
+        "seq": 2,
+        "actor": "dev-a",
+        "sku": "TX-100",
+        "delta": -6,
+        "ts": 200
+      },
+      {
+        "seq": 1,
+        "actor": "dev-b",
+        "sku": "TX-100",
+        "delta": -6,
+        "ts": 150
+      },
+      {
+        "seq": 1,
+        "actor": "dev-a",
+        "sku": "PH-200",
+        "delta": 3,
+        "ts": 120
+      },
+      {
+        "seq": 2,
+        "actor": "dev-b",
+        "sku": "PH-200",
+        "delta": 4,
+        "ts": 220
+      }
+    ],
+    "config": null,
+    "mode": "",
+    "expectedRawBase64": "eyJzdG9jayI6eyJQSC0yMDAiOjcsIlRYLTEwMCI6NH0sImFyIjp7fSwiYXBwcm92YWxzIjp7fSwicG9saWNpZXMiOnt9LCJyZWplY3RlZCI6W3sic2VxIjoyLCJhY3RvciI6ImRldi1hIiwic2t1IjoiVFgtMTAwIiwiZGVsdGEiOi02LCJyZWFzb24iOiJmbG9vciBpbnZhcmlhbnQ6IHN0b2NrIHdvdWxkIGZhbGwgYmVsb3cgMCAoaGF2ZSA0LCBkZWx0YSAtNikifV0sImFwcGxpZWQiOjQsImRpZ2VzdCI6IjZjOGMzNWVmZjFlMmMwNGQ2ZDQ2NzA0YWQ3YzU0MmMyODA4NzE3ZmFlNThmYjFkOTFjZWNjZmNiZDA5ZWI0MTAiLCJvcHNIYXNoZWQiOjV9"
+  },
+  "missionc_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "dev-a",
+        "ts": 100,
+        "sku": "TX-100",
+        "delta": 10
+      },
+      {
+        "seq": 2,
+        "actor": "dev-a",
+        "ts": 200,
+        "sku": "TX-100",
+        "delta": -6
+      },
+      {
+        "seq": 3,
+        "actor": "dev-a",
+        "ts": 300,
+        "kind": "ar.limit",
+        "customer": "CUST-01",
+        "limitMinor": 500000,
+        "currency": "BHD"
+      },
+      {
+        "seq": 4,
+        "actor": "dev-a",
+        "ts": 310,
+        "kind": "ar.charge",
+        "customer": "CUST-01",
+        "amountMinor": 400000,
+        "currency": "BHD"
+      },
+      {
+        "seq": 6,
+        "actor": "sarat",
+        "ts": 410,
+        "kind": "approval.decide",
+        "subject": "posting-77",
+        "subjectType": "posting_draft",
+        "decision": "approved",
+        "actorType": "operator",
+        "authority": 2,
+        "correlationId": "c-2"
+      },
+      {
+        "seq": 8,
+        "actor": "sarat",
+        "ts": 520,
+        "kind": "policy.override",
+        "policyId": "VAT-DEADLINE",
+        "reason": "filed via portal, receipt attached",
+        "actorType": "operator",
+        "authority": 3
+      },
+      {
+        "seq": 1,
+        "actor": "dev-b",
+        "ts": 150,
+        "sku": "TX-100",
+        "delta": -6
+      },
+      {
+        "seq": 2,
+        "actor": "dev-b",
+        "ts": 320,
+        "kind": "ar.charge",
+        "customer": "CUST-01",
+        "amountMinor": 200000,
+        "currency": "BHD"
+      },
+      {
+        "seq": 3,
+        "actor": "dev-b",
+        "ts": 330,
+        "kind": "ar.payment",
+        "customer": "CUST-01",
+        "amountMinor": 150000,
+        "currency": "BHD"
+      },
+      {
+        "seq": 5,
+        "actor": "dev-b",
+        "ts": 500,
+        "kind": "policy.violation",
+        "policyId": "VAT-DEADLINE"
+      },
+      {
+        "seq": 4,
+        "actor": "butler-ai",
+        "ts": 400,
+        "kind": "approval.decide",
+        "subject": "posting-77",
+        "subjectType": "posting_draft",
+        "decision": "approved",
+        "actorType": "agent",
+        "authority": 1,
+        "correlationId": "c-1"
+      },
+      {
+        "seq": 6,
+        "actor": "butler-ai",
+        "ts": 510,
+        "kind": "policy.override",
+        "policyId": "VAT-DEADLINE",
+        "reason": "agent says it is fine",
+        "actorType": "agent",
+        "authority": 1
+      }
+    ],
+    "config": null,
+    "mode": "",
+    "expectedRawBase64": "eyJzdG9jayI6eyJUWC0xMDAiOjR9LCJhciI6eyJDVVNULTAxIjp7ImJhbGFuY2VNaW5vciI6MjUwMDAwLCJsaW1pdE1pbm9yIjo1MDAwMDAsImN1cnJlbmN5IjoiQkhEIn19LCJhcHByb3ZhbHMiOnsicG9zdGluZy03NyI6eyJkZWNpc2lvbiI6ImFwcHJvdmVkIiwiYWN0b3IiOiJzYXJhdCIsImFjdG9yVHlwZSI6Im9wZXJhdG9yIiwiY29ycmVsYXRpb25JZCI6ImMtMiIsImRlY2lkZWRBdE1zIjo0MTB9fSwicG9saWNpZXMiOnsiVkFULURFQURMSU5FIjp7InN0YXR1cyI6Im92ZXJyaWRkZW4iLCJvdmVycmlkZGVuQnkiOiJzYXJhdCIsInJlYXNvbiI6ImZpbGVkIHZpYSBwb3J0YWwsIHJlY2VpcHQgYXR0YWNoZWQifX0sInJlamVjdGVkIjpbeyJzZXEiOjIsImFjdG9yIjoiZGV2LWEiLCJza3UiOiJUWC0xMDAiLCJkZWx0YSI6LTYsInJlYXNvbiI6ImZsb29yIGludmFyaWFudDogc3RvY2sgd291bGQgZmFsbCBiZWxvdyAwIChoYXZlIDQsIGRlbHRhIC02KSJ9LHsic2VxIjoyLCJhY3RvciI6ImRldi1iIiwia2luZCI6ImFyLmNoYXJnZSIsImN1c3RvbWVyIjoiQ1VTVC0wMSIsInJlYXNvbiI6ImFyOiBubyBjcmVkaXQgbGltaXQgc2V0IGZvciBjdXN0b21lciBDVVNULTAxIn0seyJzZXEiOjQsImFjdG9yIjoiYnV0bGVyLWFpIiwia2luZCI6ImFwcHJvdmFsLmRlY2lkZSIsInN1YmplY3QiOiJwb3N0aW5nLTc3IiwicmVhc29uIjoiYXBwcm92YWw6IGFjdG9yIGJ1dGxlci1haSAoYWdlbnQvcHJvcG9zZSkgY2Fubm90IGRlY2lkZSBhcHByb3ZlZCAoQUktYXV0aG9yaXR5IGJvdW5kYXJ5IC8gaW5zdWZmaWNpZW50IGF1dGhvcml0eSkifSx7InNlcSI6NiwiYWN0b3IiOiJidXRsZXItYWkiLCJraW5kIjoicG9saWN5Lm92ZXJyaWRlIiwicG9saWN5SWQiOiJWQVQtREVBRExJTkUiLCJyZWFzb24iOiJwb2xpY3k6IGFjdG9yIFwiYnV0bGVyLWFpXCIgY2Fubm90IG92ZXJyaWRlIHBvbGljeSBcIlZBVC1ERUFETElORVwiIChBSS1hdXRob3JpdHkgYm91bmRhcnkpIn1dLCJhcHBsaWVkIjo4LCJkaWdlc3QiOiI3OTQzMmVkOGMxNmM5ODk4MTU0YTQxODZmNmRlZDNhZWYyZDY3YmVhOTczYWVlMGJjOTM2NmEyYjYwMGFlYjIzIiwib3BzSGFzaGVkIjoxMn0="
+  },
+  "missiond_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "sarat-hub",
+        "ts": 100,
+        "kind": "cap.grant",
+        "device": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "29f1d77af5b39920361c65028388241525b9f7da1b340c3a124f18bf59c012235c28f199d0611c591c17f20d18f8b201c659dcbf7c573e24ef9a1eeae404a308"
+      },
+      {
+        "seq": 3,
+        "actor": "sarat-hub",
+        "ts": 300,
+        "sku": "TX-100",
+        "delta": 5,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "192fe763b796555daa13903df69b942ceb4037e7bb42d45982f91d9098bd86d6d8f0d43539f71cced53bcfa02138bf9d212d89a3c720c56da5bff21b6d7ded08"
+      },
+      {
+        "seq": 6,
+        "actor": "sarat-hub",
+        "ts": 600,
+        "kind": "cap.epoch",
+        "epoch": 1,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "94ad20f5a368c7bc7b44c41ce7fa54b926279ecd1149b749d3eb0a29ca7f1b3a4d1f2045c44945c8973101f89857dc2b8bc9e9078cb0130ad51fc1ae6ca7f60d"
+      },
+      {
+        "seq": 8,
+        "actor": "sarat-hub",
+        "ts": 800,
+        "kind": "cap.grant",
+        "device": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "role": "writer",
+        "epoch": 1,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "b9a5e3ce071ee4951ca13da8d11bfc7b1821826051d77f68a45f6e3ee0c71606dd25ccff024e39a4ab79a7e154cad75e2796beccaaab4fe3b687ef5d8ccc0f08"
+      },
+      {
+        "seq": 2,
+        "actor": "laptop",
+        "ts": 200,
+        "sku": "TX-100",
+        "delta": 10,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "cf6abb4037d1c5a921aed0710fa7dc01c72faf2f454b3463450a0e8f54cd20281702c5aa1a84e34075949cca76346ab38f3f2b9e7d21c7c54d837ad7e161ef0e"
+      },
+      {
+        "seq": 7,
+        "actor": "laptop",
+        "ts": 700,
+        "sku": "TX-100",
+        "delta": -4,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "e4137ce0182bdd327dd67fc6a50781b1ae4e06403e1930e4fcb99c7eacaaa3904ad6532e1400ded59db2eb6dc98fbeafbd70a92c5142553c6b28d8998594640c"
+      },
+      {
+        "seq": 9,
+        "actor": "laptop",
+        "ts": 900,
+        "sku": "TX-100",
+        "delta": -2,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "052645b865a4fc1a3eafe7c58d2ce323bfcf17466e9d2742f07d112ca0403247772254760eb5fa9061892d872b6619dde3d425c43c30e3d1f144f0bf020c710a"
+      },
+      {
+        "seq": 4,
+        "actor": "rogue",
+        "ts": 400,
+        "sku": "TX-100",
+        "delta": -3,
+        "devicePub": "d404bc44565aedbb899150e5b0b3b32b9441bf0cb7884c33130da8dbc27dd2cf",
+        "sig": "8a1f29d1c8075a64658328137d9ccfff6906f917530dd7632de8904ce4ebaf90f2e1bf8b8f1a0db6b6e13cd14af678ba04e19693ddab0b5860e6cbb942cacb07"
+      },
+      {
+        "seq": 5,
+        "actor": "rogue",
+        "ts": 500,
+        "kind": "cap.grant",
+        "device": "d404bc44565aedbb899150e5b0b3b32b9441bf0cb7884c33130da8dbc27dd2cf",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "d404bc44565aedbb899150e5b0b3b32b9441bf0cb7884c33130da8dbc27dd2cf",
+        "sig": "96d97e2f45ecb5976cfa82b73f57a4094b731ba5f53fd8797e59323067e315992b07e73943be742714106729e2be5a27d679c0c35aa6cda67e2e7bf3d87bba01"
+      }
+    ],
+    "config": {
+      "authorityPub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5"
+    },
+    "mode": "",
+    "expectedRawBase64": "eyJzdG9jayI6eyJUWC0xMDAiOjEzfSwiYXIiOnt9LCJhcHByb3ZhbHMiOnt9LCJwb2xpY2llcyI6e30sInJlamVjdGVkIjpbeyJzZXEiOjQsImFjdG9yIjoicm9ndWUiLCJza3UiOiJUWC0xMDAiLCJkZWx0YSI6LTMsInJlYXNvbiI6ImNhcGFiaWxpdHk6IG5vIGdyYW50IGZvciBkZXZpY2UgZDQwNGJjNDTigKYifSx7InNlcSI6NSwiYWN0b3IiOiJyb2d1ZSIsImtpbmQiOiJjYXAuZ3JhbnQiLCJyZWFzb24iOiJjYXBhYmlsaXR5OiBncmFudHMgbXVzdCBiZSBzaWduZWQgYnkgdGhlIG1lc2ggYXV0aG9yaXR5IChnb3QgZGV2aWNlIGQ0MDRiYzQ04oCmKSJ9LHsic2VxIjo3LCJhY3RvciI6ImxhcHRvcCIsInNrdSI6IlRYLTEwMCIsImRlbHRhIjotNCwicmVhc29uIjoiY2FwYWJpbGl0eTogZ3JhbnQgZXBvY2ggMCBpcyBzdGFsZSAoY3VycmVudCBlcG9jaCAxKSDigJQgZGV2aWNlIDU1MTU0ZjQy4oCmIHdhcyBub3QgcmUtaXNzdWVkIn1dLCJhcHBsaWVkIjo2LCJkaWdlc3QiOiIwNmQzN2IzNTg0NGU1MDg1MGY0MDMzNmE2ZDE5ZjdmZWYzMTc5YmM1OTZhMjI1YzlhOTExZDQyNGE0NGUxMjllIiwib3BzSGFzaGVkIjo5LCJjYXBFcG9jaCI6MSwiZ3JhbnRzIjp7IjU1MTU0ZjQyMDY1ZWE1YTFiZWEwNTQ2MzgyNmJlMjY4NGViOTJkZjkyYzEwMDAyN2FhYmFhZTU3Y2E1NTQyMDciOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjoxfX19"
+  },
+  "room_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "observersAllowed": true,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "912031d7d79553e969049c933105d46370fbf38d94add2768484a3afad4e6add7e85fa34fe8c5fd0cb14eba96cf101bf5f6cb0e13647cdb69178fbe77f9de20e"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 200,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "502d9cdefcbfe46f69136e944e10b895e5fdd52a6a0e227b1063c6eefe7d6437eb891027665c13f9c1b8bdf31b331dfecf93271c134a2c031020051edca58007"
+      },
+      {
+        "seq": 3,
+        "actor": "hub",
+        "ts": 300,
+        "kind": "cap.grant",
+        "device": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "87b41a8d43c435781a6d18126be9dec9fb435808f99b7ebf9f8369a9aa75383f81764e0f1a2bb6e06c515ef5ee7eb425bbf34fa67a76745b7cccdc623db6b902"
+      },
+      {
+        "seq": 4,
+        "actor": "hub",
+        "ts": 400,
+        "kind": "cap.grant",
+        "device": "c853ad0f0cd2b619aea92ceec4fd56a24d6499d584ce79257e45cfd8139b60a7",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "7d3e2b37c20486f595492a81df512d9376197e1eabac8015a124669cfef249e1bcdca480f7af0f6bc56a77ceec92f6e8c4e76d4f7c0ebc63e5e59caeb1e0aa0f"
+      },
+      {
+        "seq": 5,
+        "actor": "hub",
+        "ts": 1800,
+        "kind": "room.claim",
+        "assignee": "phone",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "0569951876bfa58639f244fe79ab4de079ff92aa9b928953973d2bfac60f85766f8ad3504934599780aa04c5adadee264567f9c1a63047a00f529ae5c768d502"
+      },
+      {
+        "seq": 5,
+        "actor": "desk",
+        "ts": 500,
+        "kind": "msg.post",
+        "body": "Can we ship the coils Thursday?",
+        "expectation": "urgent",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "af7f6423ee90a11f610456c1cf257cf3d7310ec494e916398e80c64aa209790dd8803a7009467a79bb012afa4a79e62a24539d4ad61ce09f3354b80dfbe4c90d"
+      },
+      {
+        "seq": 8,
+        "actor": "desk",
+        "ts": 800,
+        "kind": "msg.react",
+        "msgId": "phone:6",
+        "emoji": "👍",
+        "on": true,
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "707a1fe343ff5076cfa07c00c7f65164efd282cd367d6d443c481f52b8ac7c80f5346a40e29d98c188eb4265964fc2aab951336a5c73bed4e927f1531d2f9d0f"
+      },
+      {
+        "seq": 10,
+        "actor": "butler",
+        "actorType": "agent",
+        "ts": 1000,
+        "kind": "msg.draft-op",
+        "body": "Drafted the PO-2201 approval — needs a human decision",
+        "draft": "{\"kind\":\"approval.decide\",\"subject\":\"posting:PO-2201\",\"subjectType\":\"posting_draft\",\"decision\":\"approved\"}",
+        "devicePub": "c853ad0f0cd2b619aea92ceec4fd56a24d6499d584ce79257e45cfd8139b60a7",
+        "sig": "504ff8537dac3244510f1e1441e3d43b7b8362adaa9f9d095defab8a20c70e4fac18c770338e6ad95e3d0edf50be3da45f11faa53566953540b3c7aa2b432905"
+      },
+      {
+        "seq": 11,
+        "actor": "desk",
+        "ts": 1100,
+        "kind": "msg.read",
+        "upToActor": "phone",
+        "upToSeq": 7,
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "7a31eb053591f7d21a9f6a4d2ce72e483921dc12a48a1c1829107d1d9555d6de674914782f10c76c84ec5180be5a1e2cc4e11d7b1e129d697b7122032b7f3b05"
+      },
+      {
+        "seq": 12,
+        "actor": "desk",
+        "ts": 1200,
+        "kind": "msg.post",
+        "body": "typo — ignore this",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "1b228610f4b5e630c6fcf91edd183b452e93cd8b4c8af2d5e04e476cf162991c167571957a3cd60d79007c7ff6d78a9d37828530fee5448e8c2172dd03e7ca02"
+      },
+      {
+        "seq": 13,
+        "actor": "desk",
+        "ts": 1300,
+        "kind": "msg.delete",
+        "msgId": "desk:12",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "c588963aadae524daf72a4a525b4df4e6e78b1ddea47714cdfc2d6c4ea97eb2a9de5105ad9295ff59d4e11ac7bcdcf5b83567f41c190475df72c057f091cf505"
+      },
+      {
+        "seq": 17,
+        "actor": "desk",
+        "ts": 1700,
+        "kind": "room.claim",
+        "assignee": "desk",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "5a636a507eebf65688f6fef5862ee79fc1f4403b43912c9e1a34747bc1233b4b9e17b45a09959d5866b38be9a177a692d244ecdf929419c74b7959f353f1ba04"
+      },
+      {
+        "seq": 6,
+        "actor": "phone",
+        "ts": 600,
+        "kind": "msg.post",
+        "body": "Thursday morning works",
+        "replyTo": "desk:5",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "fd9b122eb0fa95b2b5c26f3aefee8f5fc39114bd4ca1fa82e2a2c8b517d4b8066d0acf43a4524c369efc6ebe12126c3dcde30c74c6a2b3542f5c59f4eb63ca05"
+      },
+      {
+        "seq": 7,
+        "actor": "phone",
+        "ts": 700,
+        "kind": "msg.edit",
+        "msgId": "phone:6",
+        "body": "Thursday afternoon works better",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "123fe21424e901df5a2bf3b7766b32ef3b9690d7071188e07af4b62667319c92293b5911e1ce3018aa224b1d96831911e0afdbd496a1f5ebe7fe9da8d641520e"
+      },
+      {
+        "seq": 9,
+        "actor": "phone",
+        "ts": 900,
+        "kind": "msg.react",
+        "msgId": "desk:5",
+        "emoji": "🔥",
+        "on": true,
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "548c1c41dd84f25b56ea11c17e3418bd2e3f8377f077a199f4523934434b6e3493c1d4c16f03d7d0b9e6183e8696781d43a7d45cfc3b743a4695df990688cb06"
+      },
+      {
+        "seq": 14,
+        "actor": "phone",
+        "ts": 1400,
+        "kind": "msg.react",
+        "msgId": "desk:5",
+        "emoji": "🔥",
+        "on": false,
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "090ffe641a0b99bccdca037b746e2a31bbc8deb1d801e1fea486f7e869756dd46a102f1213e0e63ef578b8f1ee8812d488fc18c75851107f83f63083d112c40c"
+      },
+      {
+        "seq": 15,
+        "actor": "rogue",
+        "ts": 1500,
+        "kind": "msg.post",
+        "body": "let me into this deal",
+        "devicePub": "332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5",
+        "sig": "29c07f9f018f8843fedcc6bc8846b857b12fb63da26ce15cc6eb877da733719160a1adfa00f787514a3546618756ca00672e6ec62ffc007af162717f8e84850c"
+      },
+      {
+        "seq": 16,
+        "actor": "phone",
+        "ts": 1600,
+        "kind": "msg.read",
+        "upToActor": "desk",
+        "upToSeq": 5,
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "b12360f418caedad866d9d6aa3bb971efe1da5152c0eae5cf6a193fe09a4f74fda2bca91560b98acc1c6596e6b4b8ab462ad6418619e73619a2a7bf19f8b5f07"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6dHJ1ZSwiYWN0b3IiOiJodWIiLCJ0cyI6MTAwfSwiY2xhaW0iOnsiYXNzaWduZWUiOiJkZXNrIiwiYnlBY3RvciI6ImRlc2siLCJhdFNlcSI6MTd9LCJtZXNzYWdlcyI6W3sibXNnSWQiOiJkZXNrOjUiLCJhY3RvciI6ImRlc2siLCJkZXZpY2VQdWIiOiI0ZTYwMDhiMDFiNzRlNDllMzhkOGIxMTM5MmJmYWNjYzdiNWJmZjg2Y2EyMDQ4Y2JiMGY3ODM2MzNhNjFlMmRkIiwidHMiOjUwMCwiYm9keSI6IkNhbiB3ZSBzaGlwIHRoZSBjb2lscyBUaHVyc2RheT8iLCJleHBlY3RhdGlvbiI6InVyZ2VudCJ9LHsibXNnSWQiOiJwaG9uZTo2IiwiYWN0b3IiOiJwaG9uZSIsImRldmljZVB1YiI6ImM5MDc3NTE4Y2ZhNDM4NzY3ZWQ2OGM3MTgxNzhjZjFhOTIzNDNkM2M1ZmZjODU0ZjIyNjU4YjY1Y2JhMjYyZjAiLCJ0cyI6NjAwLCJib2R5IjoiVGh1cnNkYXkgYWZ0ZXJub29uIHdvcmtzIGJldHRlciIsInJlcGx5VG8iOiJkZXNrOjUiLCJlZGl0ZWQiOnRydWUsImVkaXRUcyI6NzAwfSx7Im1zZ0lkIjoiYnV0bGVyOjEwIiwiYWN0b3IiOiJidXRsZXIiLCJhY3RvclR5cGUiOiJhZ2VudCIsImRldmljZVB1YiI6ImM4NTNhZDBmMGNkMmI2MTlhZWE5MmNlZWM0ZmQ1NmEyNGQ2NDk5ZDU4NGNlNzkyNTdlNDVjZmQ4MTM5YjYwYTciLCJ0cyI6MTAwMCwiYm9keSI6IkRyYWZ0ZWQgdGhlIFBPLTIyMDEgYXBwcm92YWwg4oCUIG5lZWRzIGEgaHVtYW4gZGVjaXNpb24iLCJkcmFmdCI6IntcImtpbmRcIjpcImFwcHJvdmFsLmRlY2lkZVwiLFwic3ViamVjdFwiOlwicG9zdGluZzpQTy0yMjAxXCIsXCJzdWJqZWN0VHlwZVwiOlwicG9zdGluZ19kcmFmdFwiLFwiZGVjaXNpb25cIjpcImFwcHJvdmVkXCJ9In0seyJtc2dJZCI6ImRlc2s6MTIiLCJhY3RvciI6ImRlc2siLCJkZXZpY2VQdWIiOiI0ZTYwMDhiMDFiNzRlNDllMzhkOGIxMTM5MmJmYWNjYzdiNWJmZjg2Y2EyMDQ4Y2JiMGY3ODM2MzNhNjFlMmRkIiwidHMiOjEyMDAsImRlbGV0ZWQiOnRydWUsImRlbGV0ZWRCeSI6ImRlc2sifV0sInJlYWN0aW9ucyI6eyJwaG9uZTo2Ijp7IvCfkY0iOnsiZGVzayI6dHJ1ZX19fSwicmVhZEN1cnNvcnMiOnsiZGVzayI6eyJwaG9uZSI6N30sInBob25lIjp7ImRlc2siOjV9fSwic2tpcHBlZCI6W10sInJlamVjdGVkIjpbeyJzZXEiOjE1LCJhY3RvciI6InJvZ3VlIiwia2luZCI6Im1zZy5wb3N0IiwicmVhc29uIjoiY2FwYWJpbGl0eTogbm8gZ3JhbnQgZm9yIGRldmljZSAzMzJlYmU4ZOKApiJ9XSwiYXBwbGllZCI6MTcsImRpZ2VzdCI6Ijc0NTIzMDEwMzI1YzJiZThkZWFlOWI1ODM1NDVlZTY4ZjA5NmE3NjVkOTM3N2U2YjVkYzkzN2FiMGUxODVjNjMiLCJvcHNIYXNoZWQiOjE4LCJncmFudHMiOnsiNGU2MDA4YjAxYjc0ZTQ5ZTM4ZDhiMTEzOTJiZmFjY2M3YjViZmY4NmNhMjA0OGNiYjBmNzgzNjMzYTYxZTJkZCI6eyJyb2xlIjoid3JpdGVyIiwiZXBvY2giOjB9LCJjODUzYWQwZjBjZDJiNjE5YWVhOTJjZWVjNGZkNTZhMjRkNjQ5OWQ1ODRjZTc5MjU3ZTQ1Y2ZkODEzOWI2MGE3Ijp7InJvbGUiOiJ3cml0ZXIiLCJlcG9jaCI6MH0sImM5MDc3NTE4Y2ZhNDM4NzY3ZWQ2OGM3MTgxNzhjZjFhOTIzNDNkM2M1ZmZjODU0ZjIyNjU4YjY1Y2JhMjYyZjAiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfX19"
+  },
+  "invite_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "89f6b55fc4a96c79bf0a28a9a805fad415e5ae3f077f4cd3a10b653398c8267a65b9096344aaf480f4f3344b4077a46824d59d73eb0bb1df5eb0a60d05ad8702"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 200,
+        "kind": "invite.offer",
+        "invitePub": "db995fe25169d141cab9bbba92baa01f9f2e1ece7df4cb2ac05190f37fcc1f9d",
+        "role": "writer",
+        "expiresAt": 100000,
+        "maxUses": 1,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "f000cfe866b39589be5d9827bcbfa0bc8315ecd1b8f78ea37fe2f182979d7b0f2e4fe071f78e5672dee94046c3ca965eea4f4a4877ea393722a09ece51cb220e"
+      },
+      {
+        "seq": 3,
+        "actor": "hub",
+        "ts": 300,
+        "kind": "invite.offer",
+        "invitePub": "2152f8d19b791d24453242e15f2eab6cb7cffa7b6a5ed30097960e069881db12",
+        "role": "observer",
+        "expiresAt": 0,
+        "maxUses": 2,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "b6a3f2adf5644ff3f036562e7d3da8f2a76e7eba55a8615702df0071d39f073b3aaa13c39ac4c984602af752ef01e429f48673e9ffeb68e57a9a6e0734c4580f"
+      },
+      {
+        "seq": 4,
+        "actor": "hub",
+        "ts": 400,
+        "kind": "invite.offer",
+        "invitePub": "22fc297792f0b6ffc0bfcfdb7edb0c0aa14e025a365ec0e342e86e3829cb74b6",
+        "role": "writer",
+        "expiresAt": 450,
+        "maxUses": 1,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "db9609c3b77a7ae7bdd04f972e1b4336324e74866bc3135826272ccd2e8c8314c23f38b6388508f91a404f667f930cf4b75737004240185332e6236fd104bd06"
+      },
+      {
+        "seq": 5,
+        "actor": "desk",
+        "ts": 500,
+        "kind": "invite.redeem",
+        "inviteId": "hub:2",
+        "inviteProof": "1c15d07560233ec076ff566a47cd6b590f0b1fbe5f61159c80070a93ae6570a9febba16cc10916f98bc3974bac133aa110863fb6bad7aca9feb4ff32939ab90b",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "1d8ac0daf650c0eb39174e4d93899036fa49ccadc522799cb4ec72452cc4ee0a7ca0511ae78eaaa56ac611288c606daa0c51f174e6f859079271afa81680e70e"
+      },
+      {
+        "seq": 6,
+        "actor": "desk",
+        "ts": 600,
+        "kind": "msg.post",
+        "body": "in via the code — sovereignty by paste",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "5579111c09bb11bd988f93777d006faa65d5b7f5fcb9d6c939fb0aded746e5dfbd0e2849b761a3a7c107aebd9949d3b1ca9a3e54da8af042dde053520e632402"
+      },
+      {
+        "seq": 7,
+        "actor": "phone",
+        "ts": 700,
+        "kind": "invite.redeem",
+        "inviteId": "hub:2",
+        "inviteProof": "0ddb3043fff0089d8fea31c9950df02733b1aa9f4187d3faa1480647327d1932d213c91c3037f0c979ebd2dd4b338dd0be21810795d5946d6427d8b97d118300",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "8ee7e8de576ab4a06a21689361bc3d5ed65046213d90037ac7621713a6a9b669dd33928fb5a88841567673f1d0d236f6fc9475e0e044b7f9bc242e310585350f"
+      },
+      {
+        "seq": 8,
+        "actor": "phone",
+        "ts": 800,
+        "kind": "invite.redeem",
+        "inviteId": "hub:4",
+        "inviteProof": "9c941154c1766fa1e1d21c6ddb63123356b451053ae1945f71f6b915d957b85ff4178890f1cba623161f1cd0c01b16baf791cc5d884d9e01de4ae82b89e44d09",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "a80860eb615101a8533eaaa8d49c925dc1b2211c9a1bc28e73a133af6a481078ae0670b2e6b60c9f572b0df2211ab3f72714663c98888d70dd792cb5c40f3a0a"
+      },
+      {
+        "seq": 9,
+        "actor": "phone",
+        "ts": 900,
+        "kind": "invite.redeem",
+        "inviteId": "hub:3",
+        "inviteProof": "563428037714ce17437bf1529fe7a35bc016fe5e860c564a755c821b4589f4fcecf468fab5b2529b0fa0efa75850bab1a9614ede72e88af2d70b420b37e4990d",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "5557b0969b3ba716767f7cae4e6429b3a474af35b7e039af09a0c3aa1be5fbf759963f9f215a470ac0d49b84276a6d9d288bd8e185daf03532df6f6abeeddb06"
+      },
+      {
+        "seq": 10,
+        "actor": "phone",
+        "ts": 1000,
+        "kind": "msg.post",
+        "body": "observer speaking!",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "885052332c9e16f24ea63bc63e4c71514ec7e85ecb98fa99252029fef54138981bba04d80361734c3c48a1dd7b72294025f964d731a503f7798c4d9a17ee4f01"
+      },
+      {
+        "seq": 11,
+        "actor": "phone",
+        "ts": 1100,
+        "kind": "msg.read",
+        "upToActor": "desk",
+        "upToSeq": 6,
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "d2eec5cfce4ed284efd25bc538e245f2b6c4365666d62b0cbb38daa89f4c12cb7bfba695afcc0cf6c8d4cbcc48dbf914770d8654b8773cd61266b6b0e4e83002"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImRlc2s6NiIsImFjdG9yIjoiZGVzayIsImRldmljZVB1YiI6IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiLCJ0cyI6NjAwLCJib2R5IjoiaW4gdmlhIHRoZSBjb2RlIOKAlCBzb3ZlcmVpZ250eSBieSBwYXN0ZSJ9XSwicmVhY3Rpb25zIjp7fSwicmVhZEN1cnNvcnMiOnt9LCJza2lwcGVkIjpbXSwicmVqZWN0ZWQiOlt7InNlcSI6NywiYWN0b3IiOiJwaG9uZSIsImtpbmQiOiJpbnZpdGUucmVkZWVtIiwicmVhc29uIjoiaW52aXRlOiBpbnZpdGUgXCJodWI6MlwiIGV4aGF1c3RlZCAoMSB1c2UocykpIn0seyJzZXEiOjgsImFjdG9yIjoicGhvbmUiLCJraW5kIjoiaW52aXRlLnJlZGVlbSIsInJlYXNvbiI6Imludml0ZTogaW52aXRlIFwiaHViOjRcIiBleHBpcmVkIGF0IDQ1MCAocmVkZWVtIHRzIDgwMCkifSx7InNlcSI6MTAsImFjdG9yIjoicGhvbmUiLCJraW5kIjoibXNnLnBvc3QiLCJyZWFzb24iOiJjYXBhYmlsaXR5OiBvYnNlcnZlciBncmFudCBpcyByZWFkLW9ubHkgKGRldmljZSBjOTA3NzUxOOKApiBtYXkgbm90IHdyaXRlIHJvb20gb3BzKSJ9LHsic2VxIjoxMSwiYWN0b3IiOiJwaG9uZSIsImtpbmQiOiJtc2cucmVhZCIsInJlYXNvbiI6ImNhcGFiaWxpdHk6IG9ic2VydmVyIGdyYW50IGlzIHJlYWQtb25seSAoZGV2aWNlIGM5MDc3NTE44oCmIG1heSBub3Qgd3JpdGUgcm9vbSBvcHMpIn1dLCJhcHBsaWVkIjo3LCJkaWdlc3QiOiJhM2Q2NzllMjJjZDUzOTNiZmNhNDMxZDYwMmIwMzMwMWE3MzYzMGNmY2Q0MmZkYjIzOWExMWU0NDhlYTU0ZTEyIiwib3BzSGFzaGVkIjoxMSwiZ3JhbnRzIjp7IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfSwiYzkwNzc1MThjZmE0Mzg3NjdlZDY4YzcxODE3OGNmMWE5MjM0M2QzYzVmZmM4NTRmMjI2NThiNjVjYmEyNjJmMCI6eyJyb2xlIjoib2JzZXJ2ZXIiLCJlcG9jaCI6MH19LCJpbnZpdGVzIjp7Imh1YjoyIjp7Imludml0ZVB1YiI6ImRiOTk1ZmUyNTE2OWQxNDFjYWI5YmJiYTkyYmFhMDFmOWYyZTFlY2U3ZGY0Y2IyYWMwNTE5MGYzN2ZjYzFmOWQiLCJyb2xlIjoid3JpdGVyIiwiZXhwaXJlc0F0IjoxMDAwMDAsIm1heFVzZXMiOjEsInVzZXMiOjF9LCJodWI6MyI6eyJpbnZpdGVQdWIiOiIyMTUyZjhkMTliNzkxZDI0NDUzMjQyZTE1ZjJlYWI2Y2I3Y2ZmYTdiNmE1ZWQzMDA5Nzk2MGUwNjk4ODFkYjEyIiwicm9sZSI6Im9ic2VydmVyIiwibWF4VXNlcyI6MiwidXNlcyI6MX0sImh1Yjo0Ijp7Imludml0ZVB1YiI6IjIyZmMyOTc3OTJmMGI2ZmZjMGJmY2ZkYjdlZGIwYzBhYTE0ZTAyNWEzNjVlYzBlMzQyZTg2ZTM4MjljYjc0YjYiLCJyb2xlIjoid3JpdGVyIiwiZXhwaXJlc0F0Ijo0NTAsIm1heFVzZXMiOjEsInVzZXMiOjB9fX0="
+  },
+  "attach_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "89f6b55fc4a96c79bf0a28a9a805fad415e5ae3f077f4cd3a10b653398c8267a65b9096344aaf480f4f3344b4077a46824d59d73eb0bb1df5eb0a60d05ad8702"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 200,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "5cd1c67a8f46f96a52dc39c392c0dc92d43f0daf4046018c465d915e41a66e9fb161aaee91e728b6aa946313eb00b50aaa2217ab0ca06b99a51d3988b5f56d06"
+      },
+      {
+        "seq": 3,
+        "actor": "hub",
+        "ts": 300,
+        "kind": "cap.grant",
+        "device": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "a0b67b27208b1c7c84a9db6695daee3cac85eeec1031bc5fea38093bb4c39b69fe6b591c73c25cea66ee30a53310d75ba9803da122906d53f781f57e92a6ba05"
+      },
+      {
+        "seq": 4,
+        "actor": "desk",
+        "ts": 400,
+        "kind": "msg.post",
+        "body": "Spec sheet attached — please review before Thursday.",
+        "attachment": "{\"blobKey\":\"a0727c84b451a46d099d5f4a0b07ec8b46dc0855e181dcd09b8815eee23039dc\",\"byteLength\":49152,\"contentType\":\"application/octet-stream\",\"id\":{\"byteOffset\":0,\"blockOffset\":0,\"blockLength\":1,\"byteLength\":49152},\"name\":\"PO-2201-spec-sheet.bin\",\"sha256\":\"8e14743130bb98684ac87941f7c04813cad506ee9d796faf28a0dedac445c6dd\"}",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "4ba19d0ff4d04503ad70f38e3071a0b107ead51ce6302e617de37a891406c82404c455209d1beee1ac63244fb2fecb681dbaba6a121b59c270c36079b558ac09"
+      },
+      {
+        "seq": 5,
+        "actor": "phone",
+        "ts": 500,
+        "kind": "msg.post",
+        "body": "",
+        "attachment": "{\"blobKey\":\"5956787c17c70cc666cefb25fa009aba6851dec53c8e7b91d2e2deb58d43489d\",\"byteLength\":98308,\"contentType\":\"audio/webm\",\"id\":{\"byteOffset\":0,\"blockOffset\":0,\"blockLength\":2,\"byteLength\":98308},\"name\":\"site-update.webm\",\"sha256\":\"f4b825d3fe5803a4b8061e63b4612bca7a6dbfcec9759934173cf2baf9cbb7b2\"}",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "7093c575da82645d07e9c6be3255ba952b28504d8a7e56fbe2273952a97724539e0246d5b7c32e4a8550be1e5500c83a39fdf1e61146e4f287716db597acaf0b"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImRlc2s6NCIsImFjdG9yIjoiZGVzayIsImRldmljZVB1YiI6IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiLCJ0cyI6NDAwLCJib2R5IjoiU3BlYyBzaGVldCBhdHRhY2hlZCDigJQgcGxlYXNlIHJldmlldyBiZWZvcmUgVGh1cnNkYXkuIiwiYXR0YWNobWVudCI6IntcImJsb2JLZXlcIjpcImEwNzI3Yzg0YjQ1MWE0NmQwOTlkNWY0YTBiMDdlYzhiNDZkYzA4NTVlMTgxZGNkMDliODgxNWVlZTIzMDM5ZGNcIixcImJ5dGVMZW5ndGhcIjo0OTE1MixcImNvbnRlbnRUeXBlXCI6XCJhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW1cIixcImlkXCI6e1wiYnl0ZU9mZnNldFwiOjAsXCJibG9ja09mZnNldFwiOjAsXCJibG9ja0xlbmd0aFwiOjEsXCJieXRlTGVuZ3RoXCI6NDkxNTJ9LFwibmFtZVwiOlwiUE8tMjIwMS1zcGVjLXNoZWV0LmJpblwiLFwic2hhMjU2XCI6XCI4ZTE0NzQzMTMwYmI5ODY4NGFjODc5NDFmN2MwNDgxM2NhZDUwNmVlOWQ3OTZmYWYyOGEwZGVkYWM0NDVjNmRkXCJ9In0seyJtc2dJZCI6InBob25lOjUiLCJhY3RvciI6InBob25lIiwiZGV2aWNlUHViIjoiYzkwNzc1MThjZmE0Mzg3NjdlZDY4YzcxODE3OGNmMWE5MjM0M2QzYzVmZmM4NTRmMjI2NThiNjVjYmEyNjJmMCIsInRzIjo1MDAsImF0dGFjaG1lbnQiOiJ7XCJibG9iS2V5XCI6XCI1OTU2Nzg3YzE3YzcwY2M2NjZjZWZiMjVmYTAwOWFiYTY4NTFkZWM1M2M4ZTdiOTFkMmUyZGViNThkNDM0ODlkXCIsXCJieXRlTGVuZ3RoXCI6OTgzMDgsXCJjb250ZW50VHlwZVwiOlwiYXVkaW8vd2VibVwiLFwiaWRcIjp7XCJieXRlT2Zmc2V0XCI6MCxcImJsb2NrT2Zmc2V0XCI6MCxcImJsb2NrTGVuZ3RoXCI6MixcImJ5dGVMZW5ndGhcIjo5ODMwOH0sXCJuYW1lXCI6XCJzaXRlLXVwZGF0ZS53ZWJtXCIsXCJzaGEyNTZcIjpcImY0YjgyNWQzZmU1ODAzYTRiODA2MWU2M2I0NjEyYmNhN2E2ZGJmY2VjOTc1OTkzNDE3M2NmMmJhZjljYmI3YjJcIn0ifV0sInJlYWN0aW9ucyI6e30sInJlYWRDdXJzb3JzIjp7fSwic2tpcHBlZCI6W10sInJlamVjdGVkIjpbXSwiYXBwbGllZCI6NSwiZGlnZXN0IjoiZWMyM2ViOTJjYTQ0NWExMTVmYjg4ZmMyYTdlMWZjZGJmMmI5Y2QxNWQzMjNlZTE2ZDhmODNjODcxMjE0NTZlMiIsIm9wc0hhc2hlZCI6NSwiZ3JhbnRzIjp7IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfSwiYzkwNzc1MThjZmE0Mzg3NjdlZDY4YzcxODE3OGNmMWE5MjM0M2QzYzVmZmM4NTRmMjI2NThiNjVjYmEyNjJmMCI6eyJyb2xlIjoid3JpdGVyIiwiZXBvY2giOjB9fX0="
+  },
+  "mirror_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "89f6b55fc4a96c79bf0a28a9a805fad415e5ae3f077f4cd3a10b653398c8267a65b9096344aaf480f4f3344b4077a46824d59d73eb0bb1df5eb0a60d05ad8702"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 200,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "5cd1c67a8f46f96a52dc39c392c0dc92d43f0daf4046018c465d915e41a66e9fb161aaee91e728b6aa946313eb00b50aaa2217ab0ca06b99a51d3988b5f56d06"
+      },
+      {
+        "seq": 3,
+        "actor": "desk",
+        "ts": 300,
+        "kind": "msg.post",
+        "body": "Shipment cleared customs at 16:40.",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "f96a4c1719af0ef4a9b3d76e936d0d96dd7b86cca3e138caa713e86cc5632b30e3b5fe129a752ae5a4b7a2c29719596399befffd148ac0dccc889789ada76a0d"
+      },
+      {
+        "seq": 4,
+        "actor": "desk",
+        "ts": 400,
+        "kind": "msg.post",
+        "body": "Original BL is with the forwarder — collecting tomorrow.",
+        "replyTo": "desk:3",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "6f4ca18003235a1bb45b0faf1f6613f4af94cc66956b592a3c7e5e8aec0cdd230df83494d96427cdfe59b0d5b2da172bef0d69238f817b6e74d08be102bf700a"
+      },
+      {
+        "seq": 5,
+        "actor": "desk",
+        "ts": 500,
+        "kind": "msg.read",
+        "upToActor": "desk",
+        "upToSeq": 4,
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "f797ef7a2b7f50238a87bc10048a0bfd05b2b90975e9197bc2f852852f61931ad160d82e476eef6f7da2853910672160595590f0f122388dad7774d32463d900"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImRlc2s6MyIsImFjdG9yIjoiZGVzayIsImRldmljZVB1YiI6IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiLCJ0cyI6MzAwLCJib2R5IjoiU2hpcG1lbnQgY2xlYXJlZCBjdXN0b21zIGF0IDE2OjQwLiJ9LHsibXNnSWQiOiJkZXNrOjQiLCJhY3RvciI6ImRlc2siLCJkZXZpY2VQdWIiOiI0ZTYwMDhiMDFiNzRlNDllMzhkOGIxMTM5MmJmYWNjYzdiNWJmZjg2Y2EyMDQ4Y2JiMGY3ODM2MzNhNjFlMmRkIiwidHMiOjQwMCwiYm9keSI6Ik9yaWdpbmFsIEJMIGlzIHdpdGggdGhlIGZvcndhcmRlciDigJQgY29sbGVjdGluZyB0b21vcnJvdy4iLCJyZXBseVRvIjoiZGVzazozIn1dLCJyZWFjdGlvbnMiOnt9LCJyZWFkQ3Vyc29ycyI6eyJkZXNrIjp7ImRlc2siOjR9fSwic2tpcHBlZCI6W10sInJlamVjdGVkIjpbXSwiYXBwbGllZCI6NSwiZGlnZXN0IjoiNTUwZmJiNzU2NjBhODZlOWJmZjgwZTBmMWIzYWQ1NWE0MGE4N2EyOGVlZGJkNWM2MmM3Yjk2NDMzNGE2MzA0OCIsIm9wc0hhc2hlZCI6NSwiZ3JhbnRzIjp7IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfX19"
+  },
+  "reissue_autobase_epoch1": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "89f6b55fc4a96c79bf0a28a9a805fad415e5ae3f077f4cd3a10b653398c8267a65b9096344aaf480f4f3344b4077a46824d59d73eb0bb1df5eb0a60d05ad8702"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 200,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "5cd1c67a8f46f96a52dc39c392c0dc92d43f0daf4046018c465d915e41a66e9fb161aaee91e728b6aa946313eb00b50aaa2217ab0ca06b99a51d3988b5f56d06"
+      },
+      {
+        "seq": 3,
+        "actor": "hub",
+        "ts": 300,
+        "kind": "cap.grant",
+        "device": "332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "1b6b09fd2529ca7f2fa619f1c99d1ac5956b44a4f70087d034f50266513bd653440f32dc0423dc2f8b8d4c21649b56f9243024ae537dea7cf3a2cc53290f6b06"
+      },
+      {
+        "seq": 4,
+        "actor": "desk",
+        "ts": 400,
+        "kind": "msg.post",
+        "body": "Booking the slot for PO-2201.",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "d78d3d46c02c908930414cdd4ef880c2ff8724a8c517946b4c83417cfc467ece16c69c7d6945865d121651449cb321659755ab13ed8a4e9c1c2bd7fbdeac6e00"
+      },
+      {
+        "seq": 5,
+        "actor": "rogue",
+        "ts": 500,
+        "kind": "msg.post",
+        "body": "In on this one too — legit for now.",
+        "devicePub": "332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5",
+        "sig": "c420743eb1ff09bdac4cda09d8103b0db96dc396c77b489de6f87e485bed76c461084e2787f566600754d824fd20b24388b461e8bd94cfb1f899017f5f071301"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImRlc2s6NCIsImFjdG9yIjoiZGVzayIsImRldmljZVB1YiI6IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiLCJ0cyI6NDAwLCJib2R5IjoiQm9va2luZyB0aGUgc2xvdCBmb3IgUE8tMjIwMS4ifSx7Im1zZ0lkIjoicm9ndWU6NSIsImFjdG9yIjoicm9ndWUiLCJkZXZpY2VQdWIiOiIzMzJlYmU4ZDI3Y2I3MzIzYjNhNDAxYzFjMTNiNWRkNjRiY2NjMGUxMGVjZGExYzJiNWQxMWEwMzc3OWE4NWU1IiwidHMiOjUwMCwiYm9keSI6IkluIG9uIHRoaXMgb25lIHRvbyDigJQgbGVnaXQgZm9yIG5vdy4ifV0sInJlYWN0aW9ucyI6e30sInJlYWRDdXJzb3JzIjp7fSwic2tpcHBlZCI6W10sInJlamVjdGVkIjpbXSwiYXBwbGllZCI6NSwiZGlnZXN0IjoiZTNiMWEzMmI1MmVjOTBlODRhMDgxNzM5MDZmOTUxNWQzMzg2YjYxY2Q0MmEyMmI1NGE1YzdmOTJhNmI5MTgyOCIsIm9wc0hhc2hlZCI6NSwiZ3JhbnRzIjp7IjMzMmViZThkMjdjYjczMjNiM2E0MDFjMWMxM2I1ZGQ2NGJjY2MwZTEwZWNkYTFjMmI1ZDExYTAzNzc5YTg1ZTUiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfSwiNGU2MDA4YjAxYjc0ZTQ5ZTM4ZDhiMTEzOTJiZmFjY2M3YjViZmY4NmNhMjA0OGNiYjBmNzgzNjMzYTYxZTJkZCI6eyJyb2xlIjoid3JpdGVyIiwiZXBvY2giOjB9fX0="
+  },
+  "reissue_autobase_successor": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 1000,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "observersAllowed": false,
+        "predecessorRoomKey": "cc1fb5d0a2d202b917e9ae040163e3ba7cbb6611b1dc9be9b9a83926b5b3084e",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "9965c9002ecb29ee9378c1f76547b8f04e147849abc03e141cb667fd71150d7668dd8f353a9dd212c2f77dabcfbac6df99af2e69742a50eaffec0b1414bc250f"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 1001,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "4e41024ec7457e0adcf638422cb30b1a1dfd7e4994a45a64c12c66666ca12019eb247eb59dafa4d8fd273f47d816333ab4de7fadcc41ae2c47bee0e9cb7e9c0c"
+      },
+      {
+        "seq": 3,
+        "actor": "desk",
+        "ts": 1500,
+        "kind": "msg.post",
+        "body": "Confirmed — moved to the new room.",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "05e4727dd7ffedf6b5a1c33ef908ab6490d1585fbedeb4886f843be2757fb11cd1bf3a513616c5ebeec325cea2955d268eb9fea3d62cd698004511a487f54200"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMDAsInByZWRlY2Vzc29yUm9vbUtleSI6ImNjMWZiNWQwYTJkMjAyYjkxN2U5YWUwNDAxNjNlM2JhN2NiYjY2MTFiMWRjOWJlOWI5YTgzOTI2YjViMzA4NGUifSwibWVzc2FnZXMiOlt7Im1zZ0lkIjoiZGVzazozIiwiYWN0b3IiOiJkZXNrIiwiZGV2aWNlUHViIjoiNGU2MDA4YjAxYjc0ZTQ5ZTM4ZDhiMTEzOTJiZmFjY2M3YjViZmY4NmNhMjA0OGNiYjBmNzgzNjMzYTYxZTJkZCIsInRzIjoxNTAwLCJib2R5IjoiQ29uZmlybWVkIOKAlCBtb3ZlZCB0byB0aGUgbmV3IHJvb20uIn1dLCJyZWFjdGlvbnMiOnt9LCJyZWFkQ3Vyc29ycyI6e30sInNraXBwZWQiOltdLCJyZWplY3RlZCI6W10sImFwcGxpZWQiOjMsImRpZ2VzdCI6IjdkYTVkMDBjNDgxNzIwNGJkNDk5NzZiMzc2YzQwNGM2OWM1ZmJmODNiZDlhNDhmZTZhZDYyODQxMDFkYjcyN2UiLCJvcHNIYXNoZWQiOjMsImdyYW50cyI6eyI0ZTYwMDhiMDFiNzRlNDllMzhkOGIxMTM5MmJmYWNjYzdiNWJmZjg2Y2EyMDQ4Y2JiMGY3ODM2MzNhNjFlMmRkIjp7InJvbGUiOiJ3cml0ZXIiLCJlcG9jaCI6MH19fQ=="
+  },
+  "reissue_autobase_successor_with_forgery": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 1000,
+        "kind": "room.manifest",
+        "title": "PO-2201 — Steel Coils",
+        "anchorType": "po",
+        "anchorId": "PO-2201",
+        "observersAllowed": false,
+        "predecessorRoomKey": "cc1fb5d0a2d202b917e9ae040163e3ba7cbb6611b1dc9be9b9a83926b5b3084e",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "9965c9002ecb29ee9378c1f76547b8f04e147849abc03e141cb667fd71150d7668dd8f353a9dd212c2f77dabcfbac6df99af2e69742a50eaffec0b1414bc250f"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 1001,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "role": "writer",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "4e41024ec7457e0adcf638422cb30b1a1dfd7e4994a45a64c12c66666ca12019eb247eb59dafa4d8fd273f47d816333ab4de7fadcc41ae2c47bee0e9cb7e9c0c"
+      },
+      {
+        "seq": 3,
+        "actor": "desk",
+        "ts": 1500,
+        "kind": "msg.post",
+        "body": "Confirmed — moved to the new room.",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "05e4727dd7ffedf6b5a1c33ef908ab6490d1585fbedeb4886f843be2757fb11cd1bf3a513616c5ebeec325cea2955d268eb9fea3d62cd698004511a487f54200"
+      },
+      {
+        "seq": 4,
+        "actor": "rogue",
+        "ts": 1600,
+        "kind": "msg.post",
+        "body": "let me back in",
+        "devicePub": "332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5",
+        "sig": "93fd92d07c27231e67f9f052e2c99ceab9f6691abe9b2c1e04f963cb7f41847b86ee4a7e786f0f6febc77cc46186554a070dbf7503bd1905f207f9e4dcd3cd0b"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTIyMDEg4oCUIFN0ZWVsIENvaWxzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy0yMjAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMDAsInByZWRlY2Vzc29yUm9vbUtleSI6ImNjMWZiNWQwYTJkMjAyYjkxN2U5YWUwNDAxNjNlM2JhN2NiYjY2MTFiMWRjOWJlOWI5YTgzOTI2YjViMzA4NGUifSwibWVzc2FnZXMiOlt7Im1zZ0lkIjoiZGVzazozIiwiYWN0b3IiOiJkZXNrIiwiZGV2aWNlUHViIjoiNGU2MDA4YjAxYjc0ZTQ5ZTM4ZDhiMTEzOTJiZmFjY2M3YjViZmY4NmNhMjA0OGNiYjBmNzgzNjMzYTYxZTJkZCIsInRzIjoxNTAwLCJib2R5IjoiQ29uZmlybWVkIOKAlCBtb3ZlZCB0byB0aGUgbmV3IHJvb20uIn1dLCJyZWFjdGlvbnMiOnt9LCJyZWFkQ3Vyc29ycyI6e30sInNraXBwZWQiOltdLCJyZWplY3RlZCI6W3sic2VxIjo0LCJhY3RvciI6InJvZ3VlIiwia2luZCI6Im1zZy5wb3N0IiwicmVhc29uIjoiY2FwYWJpbGl0eTogbm8gZ3JhbnQgZm9yIGRldmljZSAzMzJlYmU4ZOKApiJ9XSwiYXBwbGllZCI6MywiZGlnZXN0IjoiMDgwMmIyOGZlM2IzNzM5YTExODc5MzE1ODI5ZjEyYTQ0MmM1NjY3NGNlOWE5YzYyZTRhNDAzNDJlMDlhYTRjOCIsIm9wc0hhc2hlZCI6NCwiZ3JhbnRzIjp7IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfX19"
+  },
+  "social_autobase_preblock": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "ana",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "chai break ☕",
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "f4e9db5a70c514aa1126873a4aea9f0c7ef0048d6ea8b924a76f63cc98fb0ed20c6a663a09d6c7c6c9f6baa132c8afdacc029951f07797a8de3f879297beeb02"
+      },
+      {
+        "seq": 2,
+        "actor": "ana",
+        "ts": 200,
+        "kind": "invite.offer",
+        "invitePub": "5e449ad6fa4b2d65746e8cd4f968e38c5a9679f8495db114ee06317f72f717db",
+        "role": "writer",
+        "expiresAt": 259200200,
+        "maxUses": 1,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "779b3b6d2295a1530ae17d9462744192ccc5c417d4eefd049b2e7aa0c16a95b013825fa63e33c9cedaef2cd2559478300caa8de1f506466e8cc007fddfa0d001"
+      },
+      {
+        "seq": 3,
+        "actor": "ana",
+        "ts": 300,
+        "kind": "msg.post",
+        "body": "you up? been a day 🍃",
+        "expectation": "whenever",
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "ecbd419ff00c6c9fd11c1c5d09011b2d9199442cd84aa5822881fb8801ebc526a3eef43d59f090ce39fe5970bb53e8e75f9fd71fd65e0ff9c91c759ab4671502"
+      },
+      {
+        "seq": 4,
+        "actor": "bela",
+        "ts": 10000,
+        "kind": "invite.redeem",
+        "inviteId": "ana:2",
+        "inviteProof": "8489121cdb543b83f265c70eba08d44796c3f994d155dc6ce9513fce56217b28f0c372d63d4d6b45abb8bcc3ae224f09b01e07827bea2a5423f4bbe778b8410a",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "fe8db88c606fe9b0c2066360dc49e1e008fd911a925bb035d23c9eaf0d8b5296220c4356cb4c3eb980bdf126d992d53dcef447faffffd92ce893a95504f2e207"
+      },
+      {
+        "seq": 5,
+        "actor": "rogue",
+        "ts": 10100,
+        "kind": "invite.redeem",
+        "inviteId": "ana:2",
+        "inviteProof": "18ff589124fcd83e9094b7cdd5323b6785314e2c2a2fb3d84da8a06a95e4318de73accf886d91573c5feb0ee04abf37b5e0db6166ffde89781ff333f89686a0c",
+        "devicePub": "332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5",
+        "sig": "1da394766596b7250a3d0f2aaf7115a57c4c1f58e0c70e4f4961a8b1a361ea3b3b6ca848e4e7d56d6b311d871339b70a69a02136c26759aacbd91677ecab1b0b"
+      },
+      {
+        "seq": 6,
+        "actor": "bela",
+        "ts": 10200,
+        "kind": "msg.post",
+        "body": "up now. long story, got the offer today",
+        "replyTo": "ana:3",
+        "expectation": "whenever",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "7fef5eb6c1707934e62df441c1df161332d2d45d95edbb6692af2e0fc0299c17b9187b91796d04b0a66caa1f341700089adb44e2d5a3e56d263d83d66e86a700"
+      },
+      {
+        "seq": 7,
+        "actor": "bela",
+        "ts": 10300,
+        "kind": "msg.react",
+        "msgId": "ana:3",
+        "emoji": "👋",
+        "on": true,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "42701c6bda03c5c8a43ed8bd718142af1ffa67181d67327553a3658ed90d2ada5b70c5a61aac0a91a0118fafaadc730702e6fe0615674467bfccd1838246790f"
+      },
+      {
+        "seq": 8,
+        "actor": "bela",
+        "ts": 10400,
+        "kind": "msg.read",
+        "upToActor": "ana",
+        "upToSeq": 3,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "5a53e8099ef6ba376600e4040dd86d604f45a32f9a5a1669383bc8814c41c7eb4d7d94104f01a07e2e2f82c1a8af6833d54e62549209f9f24650ef4fce765201"
+      },
+      {
+        "seq": 9,
+        "actor": "bela",
+        "ts": 10500,
+        "kind": "room.claim",
+        "assignee": "bela",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "d4372d95e6b2b26894232290999d550553608a8d932aa9828ee98833a27d3ed3f7cae28bc6e767d342abff1e6b2a697b4b61dfb9641e08c3fb2423d3e2b7820d"
+      }
+    ],
+    "config": {
+      "authorityPub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6ImNoYWkgYnJlYWsg4piVIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiYW5hIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImFuYTozIiwiYWN0b3IiOiJhbmEiLCJkZXZpY2VQdWIiOiJiYzdjYmNiNTYzNjM3NWZhMWQ4MjQzNGQ0NjY3MjRkOTIzNzdmNTNiOTgwNjk1ZGQ0OWQyNmQwY2UxMjIwNWE1IiwidHMiOjMwMCwiYm9keSI6InlvdSB1cD8gYmVlbiBhIGRheSDwn42DIiwiZXhwZWN0YXRpb24iOiJ3aGVuZXZlciJ9LHsibXNnSWQiOiJiZWxhOjYiLCJhY3RvciI6ImJlbGEiLCJkZXZpY2VQdWIiOiI1NTE1NGY0MjA2NWVhNWExYmVhMDU0NjM4MjZiZTI2ODRlYjkyZGY5MmMxMDAwMjdhYWJhYWU1N2NhNTU0MjA3IiwidHMiOjEwMjAwLCJib2R5IjoidXAgbm93LiBsb25nIHN0b3J5LCBnb3QgdGhlIG9mZmVyIHRvZGF5IiwicmVwbHlUbyI6ImFuYTozIiwiZXhwZWN0YXRpb24iOiJ3aGVuZXZlciJ9XSwicmVhY3Rpb25zIjp7ImFuYTozIjp7IvCfkYsiOnsiYmVsYSI6dHJ1ZX19fSwicmVhZEN1cnNvcnMiOnt9LCJza2lwcGVkIjpbeyJzZXEiOjgsImFjdG9yIjoiYmVsYSIsImtpbmQiOiJtc2cucmVhZCIsInJlYXNvbiI6InJlYWQgY3Vyc29ycyBhcmUgbm90IGVtaXR0ZWQgaW4gc29jaWFsIHJvb21zIn0seyJzZXEiOjksImFjdG9yIjoiYmVsYSIsImtpbmQiOiJyb29tLmNsYWltIiwicmVhc29uIjoiY2xhaW1zIGFyZSBhIHdvcmsgY29uY2VwdCJ9XSwicmVqZWN0ZWQiOlt7InNlcSI6NSwiYWN0b3IiOiJyb2d1ZSIsImtpbmQiOiJpbnZpdGUucmVkZWVtIiwicmVhc29uIjoiaW52aXRlOiBpbnZpdGUgXCJhbmE6MlwiIGV4aGF1c3RlZCAoMSB1c2UocykpIn1dLCJhcHBsaWVkIjo2LCJkaWdlc3QiOiIxNzIwOWFlY2Q0MzBjMTUxYmIwZDU1M2FmMjMwYjU4MWU1NDNmNzY0NTNhNWMyNTYwMWFjYTc5MDI5ZmZiODhhIiwib3BzSGFzaGVkIjo5LCJncmFudHMiOnsiNTUxNTRmNDIwNjVlYTVhMWJlYTA1NDYzODI2YmUyNjg0ZWI5MmRmOTJjMTAwMDI3YWFiYWFlNTdjYTU1NDIwNyI6eyJyb2xlIjoid3JpdGVyIiwiZXBvY2giOjB9fSwiaW52aXRlcyI6eyJhbmE6MiI6eyJpbnZpdGVQdWIiOiI1ZTQ0OWFkNmZhNGIyZDY1NzQ2ZThjZDRmOTY4ZTM4YzVhOTY3OWY4NDk1ZGIxMTRlZTA2MzE3ZjcyZjcxN2RiIiwicm9sZSI6IndyaXRlciIsImV4cGlyZXNBdCI6MjU5MjAwMjAwLCJtYXhVc2VzIjoxLCJ1c2VzIjoxfX19"
+  },
+  "social_autobase_postblock": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "ana",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "chai break ☕",
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "f4e9db5a70c514aa1126873a4aea9f0c7ef0048d6ea8b924a76f63cc98fb0ed20c6a663a09d6c7c6c9f6baa132c8afdacc029951f07797a8de3f879297beeb02"
+      },
+      {
+        "seq": 2,
+        "actor": "ana",
+        "ts": 200,
+        "kind": "invite.offer",
+        "invitePub": "5e449ad6fa4b2d65746e8cd4f968e38c5a9679f8495db114ee06317f72f717db",
+        "role": "writer",
+        "expiresAt": 259200200,
+        "maxUses": 1,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "779b3b6d2295a1530ae17d9462744192ccc5c417d4eefd049b2e7aa0c16a95b013825fa63e33c9cedaef2cd2559478300caa8de1f506466e8cc007fddfa0d001"
+      },
+      {
+        "seq": 3,
+        "actor": "ana",
+        "ts": 300,
+        "kind": "msg.post",
+        "body": "you up? been a day 🍃",
+        "expectation": "whenever",
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "ecbd419ff00c6c9fd11c1c5d09011b2d9199442cd84aa5822881fb8801ebc526a3eef43d59f090ce39fe5970bb53e8e75f9fd71fd65e0ff9c91c759ab4671502"
+      },
+      {
+        "seq": 4,
+        "actor": "bela",
+        "ts": 10000,
+        "kind": "invite.redeem",
+        "inviteId": "ana:2",
+        "inviteProof": "8489121cdb543b83f265c70eba08d44796c3f994d155dc6ce9513fce56217b28f0c372d63d4d6b45abb8bcc3ae224f09b01e07827bea2a5423f4bbe778b8410a",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "fe8db88c606fe9b0c2066360dc49e1e008fd911a925bb035d23c9eaf0d8b5296220c4356cb4c3eb980bdf126d992d53dcef447faffffd92ce893a95504f2e207"
+      },
+      {
+        "seq": 5,
+        "actor": "rogue",
+        "ts": 10100,
+        "kind": "invite.redeem",
+        "inviteId": "ana:2",
+        "inviteProof": "18ff589124fcd83e9094b7cdd5323b6785314e2c2a2fb3d84da8a06a95e4318de73accf886d91573c5feb0ee04abf37b5e0db6166ffde89781ff333f89686a0c",
+        "devicePub": "332ebe8d27cb7323b3a401c1c13b5dd64bccc0e10ecda1c2b5d11a03779a85e5",
+        "sig": "1da394766596b7250a3d0f2aaf7115a57c4c1f58e0c70e4f4961a8b1a361ea3b3b6ca848e4e7d56d6b311d871339b70a69a02136c26759aacbd91677ecab1b0b"
+      },
+      {
+        "seq": 6,
+        "actor": "bela",
+        "ts": 10200,
+        "kind": "msg.post",
+        "body": "up now. long story, got the offer today",
+        "replyTo": "ana:3",
+        "expectation": "whenever",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "7fef5eb6c1707934e62df441c1df161332d2d45d95edbb6692af2e0fc0299c17b9187b91796d04b0a66caa1f341700089adb44e2d5a3e56d263d83d66e86a700"
+      },
+      {
+        "seq": 7,
+        "actor": "bela",
+        "ts": 10300,
+        "kind": "msg.react",
+        "msgId": "ana:3",
+        "emoji": "👋",
+        "on": true,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "42701c6bda03c5c8a43ed8bd718142af1ffa67181d67327553a3658ed90d2ada5b70c5a61aac0a91a0118fafaadc730702e6fe0615674467bfccd1838246790f"
+      },
+      {
+        "seq": 8,
+        "actor": "bela",
+        "ts": 10400,
+        "kind": "msg.read",
+        "upToActor": "ana",
+        "upToSeq": 3,
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "5a53e8099ef6ba376600e4040dd86d604f45a32f9a5a1669383bc8814c41c7eb4d7d94104f01a07e2e2f82c1a8af6833d54e62549209f9f24650ef4fce765201"
+      },
+      {
+        "seq": 9,
+        "actor": "bela",
+        "ts": 10500,
+        "kind": "room.claim",
+        "assignee": "bela",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "d4372d95e6b2b26894232290999d550553608a8d932aa9828ee98833a27d3ed3f7cae28bc6e767d342abff1e6b2a697b4b61dfb9641e08c3fb2423d3e2b7820d"
+      },
+      {
+        "seq": 10,
+        "actor": "ana",
+        "ts": 20000,
+        "kind": "cap.epoch",
+        "epoch": 1,
+        "devicePub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5",
+        "sig": "ffeef5a7991aa6af2deacab2405e26ea2bcb805ae4b27d218aa7917329e1c642bc84c1dd4f315da277b01deee3bcc6f62fded59f20e737d7e18c248cc9f5b308"
+      },
+      {
+        "seq": 11,
+        "actor": "bela",
+        "ts": 20100,
+        "kind": "msg.post",
+        "body": "hello? anyone?",
+        "devicePub": "55154f42065ea5a1bea05463826be2684eb92df92c100027aabaae57ca554207",
+        "sig": "8622794d3a93910992207db78e4f035ae84978448fee7344fb462b1c354a1b3df58a2b954768c4c1ac932d5909963f0bb59b63d87cb099917e9967b804b0d601"
+      }
+    ],
+    "config": {
+      "authorityPub": "bc7cbcb5636375fa1d82434d466724d92377f53b980695dd49d26d0ce12205a5"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6ImNoYWkgYnJlYWsg4piVIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiYW5hIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImFuYTozIiwiYWN0b3IiOiJhbmEiLCJkZXZpY2VQdWIiOiJiYzdjYmNiNTYzNjM3NWZhMWQ4MjQzNGQ0NjY3MjRkOTIzNzdmNTNiOTgwNjk1ZGQ0OWQyNmQwY2UxMjIwNWE1IiwidHMiOjMwMCwiYm9keSI6InlvdSB1cD8gYmVlbiBhIGRheSDwn42DIiwiZXhwZWN0YXRpb24iOiJ3aGVuZXZlciJ9LHsibXNnSWQiOiJiZWxhOjYiLCJhY3RvciI6ImJlbGEiLCJkZXZpY2VQdWIiOiI1NTE1NGY0MjA2NWVhNWExYmVhMDU0NjM4MjZiZTI2ODRlYjkyZGY5MmMxMDAwMjdhYWJhYWU1N2NhNTU0MjA3IiwidHMiOjEwMjAwLCJib2R5IjoidXAgbm93LiBsb25nIHN0b3J5LCBnb3QgdGhlIG9mZmVyIHRvZGF5IiwicmVwbHlUbyI6ImFuYTozIiwiZXhwZWN0YXRpb24iOiJ3aGVuZXZlciJ9XSwicmVhY3Rpb25zIjp7ImFuYTozIjp7IvCfkYsiOnsiYmVsYSI6dHJ1ZX19fSwicmVhZEN1cnNvcnMiOnt9LCJza2lwcGVkIjpbeyJzZXEiOjgsImFjdG9yIjoiYmVsYSIsImtpbmQiOiJtc2cucmVhZCIsInJlYXNvbiI6InJlYWQgY3Vyc29ycyBhcmUgbm90IGVtaXR0ZWQgaW4gc29jaWFsIHJvb21zIn0seyJzZXEiOjksImFjdG9yIjoiYmVsYSIsImtpbmQiOiJyb29tLmNsYWltIiwicmVhc29uIjoiY2xhaW1zIGFyZSBhIHdvcmsgY29uY2VwdCJ9XSwicmVqZWN0ZWQiOlt7InNlcSI6NSwiYWN0b3IiOiJyb2d1ZSIsImtpbmQiOiJpbnZpdGUucmVkZWVtIiwicmVhc29uIjoiaW52aXRlOiBpbnZpdGUgXCJhbmE6MlwiIGV4aGF1c3RlZCAoMSB1c2UocykpIn0seyJzZXEiOjExLCJhY3RvciI6ImJlbGEiLCJraW5kIjoibXNnLnBvc3QiLCJyZWFzb24iOiJjYXBhYmlsaXR5OiBncmFudCBlcG9jaCAwIGlzIHN0YWxlIChjdXJyZW50IGVwb2NoIDEpIOKAlCBkZXZpY2UgNTUxNTRmNDLigKYgd2FzIG5vdCByZS1pc3N1ZWQifV0sImFwcGxpZWQiOjcsImRpZ2VzdCI6IjVlMjA3ZGM0ZDcwNWZmMjExN2E1NDJjM2Q2NmNmMjMzZTQ4YmZhOWNlNWE2ZmMzNDcyZjA4OTI1NzM1Y2Y1Y2QiLCJvcHNIYXNoZWQiOjExLCJjYXBFcG9jaCI6MSwiZ3JhbnRzIjp7IjU1MTU0ZjQyMDY1ZWE1YTFiZWEwNTQ2MzgyNmJlMjY4NGViOTJkZjkyYzEwMDAyN2FhYmFhZTU3Y2E1NTQyMDciOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfX0sImludml0ZXMiOnsiYW5hOjIiOnsiaW52aXRlUHViIjoiNWU0NDlhZDZmYTRiMmQ2NTc0NmU4Y2Q0Zjk2OGUzOGM1YTk2NzlmODQ5NWRiMTE0ZWUwNjMxN2Y3MmY3MTdkYiIsInJvbGUiOiJ3cml0ZXIiLCJleHBpcmVzQXQiOjI1OTIwMDIwMCwibWF4VXNlcyI6MSwidXNlcyI6MX19fQ=="
+  },
+  "transcript_autobase": {
+    "ops": [
+      {
+        "seq": 1,
+        "actor": "hub",
+        "ts": 100,
+        "kind": "room.manifest",
+        "title": "PO-9001 — Compressor Spares",
+        "anchorType": "po",
+        "anchorId": "PO-9001",
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "200fa0bc1caf9e38dcc3afd7d0ca458b3ca9ec84599ce917904cd54cd53b8a4526c6915509621065a6bb9eb6ca0d3fd6ce98a8c6fe73529e7a8382bf5d3a6503"
+      },
+      {
+        "seq": 2,
+        "actor": "hub",
+        "ts": 200,
+        "kind": "cap.grant",
+        "device": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "502d9cdefcbfe46f69136e944e10b895e5fdd52a6a0e227b1063c6eefe7d6437eb891027665c13f9c1b8bdf31b331dfecf93271c134a2c031020051edca58007"
+      },
+      {
+        "seq": 3,
+        "actor": "hub",
+        "ts": 300,
+        "kind": "cap.grant",
+        "device": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "87b41a8d43c435781a6d18126be9dec9fb435808f99b7ebf9f8369a9aa75383f81764e0f1a2bb6e06c515ef5ee7eb425bbf34fa67a76745b7cccdc623db6b902"
+      },
+      {
+        "seq": 4,
+        "actor": "hub",
+        "ts": 400,
+        "kind": "cap.grant",
+        "device": "b2491d9502ae28630a2bacb2e0c74510ffcdd328c334ff3e1393e75b2d31e7dc",
+        "epoch": 0,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "968e8ff0b930773812a39e7c6ff48a069592c208ccc286331f296ebc5f7a7f1c9a1ff15f99af61d0a0d72198052fa7082c9ae5c07e93519fadb6143cd0533909"
+      },
+      {
+        "seq": 5,
+        "actor": "desk",
+        "ts": 500,
+        "kind": "msg.post",
+        "body": "can you confirm the spares ship Tuesday",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "b92c98358357bcf4a2979460c5e4571982c694df1351e98a2ab525f18f718f9d454ba66b355bcbc94755cb6b641eeac7cd0e210d4cdb8133c2eebced41cffb0e"
+      },
+      {
+        "seq": 6,
+        "actor": "phone",
+        "ts": 600,
+        "kind": "msg.post",
+        "body": "yes, Tuesday morning",
+        "replyTo": "desk:5",
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "460d3aa88ad8d48239f252ddf1b98dd4cefe03e49b3177cd9cd8ee1b9256fa447ff5e6625f5f6fa2a85339ab7fb36331d232a1d4cc695ad6206ff4f50bd0520f"
+      },
+      {
+        "seq": 7,
+        "actor": "desk",
+        "ts": 700,
+        "kind": "msg.edit",
+        "msgId": "desk:5",
+        "body": "can you confirm the spares ship Tuesday AM",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "d283cdea53d4ed1afb154821d54bfdf2e051a699db149a23946512f80db9f5278e2d0b8f8a396d3068fae78d064cff0c376d236702fba01897e59d4b32e7c700"
+      },
+      {
+        "seq": 8,
+        "actor": "desk",
+        "ts": 800,
+        "kind": "msg.post",
+        "body": "ignore this, wrong thread",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "6dacf7d1c33721e43a19d09ea4b3fd1fe2d566eb16e51e49d0acef93f754893b0cb584a0a43676503bb52f18097afd1481f1ae4dfb1e84e63710ab5917741f0b"
+      },
+      {
+        "seq": 9,
+        "actor": "desk",
+        "ts": 900,
+        "kind": "msg.delete",
+        "msgId": "desk:8",
+        "devicePub": "4e6008b01b74e49e38d8b11392bfaccc7b5bff86ca2048cbb0f783633a61e2dd",
+        "sig": "64a14fd3d6c28508529bfa872542b815bfbf919442081304e8f499fa8afee67ba8ffd5074bacc865c737a1f582371e3a4e7d2730235b97312dc08f06eee2a706"
+      },
+      {
+        "seq": 10,
+        "actor": "phone",
+        "ts": 1000,
+        "kind": "msg.react",
+        "msgId": "desk:5",
+        "emoji": "👍",
+        "on": true,
+        "devicePub": "c9077518cfa438767ed68c718178cf1a92343d3c5ffc854f22658b65cba262f0",
+        "sig": "269ddec6cd9ae4838ed21d72a17f3dcb61cfef7c6b36571d1408e11df01615ef2a79aa109a65467d1e1a8ea7253053c7845f3b10982eb2521057bce9f1fa6c02"
+      },
+      {
+        "seq": 11,
+        "actor": "guest",
+        "ts": 1100,
+        "kind": "msg.post",
+        "body": "guest checking in before I leave the account",
+        "devicePub": "b2491d9502ae28630a2bacb2e0c74510ffcdd328c334ff3e1393e75b2d31e7dc",
+        "sig": "eb08ae50c0941515265cb7959ff3afc636553906c822b989570ad61d65de228491ddebb7c49c7c603e083b42e67b6b4aa30d1f8fd35f65236ad5016e5eaeb007"
+      },
+      {
+        "seq": 12,
+        "actor": "hub",
+        "ts": 1200,
+        "kind": "cap.epoch",
+        "epoch": 1,
+        "devicePub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05",
+        "sig": "c5173dcc5bd8c72bc6943f44a0f684919868017e9bd23ddb152de539b70e671bddecaadab7ff6b40cf588f5c636903da5bd3bc4cd3656dd5a203102da848de02"
+      },
+      {
+        "seq": 13,
+        "actor": "guest",
+        "ts": 1300,
+        "kind": "msg.post",
+        "body": "still trying to post after being let go",
+        "devicePub": "b2491d9502ae28630a2bacb2e0c74510ffcdd328c334ff3e1393e75b2d31e7dc",
+        "sig": "b665857f9753a02ffebcae5ed93b0874d2a0d400fed3878a99a04972cbc666df2034eca4282fff3637164692b3219f8cc57e52f1c165483ce1e0fb0d05f09008"
+      }
+    ],
+    "config": {
+      "authorityPub": "ed3234b276d4ceda57d59bad14fbaf5a773c0f318c999de3a60d53c5a5b34c05"
+    },
+    "mode": "room",
+    "expectedRawBase64": "eyJtYW5pZmVzdCI6eyJ0aXRsZSI6IlBPLTkwMDEg4oCUIENvbXByZXNzb3IgU3BhcmVzIiwiYW5jaG9yVHlwZSI6InBvIiwiYW5jaG9ySWQiOiJQTy05MDAxIiwib2JzZXJ2ZXJzQWxsb3dlZCI6ZmFsc2UsImFjdG9yIjoiaHViIiwidHMiOjEwMH0sIm1lc3NhZ2VzIjpbeyJtc2dJZCI6ImRlc2s6NSIsImFjdG9yIjoiZGVzayIsImRldmljZVB1YiI6IjRlNjAwOGIwMWI3NGU0OWUzOGQ4YjExMzkyYmZhY2NjN2I1YmZmODZjYTIwNDhjYmIwZjc4MzYzM2E2MWUyZGQiLCJ0cyI6NTAwLCJib2R5IjoiY2FuIHlvdSBjb25maXJtIHRoZSBzcGFyZXMgc2hpcCBUdWVzZGF5IEFNIiwiZWRpdGVkIjp0cnVlLCJlZGl0VHMiOjcwMH0seyJtc2dJZCI6InBob25lOjYiLCJhY3RvciI6InBob25lIiwiZGV2aWNlUHViIjoiYzkwNzc1MThjZmE0Mzg3NjdlZDY4YzcxODE3OGNmMWE5MjM0M2QzYzVmZmM4NTRmMjI2NThiNjVjYmEyNjJmMCIsInRzIjo2MDAsImJvZHkiOiJ5ZXMsIFR1ZXNkYXkgbW9ybmluZyIsInJlcGx5VG8iOiJkZXNrOjUifSx7Im1zZ0lkIjoiZGVzazo4IiwiYWN0b3IiOiJkZXNrIiwiZGV2aWNlUHViIjoiNGU2MDA4YjAxYjc0ZTQ5ZTM4ZDhiMTEzOTJiZmFjY2M3YjViZmY4NmNhMjA0OGNiYjBmNzgzNjMzYTYxZTJkZCIsInRzIjo4MDAsImRlbGV0ZWQiOnRydWUsImRlbGV0ZWRCeSI6ImRlc2sifSx7Im1zZ0lkIjoiZ3Vlc3Q6MTEiLCJhY3RvciI6Imd1ZXN0IiwiZGV2aWNlUHViIjoiYjI0OTFkOTUwMmFlMjg2MzBhMmJhY2IyZTBjNzQ1MTBmZmNkZDMyOGMzMzRmZjNlMTM5M2U3NWIyZDMxZTdkYyIsInRzIjoxMTAwLCJib2R5IjoiZ3Vlc3QgY2hlY2tpbmcgaW4gYmVmb3JlIEkgbGVhdmUgdGhlIGFjY291bnQifV0sInJlYWN0aW9ucyI6eyJkZXNrOjUiOnsi8J+RjSI6eyJwaG9uZSI6dHJ1ZX19fSwicmVhZEN1cnNvcnMiOnt9LCJza2lwcGVkIjpbXSwicmVqZWN0ZWQiOlt7InNlcSI6MTMsImFjdG9yIjoiZ3Vlc3QiLCJraW5kIjoibXNnLnBvc3QiLCJyZWFzb24iOiJjYXBhYmlsaXR5OiBncmFudCBlcG9jaCAwIGlzIHN0YWxlIChjdXJyZW50IGVwb2NoIDEpIOKAlCBkZXZpY2UgYjI0OTFkOTXigKYgd2FzIG5vdCByZS1pc3N1ZWQifV0sImFwcGxpZWQiOjEyLCJkaWdlc3QiOiIxYTFhZWQwMDgyZjAxMTNiNDAxY2Y4YzE3OGNhNjBhYzk5NzM2ZDE1ZTRjMTUxNjExNzY1YmI5YzNkNTE0MjUxIiwib3BzSGFzaGVkIjoxMywiY2FwRXBvY2giOjEsImdyYW50cyI6eyI0ZTYwMDhiMDFiNzRlNDllMzhkOGIxMTM5MmJmYWNjYzdiNWJmZjg2Y2EyMDQ4Y2JiMGY3ODM2MzNhNjFlMmRkIjp7InJvbGUiOiJ3cml0ZXIiLCJlcG9jaCI6MH0sImIyNDkxZDk1MDJhZTI4NjMwYTJiYWNiMmUwYzc0NTEwZmZjZGQzMjhjMzM0ZmYzZTEzOTNlNzViMmQzMWU3ZGMiOnsicm9sZSI6IndyaXRlciIsImVwb2NoIjowfSwiYzkwNzc1MThjZmE0Mzg3NjdlZDY4YzcxODE3OGNmMWE5MjM0M2QzYzVmZmM4NTRmMjI2NThiNjVjYmEyNjJmMCI6eyJyb2xlIjoid3JpdGVyIiwiZXBvY2giOjB9fX0="
+  }
+}
