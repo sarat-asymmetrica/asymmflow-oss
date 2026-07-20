@@ -66,7 +66,18 @@ const meshRoot = join(kitDir, '..')
 // Deliberately a DIFFERENT output directory than build-kit.mjs's dist/ —
 // the two builders must never contend for the same target (the Node kit
 // stays the rollback path, untouched by this file, per the fencing brief).
-const distOut = join(kitDir, 'dist-bare')
+//
+// SEALED CORRIDOR ADDITION (--out=<dir>): the default stays `dist-bare`, so
+// every existing caller is unchanged. The parameter exists because this
+// builder WIPES its target (§1 below) and the corridor campaign runs several
+// gates that each build a DIFFERENT entry — two of them concurrently. Sharing
+// one output directory means one gate's rmSync can delete another gate's kit
+// mid-copy, producing a failure that looks like a defect in the kit and is
+// actually a defect in the harness. That is precisely the class of
+// self-inflicted wrong answer this campaign keeps paying for, so the fix is
+// structural rather than a scheduling convention.
+const outArg = process.argv.find((a) => a.startsWith('--out='))
+const distOut = outArg ? resolve(meshRoot, outArg.slice('--out='.length)) : join(kitDir, 'dist-bare')
 
 // ── entry point parameter ──────────────────────────────────────────────────
 const entryArg = process.argv.find((a) => a.startsWith('--entry='))
@@ -138,6 +149,87 @@ if (!existsSync(offloadedWasm)) {
 if (statSync(offloadedWasm).size !== statSync(wasmPath).size) {
   throw new Error(`offloaded reducer.wasm is ${statSync(offloadedWasm).size} bytes `
     + `but the freshly built source is ${statSync(wasmPath).size} — stale or partial offload`)
+}
+
+// ── 2c. HARD GATE: offloaded NATIVE ADDONS (Sealed Corridor addition) ──────
+// Same disease as 2b, different organ. §2b exists because a kit missing
+// reducer.wasm boots, renders its whole menu, says Goodbye, and silently
+// cannot post — broken-but-green. The corridor adds SIX native addons to the
+// reachable graph (measured, SC0_PORT_MAP.md §2: bare-dns, bare-inspect,
+// bare-tcp, bare-type, sodium-native, udx-native), and a kit missing
+// udx-native.bare or bare-tcp.bare has EXACTLY that shape: the ceremony
+// renders, the room is created, and the other machine is simply never
+// reached. A field build must refuse on its own rather than rely on a spike
+// having been run first (the campaign's own §SC-2 wording: "the builder must
+// refuse on its own").
+//
+// TWO checks, because they catch different failures:
+//   (a) --require-addons=<a,b,c>: the caller DECLARES what this entry's graph
+//       must contain. Only an explicit expectation can catch a MISSING addon
+//       — walking whatever happens to be present can never notice absence,
+//       which is the same reason a probe that cannot report failure proves
+//       nothing (Rule 1).
+//   (b) byte-identity of every offloaded addon against its node_modules
+//       source — catches a stale, partial or truncated offload, the shape
+//       §2b already guards for the wasm.
+// Unlike the wasm gate, (a) is opt-in: different entries legitimately reach
+// different addon sets, so a hardcoded universal list would fail honest
+// builds. Declaring the requirement at the call site keeps the gate honest
+// for every shape.
+//
+// MEASURED, not assumed (2026-07-20, correcting this file's own §"Sealed-
+// folder shape" header, which named only bare-fs/bare-path/bare-url):
+// kit/bare-guide-entry.mjs ALREADY offloads EIGHTEEN addons — bare-abort,
+// bare-crypto, bare-fs, bare-hrtime, bare-inspect, bare-os, bare-path,
+// bare-pipe, bare-signals, bare-stdio, bare-tty, bare-type, bare-url,
+// fs-native-extensions, quickbit-native, rocksdb-native, simdle-native,
+// sodium-native. The corridor adds udx-native, bare-tcp and bare-dns on top.
+// Both gates below were proven RED-PROVABLE before being trusted: requiring
+// udx-native,bare-tcp of the pre-corridor guide entry makes this builder
+// refuse and exit non-zero, while bare-fs in the same list is accepted.
+function walkAddons(dir) {
+  const found = new Map() // pkg -> absolute path of its offloaded .bare
+  const nmDir = join(dir, 'node_modules')
+  if (!existsSync(nmDir)) return found
+  for (const pkg of readdirSync(nmDir, { withFileTypes: true })) {
+    if (!pkg.isDirectory()) continue
+    const addon = join(nmDir, pkg.name, 'prebuilds', 'win32-x64', `${pkg.name}.bare`)
+    if (existsSync(addon)) found.set(pkg.name, addon)
+  }
+  return found
+}
+
+const offloadedAddons = walkAddons(distOut)
+console.log(`offloaded native addons: ${offloadedAddons.size ? [...offloadedAddons.keys()].sort().join(', ') : '(none)'}`)
+
+// (b) byte-identity against the source prebuild — always on.
+for (const [pkg, addonPath] of offloadedAddons) {
+  const src = join(meshRoot, 'node_modules', pkg, 'prebuilds', 'win32-x64', `${pkg}.bare`)
+  if (!existsSync(src)) {
+    // Not a failure: bare-pack may legitimately source a prebuild from a
+    // nested node_modules. Say so plainly rather than guessing or throwing.
+    console.log(`  (note: ${pkg}.bare has no top-level node_modules source to compare against — size check skipped)`)
+    continue
+  }
+  const got = statSync(addonPath).size
+  const want = statSync(src).size
+  if (got !== want) {
+    throw new Error(`offloaded ${pkg}.bare is ${got} bytes but its source prebuild is ${want} — `
+      + 'stale or partial offload; a kit with a truncated addon renders its whole ceremony and silently cannot reach the network')
+  }
+}
+
+// (a) the declared requirement — only reachable when a caller declares one.
+const requireArg = process.argv.find((a) => a.startsWith('--require-addons='))
+if (requireArg) {
+  const required = requireArg.slice('--require-addons='.length).split(',').map((s) => s.trim()).filter(Boolean)
+  const missing = required.filter((pkg) => !offloadedAddons.has(pkg))
+  if (missing.length) {
+    throw new Error(`bare-pack did not offload required native addon(s) into the kit: ${missing.join(', ')}. `
+      + 'The entry file\'s import graph must actually reach them. A kit built without them '
+      + 'looks healthy, creates its room, and silently never reaches the other machine.')
+  }
+  console.log(`required addons present: ${required.join(', ')}`)
 }
 
 // ── 3. the runtime binary — copied verbatim, never rebuilt ─────────────────
