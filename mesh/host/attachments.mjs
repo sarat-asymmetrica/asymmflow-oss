@@ -19,7 +19,7 @@
 // live-media stack needed — capture is UI-side MediaRecorder → webm bytes).
 
 import Hyperblobs from 'hyperblobs'
-import { createHash } from 'node:crypto'
+import { createHash } from '#crypto'
 
 const BLOB_CORE_NAME = 'room-blobs'
 

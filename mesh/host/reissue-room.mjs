@@ -31,7 +31,7 @@
 import { createMeshNode } from './mesh-node.mjs'
 import { signOp, grantOp } from './capability.mjs'
 import { encodeInviteCode } from './invite-code.mjs'
-import { createHash } from 'node:crypto'
+import { createHash } from '#crypto'
 
 /**
  * reissueRoom({ predecessorNode, storage, primaryKey, authorityKeys,

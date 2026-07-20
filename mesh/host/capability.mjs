@@ -11,7 +11,7 @@
 // cross-runtime proof (JS signs → Go/WASM verifies).
 
 import hcrypto from 'hypercore-crypto'
-import { createHash } from 'node:crypto'
+import { createHash } from '#crypto'
 
 /** Fixed field order — MIRROR of mesh/reducer/capability.go signableV1(). */
 const FIELDS = [
