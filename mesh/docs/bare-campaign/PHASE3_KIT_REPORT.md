@@ -1086,3 +1086,148 @@ proven-clean, no open defects) after this rehearsal, consistent with
 every prior task in this report — the checked-in build is never the
 most-recently-tested diagnostic one. Hostile directory and scratchpad
 driver script removed.
+
+---
+
+## 14. GATE PASSED — staged rehearsal run on both axes, README updated
+
+Both remaining defects were fixed (team lead's own `setWasmSource(
+import.meta.asset('../dist/reducer.wasm'))` injection into
+`kit/bare-guide-entry.mjs`, gated by them directly — not this coder's
+edit, that file stayed out of fence throughout). Ran the staged rehearsal
+immediately, on both required axes.
+
+### 14a. Fixed kit: PASS, both harness and real launcher
+
+```
+$ node kit/build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs
+total: 24 file(s), 62.8 MB          (dist/reducer.wasm present — confirmed by listing, not assumed)
+```
+
+Real spawned pipe, 5 runs, corrected input sequence (`2/skip/<message>/
+/exit/5`):
+
+```
+fixed kit: OK=5/5 PARTIAL=0/5 TOTAL_LOSS=0/5 HANG=0/5
+```
+
+Real `.cmd` launcher, via PowerShell, hostile geography:
+
+```
+exitcode=0 menu=True posted=True goodbye=True
+```
+
+**Full ceremony, every time, both topologies.**
+
+### 14b. Broken kit (reducer.wasm deleted from the FIXED build): correctly fails, both ways
+
+Per the instruction — a genuine non-synthetic broken artifact, not a
+fabricated fixture. Real spawned pipe, 5 runs:
+
+```
+broken kit: OK=0/5 PARTIAL=0/5 TOTAL_LOSS=5/5 HANG=0/5
+  every run: code=3221226505 (non-zero), zero content match
+```
+
+Real `.cmd` launcher:
+
+```
+exitcode=-1073740791 menu=False posted=False goodbye=False
+```
+
+**The rehearsal correctly flags this build as failing on both axes, real
+harness and real launcher.**
+
+**One prediction corrected with evidence, in the same spirit as §11b's
+earlier correction:** the brief anticipated this would reproduce "the
+nastiest failure shape we found (full ceremony renders, room created,
+only posting fails)" — the shape observed in §13c, BEFORE the fix
+landed. It does not. Inspected the exact stdout/stderr directly (a
+separate, minimal `child_process.spawn` script, not the harness, to see
+the raw bytes):
+
+```
+CODE=3221226505
+STDOUT=""
+STDERR="Uncaught ModuleError: ASSET_NOT_FOUND: Cannot find asset
+  '../dist/reducer.wasm' imported from '...bare-guide-entry.mjs'
+  ... at Module.asset (bare:/bare.bundle/node_modules/bare-module/index.js:607:18)
+  ... at file:///...bare-guide-entry.mjs:68:35"
+```
+
+**The failure shape changed because the fix's own placement changed it.**
+Before the fix, the wasm read happened lazily, deep inside
+`openMessenger`'s reducer call, wrapped by application-level error
+handling — deleting the file produced §13c's graceful, deep-in-the-flow
+catch. The fix calls `setWasmSource(import.meta.asset(...))` at
+`bare-guide-entry.mjs`'s own TOP LEVEL, unconditionally, before
+`runGuide()` is ever called — so a missing asset now throws at MODULE
+EVALUATION time, before a single line of the menu ever prints. This is
+arguably a BETTER failure shape for a real deployment (fails loud and
+immediate, not deep inside a UX flow after the user has already started
+interacting) — but it is a different one than predicted, and the
+difference is reported plainly rather than silently reconciled with the
+brief's wording.
+
+### 14c. README — updated, since it is now true
+
+Rewrote `README_BARE_KIT.txt` in `build-bare-kit.mjs` (§4b) to describe
+the real ceremony: double-click, the five-item menu, opening the
+messenger, posting a message, `/exit`, closing. ASCII-only (0 non-ASCII
+bytes, verified again on the rebuilt file). Kept the Kitchen-Table
+safety-box structure and voice.
+
+**Three items disclosed as honest stubs, matched in spirit to
+`bare-guide.mjs`'s own stub copy** (that file's wording, not edited —
+this coder's README independently states the same gap in its own
+client-facing voice): "Check the connection" (use the messenger instead
+to confirm the mesh works), "Make this machine the always-on anchor"
+(not built yet, nothing on the computer changes if chosen), and the
+one-time Windows-permission notice (does not yet automate anything —
+"if Windows itself asks you for permission later while you are
+connecting, click Yes" — the exact "state the gap, give a path" shape
+the brief asked to match).
+
+**`data/keys` + `data/corestore` documented**, per the instruction — a
+"Your data" section explains these are NOT temporary (device identity +
+messages, DP1 sibling layout, persisted across runs), so a client does
+not delete them thinking they're disposable. Confirmed these directories
+are real and populated by re-checking a hostile run's own folder after
+the ceremony completed (not asserted from the source alone).
+
+Verified the COMPLETE shipped artifact end-to-end one more time — build,
+copy to a fresh hostile directory, README present, ceremony runs:
+
+```
+Get-ChildItem: app.bundle, bare.exe, portable.flag, README_BARE_KIT.txt, run_bare_mesh.cmd (+ dist/, node_modules/)
+exitcode=0 menu=True posted=True goodbye=True
+```
+
+### 14d. Final artifact state
+
+`kit/dist-bare/` was left as the **guide-entry build** (24 files, 62.8 MB,
+`dist/reducer.wasm` present, README describing the real ceremony) —
+NOT reverted back to the `bare-entry.mjs` fold-proof this time, unlike
+every earlier task in this report. That earlier reversion existed
+specifically because the guide build was known-broken and the checked-in
+artifact should never be the most-recently-tested diagnostic one; now
+that the guide build is the proven, gated, final artifact, it is the
+correct one to leave in place. `kit/dist-bare/` remains gitignored
+(unaffected either way by repository state).
+
+### 14e. What is NOT verified (addendum)
+
+1. The switch/stdin interaction question from §13d/the earlier brief
+   remains re-verifiable-but-not-yet-re-verified against fully WORKING
+   ceremony output specifically with the interaction stress-tested (this
+   task confirmed both switch states independently produce correct
+   results, but did not specifically hunt for an interaction bug beyond
+   that — no evidence of one found, not exhaustively ruled out either).
+2. Root cause of WHY `import.meta.asset()` throws synchronously at
+   evaluation time (§14b) rather than lazily was not investigated beyond
+   the observed stack trace — sufficient to characterize the failure
+   shape change accurately, not a claim about bare-module's internal
+   design intent.
+3. Everything already listed in §6/§9/§12h — no clean VM, no macOS/
+   Linux, no two-machine corridor, no real firewall/anchor mutation
+   (both remain honest stubs by design, not this coder's scope).

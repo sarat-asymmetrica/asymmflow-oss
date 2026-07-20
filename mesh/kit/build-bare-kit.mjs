@@ -190,15 +190,18 @@ writeFileSync(join(distOut, 'run_bare_mesh.cmd'), toCrlf(RUN_BARE_MESH_CMD))
 // plain text, never parsed by cmd.exe — safe"). Matching that file's own
 // actual practice, not just its literal words.
 //
-// HONESTY, not the ceremony script: this builder's proven entry
-// (bare-entry.mjs) is a technical proof that the sealed packaging works —
-// it is NOT yet the messenger ceremony build-kit.mjs's Node kit ships.
-// Writing a README that describes a chat ceremony this kit cannot yet
-// perform would violate the same honesty law this whole campaign runs on.
-// This README describes what a build of THIS kit is proven to do today —
-// see PHASE3_KIT_REPORT.md §10 for a note on what changes once
-// bare-guide.mjs is the entry.
-const README_TEXT = `ASYMMFLOW MESH -- SEALED BARE KIT (technical proof build)
+// HONESTY, not the ceremony script — kept true, not aspirational: this
+// text describes ONLY what a build of THIS kit with the guide as its entry
+// (kit/bare-guide-entry.mjs) is proven, end to end, in hostile geography, to
+// actually do (PHASE3_KIT_REPORT.md §13 — the isMain fix and the
+// reducer.wasm offload fix, both gated). It was deliberately left
+// describing the earlier fold-only proof build while the ceremony did not
+// yet work end-to-end (§10a/§13f) — updated only now that it is true. Three
+// menu items are honest stubs in THIS build, matched here word-for-word in
+// spirit to bare-guide.mjs's own stub copy (its file, not edited by this
+// builder) — say the gap plainly AND give the reader something to do, never
+// silently do nothing and never pretend to succeed.
+const README_TEXT = `ASYMMFLOW MESH -- GUIDE (Bare sealed kit)
 =============================================================
 
 *******************************************************************
@@ -206,64 +209,93 @@ const README_TEXT = `ASYMMFLOW MESH -- SEALED BARE KIT (technical proof build)
 *                                                                   *
 *  - This kit is ONE self-contained folder. It touches NOTHING     *
 *    outside itself -- no other program, no other folder on this   *
-*    computer, no company system, no network.                      *
-*  - Nothing here is installed on your computer. Nothing is left   *
-*    behind anywhere else. Deleting this folder removes everything *
-*    it ever did.                                                  *
-*  - This build uses only made-up, synthetic demo numbers. There   *
-*    is nothing to type in -- it runs on its own.                  *
+*    computer, no company system.                                  *
+*  - Nothing here is installed on your computer. Deleting this     *
+*    folder removes everything it ever did, EXCEPT see the "Your   *
+*    data" section below -- read that before you delete anything.  *
+*  - Use made-up, synthetic names and messages with this kit.      *
+*    Never type in a real customer, a real document, or real       *
+*    business information.                                         *
 *******************************************************************
 
 What this is
 -------------
-A small, self-contained technical check. It proves that this folder can
-run completely on its own -- on a computer with nothing else installed --
-and still do real work correctly.
+A small, self-contained messenger. No account, no company server, no
+installer -- just this folder. Double-click one file and answer plain
+questions on screen.
 
-This is NOT yet the full messenger described in other AsymmFlow Mesh
-kits. It is the foundation underneath it: the same sealed-folder idea,
-the same "double-click and it just works" promise, proven on a small,
-real task first, before the full conversation feature is built on top of
-it. If you were sent this folder, you were probably asked to confirm it
-runs cleanly on your machine -- that is all this build is for.
+SYNTHETIC DATA ONLY. Pick a made-up name when asked, and use a made-up
+message for any test.
 
-What happens when you run it
---------------------------------
-1. Double-click run_bare_mesh.cmd. A black window opens.
-2. It runs a real internal check -- the same calculation this project's
-   business logic always runs -- entirely inside this folder.
-3. It prints ONE line telling you the result. If everything is working,
-   that line starts with:
-       BARE_ENTRY_FOLD_OK
-   followed by a long string of letters and numbers. That string is a
-   fingerprint of the result -- if you are asked to confirm the kit
-   worked, read that whole line back (or copy-paste it) exactly as
-   printed.
-4. The window stays open with a short message at the bottom. Press any
-   key to close it whenever you are done reading.
+Getting started
+------------------
+1. Double-click run_bare_mesh.cmd. A black window opens with a short
+   welcome message, then a numbered menu:
+
+     [1] Check the connection
+     [2] Open the messenger
+     [3] Make this machine the always-on anchor
+     [4] Show status
+     [5] Close
+
+2. Type a number and press Enter to choose. To open the messenger and
+   send a message, type 2 and press Enter.
+3. The FIRST time you open the messenger (or check the connection), you
+   will see a one-time notice about a Windows permission. Press Enter to
+   continue past it, or type skip and press Enter to skip it for now --
+   either is fine, and you will not see this notice again this session.
+4. Inside the messenger: type a message and press Enter to post it. Type
+   /rooms to list rooms, /exit to leave the messenger and go back to the
+   menu.
+5. From the menu, type 5 and press Enter to close the kit. The window
+   prints "Goodbye -- this window is safe to close." -- that line means
+   everything shut down cleanly.
+
+What this build does NOT do yet (read this so you do not expect it)
+------------------------------------------------------------------------
+Three menu items say plainly, on screen, that they are not available yet
+in this build -- they are not broken, they are simply not built yet:
+
+  [1] Check the connection -- no automatic connection check exists in
+      this build yet. Use [2] Open the messenger instead to confirm
+      everything works -- if you can post a message, the connection is
+      working.
+  [3] Make this machine the always-on anchor -- this always-on option has
+      not been built for this kit yet. Nothing on your computer is
+      changed if you choose it; it will simply say so and return you to
+      the menu.
+  The one-time Windows permission notice (step 3 above) does not yet set
+      anything up automatically either -- if Windows itself asks you for
+      permission later while you are connecting, click Yes; nothing else
+      needs to be done by hand.
 
 If something looks wrong
 ----------------------------
-- If the line does NOT start with BARE_ENTRY_FOLD_OK, or the window
-  closes immediately without printing anything, something is wrong with
-  this copy of the folder -- copy-paste (or photograph) everything the
-  window shows and send it to whoever gave you this kit. Do not try to
-  fix it yourself; there is nothing to configure.
+- If the window closes immediately without showing the menu, or shows an
+  error instead of the menu, something is wrong with this copy of the
+  folder -- copy-paste (or photograph) everything the window shows and
+  send it to whoever gave you this kit. Do not try to fix it yourself;
+  there is nothing to configure.
 - If Windows shows a security warning before the window opens (some
   computers ask about running a program from an unfamiliar publisher),
   that is normal for a small self-contained tool like this one -- choose
   "Run anyway" / "More info -> Run anyway" if you trust whoever sent you
   this folder.
-- This kit never asks you to type anything, never asks for a password,
-  and never needs the internet to produce its result.
+
+Your data
+------------
+After your first run, this folder grows two new subfolders next to
+run_bare_mesh.cmd: data\\keys and data\\corestore. These are NOT
+temporary files -- they are your device identity and your messages,
+saved so they are still here the next time you run the kit. Do not
+delete them if you want to keep using this kit; only delete the whole
+folder (including these) if you are finished with it for good, on this
+computer.
 
 What you need
 ---------------
-- A Windows computer. Nothing else -- no installers, no accounts, no
-  internet connection required for this check.
-
-That's it -- this build has one job, and the single line it prints is the
-whole answer.
+- A Windows computer. Nothing else -- no installers, no accounts to
+  create, no software to download first.
 `
 
 writeFileSync(join(distOut, 'README_BARE_KIT.txt'), README_TEXT)
