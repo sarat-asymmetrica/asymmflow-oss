@@ -18,11 +18,14 @@ kit/dist-bare/
 # dist-bare/ above, so the ignore rule has to travel with the parameter — one
 # uncovered `--out=` and a prebuilt binary lands in the repo on the next
 # `git add -A`. Convention: any sealed-kit output dir under kit/ starts with a dot.
-kit/.sc0-gatecheck/
-kit/.sc1-dist/
-kit/.sc2-dist/
-kit/.sc3-dist/
-kit/.sc4-dist/
+#
+# Generalized to a glob after a coder's ad-hoc `kit/.sc3a-manual-test/` showed
+# up untracked: enumerating each mission's output directory by hand guarantees
+# the list lags behind the next one created, and a single uncovered entry puts
+# a 62MB prebuilt binary into the repo on the next `git add -A`. The convention
+# is now load-bearing rather than descriptive: ANY sealed-kit output or scratch
+# directory under kit/ starts with `.sc`.
+kit/.sc*/
 
 # Disposable spike storage/fixture dirs (created and removed by the spikes
 # themselves; listed so an interrupted run can't leave a committable stray).
