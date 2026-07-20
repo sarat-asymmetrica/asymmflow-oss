@@ -1,7 +1,8 @@
 # The Sealed Corridor — Field Runbook
 
-**Status:** DRAFT — sections 1, 2, 6, 7 and 8 are final; the ceremony script
-(§3–§5) is filled in by SC-3 and is marked clearly where it is not yet written.
+**Status:** COMPLETE — the ceremony script (§4) is written from a ceremony that
+was actually driven end to end, not from the design. Two sealed kits formed one
+room through the real launchers and messages crossed both ways.
 **Campaign:** The Sealed Corridor · **Deliverable:** SC-4
 **Audience:** the two humans who actually run the ceremony, and the person on
 the phone guiding them.
@@ -93,25 +94,80 @@ ceremony-day caution.
 
 ## 4. The ceremony
 
-*(SC-3 deliverable — the two-human script, who reads what aloud, and what to
-photograph. NOT YET WRITTEN. Do not run a ceremony from this section until it
-is filled in and the SC-5 gate has passed.)*
+**Two people, one phone call.** Decide first who is **STARTING** and who is
+**JOINING**. It does not matter which machine is which — but it must be
+decided before you begin, not negotiated halfway through.
 
-What is already fixed about it:
+Both people: double-click **`run_bare_mesh.cmd`**, then type `2` and press
+Enter for *Open the messenger*. You will each see a one-time Windows-permission
+notice — press Enter, or type `skip` and press Enter. Either is fine.
 
-- **The invite code is long** (a few hundred characters). It is designed to be
-  **pasted** — WhatsApp, email, whatever is easiest. Reading it aloud is the
-  fallback, not the plan, and it is read in groups of four.
-- **The pairing code that comes back is short** (a single key) and *is*
-  comfortable to read aloud in groups of four.
-- **The person who starts the room must type in the other person's pairing
-  code.** This step is on the founder's machine and cannot be done remotely —
-  the protocol deliberately has no over-the-wire "make me a writer" method.
+You will then both see the same question. **This is where the two paths split.**
+
+### 4a. The person STARTING
+
+1. Type `connect` and press Enter.
+2. At *"Did someone send you a code?"* — **just press Enter** (you are the one
+   starting).
+3. The screen prints a **long code**. **Send it** — WhatsApp, email, whatever
+   is easiest. Reading it aloud is the fallback, not the plan; if you must, it
+   is printed in groups of four.
+4. The screen then waits and says it is listening. **Leave this window open.**
+5. The other person will read you back a **short code**. **Type or paste it in
+   and press Enter.** The screen says *"the other computer can finish joining
+   now"*.
+6. You are now in the messenger. Type a message and press Enter. Type `/read`
+   to see the conversation.
+
+### 4b. The person JOINING
+
+1. Type `connect` and press Enter.
+2. **Paste the long code** they sent you and press Enter. (Extra spaces or
+   line breaks from a chat app are fine — they are stripped automatically.)
+3. Your screen prints a **short code**. **Read it back to them** — this one is
+   short enough to say out loud, in groups of four.
+4. You will be asked for an address. **If you are in different offices or
+   different countries, just press Enter.** Only type something here if you are
+   both on the same office network *and* someone has told you an address like
+   `192.168.1.5:4300`.
+5. The screen says it is waiting for the other computer to let you in. This can
+   take a little while. When it succeeds it says *"joined — you can post now"*.
+6. Type a message and press Enter. Type `/read` to see the conversation.
+
+### 4c. Proving it actually worked
+
+Do **both** of these, in this order. One direction is not a corridor.
+
+1. The JOINER types a message. The STARTER types `/read` and reads it aloud.
+2. The STARTER types a message. The JOINER types `/read` and reads it aloud.
+
+> **Use `/read`, not `/rooms`.** `/rooms` shows only a one-line summary of the
+> *last* message in the room's canonical order, which is **not** necessarily
+> the newest one you just received — if you both typed at about the same time,
+> a perfectly delivered message can be missing from that line. `/read` shows
+> the actual conversation. This is not a nicety; a gate run misdiagnosed a
+> working corridor as broken for exactly this reason.
+
+When you are done, type `/exit` then `5` to close.
 
 ## 5. What to photograph
 
-*(SC-3/SC-4 deliverable. The intent: enough evidence that a failure can be
-diagnosed after the fact without a second live call.)*
+Enough that a failure can be diagnosed later without booking a second call:
+
+- **Both screens** at the moment of the verdict — the joiner's *"joined — you
+  can post now"* and the starter's *"the other computer can finish joining
+  now"*.
+- **Both `/read` outputs** from §4c, showing each other's messages. This is the
+  actual proof; everything else is supporting evidence.
+- **Any red or unexpected line, in full**, including the detail below the fold
+  line. The guide deliberately prints one plain sentence and then the raw
+  detail underneath — photograph both halves, not just the sentence.
+- If anything failed: the whole **`VERIFY_EVIDENCE.txt` + `verify-logs\`**
+  folder from §7.
+
+**Do not photograph the long invite code.** It is a bearer secret — anyone who
+has it can read the room. Send it once, to the person who needs it, and do not
+put it in a group chat or a support ticket.
 
 ## 6. What "it worked" actually means
 
