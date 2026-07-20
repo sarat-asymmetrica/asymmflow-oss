@@ -32,17 +32,49 @@
 // `default` -> `fs`) resolves to the correct module in BOTH runtimes at
 // import time, with no runtime branching in this file at all, and packs
 // clean (only the `bare` branch is ever traversed/embedded).
+// WASM SOURCE — dependency injection, not a runtime branch (Phase 2 ruling,
+// PHASE2_ASSET_LOCATION.md; same preference already stated in
+// PHASE0_GATE_B3_CONDITION_MAP.md: "prefer dependency injection where it
+// applies"). The DEFAULT below (self-locating via `#fs` + `import.meta.url`)
+// is UNCHANGED and keeps every existing caller — apply-bare.mjs's own
+// bare-parity-spike run under both Node and Bare, mesh-node.mjs via `#apply`
+// — working with ZERO call-site changes. `setWasmSource()` exists purely so
+// a Bare-ONLY sealed-artifact entry point (mesh/host/bare-entry.mjs) can
+// inject bytes resolved via `import.meta.asset()` — a bare-pack/Bare lexer
+// feature that does NOT exist under Node (PHASE0_NOTES_B2_PACKAGING_SPIKE.md
+// §4c) — WITHOUT this file ever knowing it was bundled. Concentrating that
+// packaging knowledge in one Bare-only file (never imported by anything that
+// also runs under Node) is the same shape wasi-preview1-lite.mjs's zero-
+// import injected-I/O design already uses successfully.
 import { createWASI } from './wasi-preview1-lite.mjs'
 import * as fsMod from '#fs'
 
 const WASM_URL = new URL('../dist/reducer.wasm', import.meta.url)
 
+let _wasmSourceOverride = null
+
+/**
+ * setWasmSource(bytes) — override the reducer.wasm bytes `loadModule()`
+ * compiles, bypassing the default self-locating read entirely. Optional;
+ * never calling this preserves today's behavior exactly. Resets the
+ * compiled-module cache so a later call takes effect on the next apply.
+ */
+export function setWasmSource(bytes) {
+  _wasmSourceOverride = bytes
+  _module = null
+}
+
 // Compile once, instantiate fresh per apply — same reasoning as apply.mjs's
-// header: a command module's memory is consumed by its one run.
+// header: a command module's memory is consumed by its one run. Per the
+// binding rule (PHASE0_GATE_D2_FLUSH_RACE.md): synchronous `new
+// WebAssembly.Module()` ONLY — `WebAssembly.compile()` silently drops ~33%
+// of stdout under Bare with exit code 0. Do not "modernize" this to the
+// async form.
 let _module = null
 function loadModule() {
   if (_module) return _module
-  _module = new WebAssembly.Module(fsMod.readFileSync(WASM_URL))
+  const bytes = _wasmSourceOverride ?? fsMod.readFileSync(WASM_URL)
+  _module = new WebAssembly.Module(bytes)
   return _module
 }
 

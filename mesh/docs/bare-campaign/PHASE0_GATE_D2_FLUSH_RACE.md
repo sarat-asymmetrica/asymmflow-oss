@@ -1,5 +1,34 @@
 # Gate result: the Bare stdout loss is real, silent, and NARROW
 
+> **⚠️ PARTLY SUPERSEDED — READ `PHASE0_NOTES_D2_FLUSH_RACE.md` (P0-D) ALONGSIDE THIS.**
+>
+> What stands: Bug A below (`await WebAssembly.compile()` loses stdout; the synchronous
+> `new WebAssembly.Module()` is the mitigation) is confirmed, and P0-D measured it worse
+> than I did — **53% loss** on a real pipe, and **27% even on a plain file redirect**, which
+> kills my implied "it might just be console teardown" framing.
+>
+> **What is WRONG here: this document's conclusion that "the stdio transport is NOT
+> inherently unsafe under Bare".** That was too broad. There is a **SECOND, independent bug**
+> I did not find: writing via **`bare-process`'s `process.stdout.write()` on a pipe HANGS,
+> 30/30 — with no WASM involved at all.** The "correct" drain/write-callback pattern hangs
+> too (5/5).
+>
+> **Why I missed it:** I tested with a shell pipe (`$(...)` capture). P0-D tested with
+> `child_process.spawn` + `stdio:['pipe','pipe','pipe']` and a parent reading
+> `child.stdout.on('data', …)` — the actual topology a sidecar bridge is driven with.
+> Different topology, different failure. This is the same lesson as the four earlier broken
+> probes in this campaign, and it is the fourth time I personally have drawn a conclusion
+> from a control I did not run.
+>
+> **The finding that matters most is about our own code:** `mesh/host/bare-spike/stdio-check.mjs`
+> — marked PASS on 2026-07-19, the literal DP4 ndjson-over-stdio proof-of-concept — silently
+> drops its **entire reply payload 10/10 (100%)** when driven through a real spawn pipe. The
+> `ready` event arrives; the actual message never does. Exit code 0, no hang, no error. It
+> passed only because it was verified with a shell pipe rather than the topology it exists to
+> model. **Our DP4 proof was not proving what we believed it proved.**
+>
+> Binding rules are therefore THREE, not one — see P0-D's §4 and the campaign rules below.
+
 **Date:** 2026-07-20 · **Author:** orchestrator (Opus 4.8), run personally
 **Status:** root-caused to a single trigger; **our shipped code is not exposed**
 **Relation to P0-D:** P0-D's independent root-cause mission was running in parallel; this is
@@ -79,11 +108,25 @@ Phase-0 diagnostic scripts P0-D found flaking (`wasm-compile-check.mjs`,
 why the parity spikes ran clean across dozens of executions today while the diagnostics
 flaked: the production path was never exposed.
 
-## BINDING RULE (campaign-wide, effective immediately)
+## BINDING RULES (campaign-wide, effective immediately)
 
-> No file destined for the sealed artifact may use `WebAssembly.compile()` or
-> `WebAssembly.instantiate()` (the async forms). Use `new WebAssembly.Module()` and
-> `new WebAssembly.Instance()`. A reviewer must reject the async forms on sight.
+**RULE 1 — no async WebAssembly.** No file destined for the sealed artifact may use
+`WebAssembly.compile()` or `WebAssembly.instantiate()`. Use `new WebAssembly.Module()` and
+`new WebAssembly.Instance()`. Reject the async forms on sight.
+
+**RULE 2 — never write frames through `bare-process`'s `process.stdout.write()`.** Use
+`console.log()`. Measured 30/30 clean where `process.stdout.write()` was 0/30 (deadlock).
+Convenient rather than awkward: `console.log` appends exactly the newline ndjson framing
+wants, so `console.log(JSON.stringify(frame))` is the frame writer. (P0-D, Bug B.)
+
+**RULE 3 — keep an explicit `process.exit(0)` on the stdin `end` path.** Removing it in the
+hope the loop drains naturally produces a 10/10 hang; the call is load-bearing for
+termination, not an early cut-off. Do not "clean it up". (P0-D.)
+
+**RULE 4 — gate the seam through a real `child_process.spawn` pipe**, with a parent reading
+`stdout.on('data', …)`. Never a shell pipe, never in-process calls. A green in-process run
+proves nothing about the seam — that is exactly how `stdio-check.mjs` passed for a day while
+dropping 100% of its payloads.
 
 The rule matters more than the current clean state, because the defect's signature is
 **silent success**: nobody would notice a regression here from a green test run. A future
