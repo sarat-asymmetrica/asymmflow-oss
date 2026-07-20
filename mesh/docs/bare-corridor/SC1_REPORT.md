@@ -418,7 +418,55 @@ The positive claim ("when it completes, it completes correctly") is
 supported by every completed run across all four executions, with zero
 counterexamples.
 
-## 5c. A second environmental finding: `fs.cpSync` recursive copy failing 100% with `EINPROGRESS`, self-clearing, root cause not determined
+## 5c. A second environmental finding: `fs.cpSync` recursive copy failing 100% with `EINPROGRESS`
+
+> **ROOT CAUSE DETERMINED BY THE GATE REVIEWER, 2026-07-20 — IT WAS NOT
+> ANTIVIRUS. THE DISK WAS FULL.**
+>
+> This section's investigation was careful and its observations were all
+> correct; only its conclusion was wrong. It is left below in full, because
+> the reasoning is instructive and because a hypothesis that fits every
+> observation and is still false is exactly the thing worth recording.
+>
+> **`errno: 112` is `ERROR_DISK_FULL`.** Node has no errno mapping for 112
+> on Windows, so it falls back to printing `EINPROGRESS, unknown error` —
+> a name that reads like a transient race and actively misleads. The C:
+> drive was measured at **literally zero bytes free** shortly after this
+> section was written.
+>
+> **Every observation in this section fits disk-full exactly**, including
+> the one that looked most like evidence for antivirus:
+> - large binary tree fails, **trivial one-file copy succeeds in the same
+>   moment** — a few KB fits in remaining slack; 62 MB does not. This was
+>   read as "AV targets large native binaries"; it is simply capacity.
+> - not Temp-specific, not source-specific — a full volume is volume-wide.
+> - "self-clearing with no code change" — another agent's harness released
+>   its temp copies, freeing just enough to proceed.
+> - correlated with heavy concurrent agent activity — because that activity
+>   is what filled the disk.
+>
+> **The actual mechanism:** every gate harness in this campaign stages a
+> ~62 MB copy of the sealed kit per run, and several leaked those copies
+> instead of releasing them. **41 abandoned kit directories totalling
+> 2.37 GB** were found in `%TEMP%` and reclaimed, plus ~735 MB of stale
+> build output elsewhere.
+>
+> **Why this correction matters more than the bug:** left standing, "flaky
+> antivirus on Windows" would have become folklore — an unfalsifiable
+> explanation that excuses any future copy failure and points the field
+> runbook at the wrong hardening story. The real lesson is mundane,
+> actionable, and ours: **a gate harness that stages 62 MB per run must
+> release it per run.** `kit/sealed-corridor-gate.mjs` now checks free
+> space before staging, refuses to retry errno 112 (retrying a full disk
+> cannot succeed, and retrying it is what buried the cause), and prints the
+> errno-112 decoder ring in its failure message.
+>
+> The AV hypothesis below is therefore **retracted**, not merely
+> supplemented. The `robustCopy()` retry helper this section added is still
+> a genuine improvement to the spike's own robustness and stays.
+
+*(original text follows, unedited)*
+
 
 While re-verifying the gate after §5b's fixes, a re-run crashed the whole
 spike process (an uncaught exception, not a reported failure — see below
