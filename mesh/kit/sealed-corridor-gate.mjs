@@ -146,9 +146,28 @@ function freshKit(tag) {
   }
   throw new Error(`could not stage a fresh kit for ${tag} after 3 attempts: ${lastErr?.message ?? lastErr}`)
 }
+function releaseKit(d) {
+  // Free each staged kit AS SOON AS its run is done, not at the end of the
+  // gate. Found by measurement, 2026-07-20: the first version accumulated
+  // every staged copy until the final cleanup, and each copy is ~63 MB. By
+  // the fourth leg-C fixture that is well over a gigabyte of live temp data,
+  // and `cpSync` began failing with a reproducible `EINPROGRESS` on a QUIET
+  // machine — reproducible at the same point across all three retries, which
+  // is what distinguished it from the load-related flakiness above it.
+  //
+  // Worth stating precisely because the two failures looked similar and were
+  // not: the earlier HANGs were caused by other processes loading the
+  // machine (they vanished when the machine was quiet), while this one was
+  // caused by THIS harness's own disk appetite (it survived the machine
+  // going quiet). Same red, two different causes, isolated one at a time.
+  if (KEEP) return
+  try { rmSync(d, { recursive: true, force: true }) } catch { /* best-effort */ }
+  const i = tmpDirs.indexOf(d)
+  if (i !== -1) tmpDirs.splice(i, 1)
+}
 function cleanup() {
   if (KEEP) { console.log(`\n(--keep: left ${tmpDirs.length} temp dir(s) in place)`); return }
-  for (const d of tmpDirs) { try { rmSync(d, { recursive: true, force: true }) } catch { /* best-effort */ } }
+  for (const d of [...tmpDirs]) releaseKit(d)
 }
 
 const stdinScript = (lines) => lines.join('\r\n') + '\r\n'
@@ -172,6 +191,7 @@ async function provingGroundsRed() {
     const looksHealthy = r.stdout.includes('Goodbye') && /posted, seq \d+/.test(r.stdout)
     allRed = check('control 1: a corrupted app.bundle is NOT reported as a healthy ceremony', !looksHealthy,
       `stdout was ${JSON.stringify(r.stdout.slice(0, 200))}`) && allRed
+    releaseKit(kit)
   }
 
   // Control 2 — the success predicate itself. A run that never posts must not
@@ -189,6 +209,7 @@ async function provingGroundsRed() {
     // Without this, control 2 would pass for the wrong reason (Rule 2 —
     // vary one axis at a time).
     check('control 2: the same kit DOES still reach the menu (so the red above is about posting, not a broken kit)', reachedMenu)
+    releaseKit(kit)
   }
 
   // Control 3 — the launcher itself is the thing under test in this file, so
@@ -199,6 +220,7 @@ async function provingGroundsRed() {
     const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['5']), timeoutMs: 30000 })
     const healthy = r.stdout.includes('Goodbye')
     allRed = check('control 3: a kit with no run_bare_mesh.cmd is NOT reported as healthy', !healthy) && allRed
+    releaseKit(kit)
   }
 
   return allRed
@@ -220,6 +242,7 @@ async function ceremonyThroughLauncher(runs) {
     else if (good) ok++
     else if (r.stdout.trim().length) { partial++; if (!firstBad) firstBad = { i, why: 'PARTIAL', out: r.stdout.slice(0, 300) } }
     else { totalLoss++; if (!firstBad) firstBad = { i, why: 'TOTAL_LOSS', err: r.stderr.slice(0, 300) } }
+    releaseKit(kit)
   }
   console.log(`  leg A: OK=${ok}/${runs} PARTIAL=${partial}/${runs} TOTAL_LOSS=${totalLoss}/${runs} HANG=${hang}/${runs}`)
   check(`leg A: the sealed kit runs its full ceremony through the REAL launcher, ${runs}/${runs}`,
@@ -250,6 +273,7 @@ async function persistenceThroughLauncher(runs) {
     const dataInKit = existsSync(join(kit, 'data', 'keys')) && existsSync(join(kit, 'data', 'corestore'))
     if (posted && readBack && didNotRecreate && dataInKit) ok++
     else if (!firstBad) firstBad = { i, posted, readBack, didNotRecreate, dataInKit, r2: r2.stdout.slice(0, 300) }
+    releaseKit(kit)
   }
   console.log(`  leg B: OK=${ok}/${runs}`)
   check(`leg B: run 2 reopens run 1's room and reads its message back, ${runs}/${runs}`,
@@ -316,6 +340,7 @@ async function registryRobustness(runsPer) {
           out: r.stdout.slice(0, 300), err: r.stderr.slice(0, 200),
         }
       }
+      releaseKit(kit)
     }
     check(`leg C: ${label} -- kit still reaches the menu and closes cleanly (${ok}/${runsPer})`,
       ok === runsPer, firstBad ? JSON.stringify(firstBad) : '')
