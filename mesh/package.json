@@ -61,7 +61,8 @@
     "buildbarekit": "npm run build && node kit/build-bare-kit.mjs",
     "sc1spike": "npm run build && node kit/bare-registry-spike.mjs",
     "sc2spike": "npm run build && node kit/bare-net-spike.mjs",
-    "sc3bspike": "npm run build && node kit/bare-connection-check-spike.mjs"
+    "sc3bspike": "npm run build && node kit/bare-connection-check-spike.mjs",
+    "sc3aspike": "npm run build && node kit/bare-corridor-spike.mjs"
   },
   "dependencies": {
     "autobase": "^7.11.0",

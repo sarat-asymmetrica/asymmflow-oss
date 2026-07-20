@@ -63,11 +63,22 @@ const DISTINCTIVE_MSG = 'sc1-registry-persistence-proof-3f8a1c'
 // leave, close. Firewall offer answered 'skip' -- same convention as
 // bare-guide-spike.mjs's own sealed-kit layer 4 (a bare Enter also works;
 // 'skip' is the precedent this spike matches).
-const RUN1_STDIN = guideStdin(['2', 'skip', DISTINCTIVE_MSG, '/exit', '5'])
+//
+// SC-3a corridor fork: menu [2] now asks ONE MORE question before the
+// messenger opens -- "open/start the conversation on this computer, or type
+// connect to link up with a different computer" -- the SAME question and
+// the SAME Enter-is-always-safe shape whether or not a room already exists
+// (the orchestrator's own D3 ruling, made explicit BECAUSE this spike's own
+// run-1-vs-run-2 shape is exactly the case that breaks if the two states
+// ask different questions: run 1 has no room, runs 2+ do, and ONE fixed
+// stdin script has to drive both). The extra '' below is that Enter --
+// straight into reopenOrCreateRoom + the messenger, no invite, no network,
+// unchanged from what this spike tested before the fork existed.
+const RUN1_STDIN = guideStdin(['2', 'skip', '', DISTINCTIVE_MSG, '/exit', '5'])
 // A run-2-shaped script: open the messenger (no post), list rooms (surfaces
 // lastPreview, which is where a reopened room's last message shows up),
 // leave, close.
-const RUN2_STDIN = guideStdin(['2', 'skip', '/rooms', '/exit', '5'])
+const RUN2_STDIN = guideStdin(['2', 'skip', '', '/rooms', '/exit', '5'])
 
 const RAW_HEX64 = /\b[0-9a-f]{64}\b/i
 
@@ -326,7 +337,15 @@ if (bundleDir && existsSync(join(bundleDir, 'app.bundle')) && existsSync(join(bu
   //    empty store instead of throwing) before this guard was added. ──────
   console.log('\n-- layer 4: negative control C (malformed / dangling rooms.json must never crash boot) --')
   const REGISTRY_N = 3
-  const NOT_CRASHED_STDIN = guideStdin(['2', 'skip', '/exit', '5'])
+  // SC-3a corridor fork: same extra '' (Enter, the safe default) as
+  // RUN1_STDIN/RUN2_STDIN above -- without it, '/exit' would be consumed as
+  // the fork question's answer instead (not '/exit', so the Enter branch
+  // still runs, but '/exit' itself is lost and '5' gets typed as a chat
+  // message instead of the close command). The current assertion happens to
+  // still pass either way (it only checks Welcome/menu-banner/Goodbye), but
+  // the point of this stdin is to exercise "/exit works", not to pass by
+  // accident on a path that never reaches it.
+  const NOT_CRASHED_STDIN = guideStdin(['2', 'skip', '', '/exit', '5'])
   function notCrashedSuccess(stdout) {
     return stdout.includes('Welcome.')
       && stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
