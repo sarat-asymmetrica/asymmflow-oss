@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Sovereign Mesh track for AsymmFlow — the Go kernel as a deterministic Autobase apply() reducer over Hypercore/Corestore, replicated across Holesail P2P tunnels. See ../FABLE_CAMPAIGN_SOVEREIGN_MESH.md.",
+  "imports": {
+    "#apply": { "bare": "./host/apply-bare.mjs", "default": "./host/apply.mjs" },
+    "#fs": { "bare": "bare-fs", "default": "fs" },
+    "#crypto": { "bare": "bare-crypto", "default": "crypto" }
+  },
   "scripts": {
     "build": "node scripts/build-reducer.mjs",
     "smoke": "npm run build && node host/smoke.mjs",

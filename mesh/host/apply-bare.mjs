@@ -20,14 +20,20 @@
 // (node:fs vs bare-fs — no bare-path/bare-os were needed; `new URL(...,
 // import.meta.url)` plus each fs module's Node-shaped `readFileSync(url)`
 // was enough, mirroring the exact pattern already proven in
-// host/bare-spike/wasi-imports-list.mjs). `Bare` is a global namespace that
-// only exists under the Bare runtime (verified: PHASE0_NOTES_A_BARE.md §2.2
-// lists `Bare.platform`/`Bare.argv`/etc as real Bare-only globals) — that is
-// the feature-detection switch used below, at module load time, once.
+// host/bare-spike/wasi-imports-list.mjs).
+//
+// PACKAGING (Phase 2 fix, PHASE0_GATE_B3_CONDITION_MAP.md): the runtime
+// ternary this comment used to describe (`isBare ? import('bare-fs') :
+// import('node:fs')`) is a `bare-pack` build blocker — its static traverser
+// walks both branches of a dynamic `await import()` and fails on `node:fs`
+// exactly as it would on a nonexistent package (verified,
+// PHASE0_NOTES_B2_PACKAGING_SPIKE.md §9). The `#fs` subpath import below
+// (mesh/package.json's `imports` map, `bare` condition -> `bare-fs`,
+// `default` -> `fs`) resolves to the correct module in BOTH runtimes at
+// import time, with no runtime branching in this file at all, and packs
+// clean (only the `bare` branch is ever traversed/embedded).
 import { createWASI } from './wasi-preview1-lite.mjs'
-
-const isBare = typeof Bare !== 'undefined'
-const fsMod = isBare ? await import('bare-fs') : await import('node:fs')
+import * as fsMod from '#fs'
 
 const WASM_URL = new URL('../dist/reducer.wasm', import.meta.url)
 

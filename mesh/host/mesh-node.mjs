@@ -17,8 +17,14 @@
 
 import Corestore from 'corestore'
 import Autobase from 'autobase'
-import { createHash } from 'node:crypto'
-import { applyViaWasm } from './apply.mjs'
+import { createHash } from '#crypto'
+// #apply (mesh/package.json imports map): each runtime keeps its OWN host —
+// Node resolves to apply.mjs (the frozen rollback path, node:wasi), Bare
+// resolves to apply-bare.mjs (the WASI-shim host) — so a latent bug in one
+// can never take down the other's independence (owner ruling R1 condition 2;
+// team lead's ruling, PHASE2_IMPORT_MIGRATION.md). Never point this at
+// apply-bare.mjs unconditionally.
+import { applyViaWasm } from '#apply'
 
 /**
  * An op value appended by writers. Common envelope: { seq, actor, ts, kind? }.
