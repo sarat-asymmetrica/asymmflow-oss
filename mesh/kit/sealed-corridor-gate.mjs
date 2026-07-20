@@ -1,0 +1,278 @@
+// sealed-corridor-gate.mjs — the Sealed Corridor campaign's INDEPENDENT final
+// gate (SC-5). Written by the orchestrator, not by any mission's coder, and
+// deliberately NOT built on any mission's spike: SC-5's charter is "re-verify
+// independently (own driver, own negative controls, honest N)". A gate that
+// re-runs the same spike the coder wrote proves the coder ran it, not that the
+// thing works.
+//
+// WHAT MAKES THIS DIFFERENT FROM EVERY MISSION SPIKE, and why it is not
+// duplication:
+//
+//   RULE 3 — "test the layer the client touches" (CAMPAIGN_REPORT.md §4).
+//   The campaign spec states it explicitly for this wave: "final gates drive
+//   `run_bare_mesh.cmd` through a real spawned pipe, never `bare.exe
+//   app.bundle`, never a shell pipe." EVERY spike in the tree today —
+//   bare-guide-spike.mjs layer 4, bare-registry-spike.mjs, bare-net-spike.mjs
+//   — drives `bare.exe app.bundle` directly. That is one layer BELOW what a
+//   client double-clicks. The launcher is not a formality: it does `cd /d
+//   "%~dp0"` (which is what makes the kit's CWD-relative `./data/...` storage
+//   land inside the kit folder rather than wherever the shell happened to be),
+//   it captures and propagates the exit code around `pause`, and it is the
+//   file that has historically been mis-driven — three false kit-launcher
+//   failures in the Sealed Ship campaign were Git Bash mangling `cmd.exe /c`.
+//   This file closes that gap by spawning the .cmd itself.
+//
+//   The launcher's own `pause` is skipped via ASYMMFLOW_KIT_NONINTERACTIVE —
+//   a DOCUMENTED opt-in on the same file, same code path (build-bare-kit.mjs's
+//   own comment explains why that beats substituting a different command).
+//
+// NODE-ONLY by construction, like spawn-pipe-harness.mjs: this is the PARENT
+// half of the seam. It is never imported by, or shipped inside, anything that
+// runs AS the Bare child.
+//
+// NEGATIVE CONTROLS ARE RUN FIRST, ALWAYS. Rule 1: a probe that cannot report
+// the opposite result proves nothing. If any control in `provingGroundsRed()`
+// fails to go red, this file refuses to report ANY positive result at all —
+// it does not merely note it and continue.
+//
+// Run: node kit/sealed-corridor-gate.mjs [--runs N] [--keep]
+
+import { spawn } from 'node:child_process'
+import { mkdtempSync, rmSync, existsSync, writeFileSync, mkdirSync, cpSync, readdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { execFileSync } from 'node:child_process'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const meshRoot = join(__dirname, '..')
+const OUT_DIR = 'kit/.sc4-dist'          // own output dir — never contends with a mission spike
+const BUILT = join(meshRoot, OUT_DIR)
+
+const argv = process.argv.slice(2)
+const RUNS = (() => {
+  const i = argv.indexOf('--runs')
+  return i !== -1 && argv[i + 1] ? Number(argv[i + 1]) : 16
+})()
+const KEEP = argv.includes('--keep')
+
+let checks = 0
+let failures = 0
+function check(name, cond, detail = '') {
+  checks++
+  if (cond) console.log(`  OK   ${name}`)
+  else { failures++; console.log(`  FAIL ${name}${detail ? ' -- ' + detail : ''}`) }
+  return cond
+}
+
+// ── driving the REAL launcher ─────────────────────────────────────────────
+//
+// `run_bare_mesh.cmd` is a batch file: it must be run by cmd.exe, and the
+// PHASE3_KIT_REPORT.md §5d finding is that invoking it from a POSIX shell
+// mangles the arguments. We therefore spawn `cmd.exe /c <abs path>` directly
+// from Node with `shell: false` — no shell interprets anything, and the child
+// gets a real OS pipe for stdio (never a shell pipe, which is the exact
+// distinction that hid two real Bare bugs for a day).
+function runLauncher({ kitDir, stdin, timeoutMs = 90000 }) {
+  return new Promise((resolve) => {
+    const comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
+    const child = spawn(comspec, ['/c', join(kitDir, 'run_bare_mesh.cmd')], {
+      cwd: kitDir,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: false,
+      env: { ...process.env, ASYMMFLOW_KIT_NONINTERACTIVE: '1' },
+    })
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    const t0 = Date.now()
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      try { child.kill('SIGKILL') } catch { /* already gone */ }
+      resolve({ stdout, stderr, code: null, hang: true, ms: Date.now() - t0 })
+    }, timeoutMs)
+    child.stdout.on('data', (d) => { stdout += d.toString('utf8') })
+    child.stderr.on('data', (d) => { stderr += d.toString('utf8') })
+    child.on('close', (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ stdout, stderr, code, hang: false, ms: Date.now() - t0 })
+    })
+    child.on('error', (err) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ stdout, stderr: stderr + String(err), code: -1, hang: false, ms: Date.now() - t0 })
+    })
+    child.stdin.write(stdin)
+    child.stdin.end()
+  })
+}
+
+const tmpDirs = []
+function hostileDir(tag) {
+  // The '#'-in-path defect (merge-gate finding 2026-07-20) breaks Bare addon
+  // resolution. mkdtemp's suffix is random, so this is asserted rather than
+  // assumed — a generated '#' would silently invalidate the whole run.
+  const d = mkdtempSync(join(tmpdir(), `asymm-corridor-${tag}-`))
+  if (d.includes('#')) throw new Error(`hostile dir contains '#', which breaks Bare addon resolution: ${d}`)
+  tmpDirs.push(d)
+  return d
+}
+function freshKit(tag) {
+  const d = hostileDir(tag)
+  cpSync(BUILT, d, { recursive: true })
+  return d
+}
+function cleanup() {
+  if (KEEP) { console.log(`\n(--keep: left ${tmpDirs.length} temp dir(s) in place)`); return }
+  for (const d of tmpDirs) { try { rmSync(d, { recursive: true, force: true }) } catch { /* best-effort */ } }
+}
+
+const stdinScript = (lines) => lines.join('\r\n') + '\r\n'
+
+// The message bodies are synthetic by construction (campaign invariant I4 —
+// synthetic identities only, everywhere).
+const MARK = 'sc5-independent-gate-marker'
+
+// ── PROVING GROUNDS: the controls run FIRST and gate everything else ───────
+async function provingGroundsRed() {
+  console.log('\n== proving grounds: can this driver report a FAILURE? ==')
+  let allRed = true
+
+  // Control 1 — a kit whose app.bundle is corrupt. The launcher still runs,
+  // bare.exe still starts, and the ceremony cannot happen. If this driver
+  // calls that a pass, nothing it says afterwards means anything.
+  {
+    const kit = freshKit('ctl-corrupt')
+    writeFileSync(join(kit, 'app.bundle'), 'this is not a bundle')
+    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', MARK, '/exit', '5']), timeoutMs: 45000 })
+    const looksHealthy = r.stdout.includes('Goodbye') && /posted, seq \d+/.test(r.stdout)
+    allRed = check('control 1: a corrupted app.bundle is NOT reported as a healthy ceremony', !looksHealthy,
+      `stdout was ${JSON.stringify(r.stdout.slice(0, 200))}`) && allRed
+  }
+
+  // Control 2 — the success predicate itself. A run that never posts must not
+  // satisfy it. This is the predicate, not the kit, under test: the campaign's
+  // most expensive lesson was a proof that passed because it asserted the
+  // wrong thing (CAMPAIGN_REPORT.md §4).
+  {
+    const kit = freshKit('ctl-nopost')
+    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['5']), timeoutMs: 45000 })
+    const reachedMenu = r.stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
+    const claimsPosted = /posted, seq \d+/.test(r.stdout) && r.stdout.includes(MARK)
+    allRed = check('control 2: a run that closes without posting is NOT counted as a post', !claimsPosted) && allRed
+    // Positive sub-assertion: the control kit is otherwise healthy, so a red
+    // above is attributable to "did not post" and not to "kit is broken".
+    // Without this, control 2 would pass for the wrong reason (Rule 2 —
+    // vary one axis at a time).
+    check('control 2: the same kit DOES still reach the menu (so the red above is about posting, not a broken kit)', reachedMenu)
+  }
+
+  // Control 3 — the launcher itself is the thing under test in this file, so
+  // prove a MISSING launcher is detected rather than silently skipped.
+  {
+    const kit = freshKit('ctl-nolauncher')
+    rmSync(join(kit, 'run_bare_mesh.cmd'), { force: true })
+    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['5']), timeoutMs: 30000 })
+    const healthy = r.stdout.includes('Goodbye')
+    allRed = check('control 3: a kit with no run_bare_mesh.cmd is NOT reported as healthy', !healthy) && allRed
+  }
+
+  return allRed
+}
+
+// ── POSITIVE LEG A: the ceremony through the REAL launcher ────────────────
+async function ceremonyThroughLauncher(runs) {
+  console.log(`\n== leg A: the full ceremony through run_bare_mesh.cmd, N=${runs} ==`)
+  let ok = 0, partial = 0, totalLoss = 0, hang = 0
+  let firstBad = null
+  for (let i = 1; i <= runs; i++) {
+    const kit = freshKit(`legA-${i}`)
+    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', `${MARK}-${i}`, '/rooms', '/exit', '5']) })
+    const good = r.stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
+      && /posted, seq \d+/.test(r.stdout)
+      && r.stdout.includes(`${MARK}-${i}`)
+      && r.stdout.includes('Goodbye -- this window is safe to close.')
+    if (r.hang) { hang++; if (!firstBad) firstBad = { i, why: 'HANG' } }
+    else if (good) ok++
+    else if (r.stdout.trim().length) { partial++; if (!firstBad) firstBad = { i, why: 'PARTIAL', out: r.stdout.slice(0, 300) } }
+    else { totalLoss++; if (!firstBad) firstBad = { i, why: 'TOTAL_LOSS', err: r.stderr.slice(0, 300) } }
+  }
+  console.log(`  leg A: OK=${ok}/${runs} PARTIAL=${partial}/${runs} TOTAL_LOSS=${totalLoss}/${runs} HANG=${hang}/${runs}`)
+  check(`leg A: the sealed kit runs its full ceremony through the REAL launcher, ${runs}/${runs}`,
+    ok === runs, firstBad ? JSON.stringify(firstBad) : '')
+  return { ok, runs }
+}
+
+// ── POSITIVE LEG B: persistence across a restart, through the REAL launcher ─
+// SC-1's own spike proved this through `bare.exe app.bundle`. This re-proves
+// it one layer up, where the client actually lives — and the launcher's
+// `cd /d "%~dp0"` is precisely what makes the CWD-relative data dir land in
+// the kit folder, so this leg tests something the lower-layer spike could not.
+async function persistenceThroughLauncher(runs) {
+  console.log(`\n== leg B: room persistence across a restart, through run_bare_mesh.cmd, N=${runs} ==`)
+  let ok = 0
+  let firstBad = null
+  for (let i = 1; i <= runs; i++) {
+    const kit = freshKit(`legB-${i}`)
+    const body = `${MARK}-persist-${i}`
+    const r1 = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', body, '/exit', '5']) })
+    const posted = /posted, seq \d+/.test(r1.stdout)
+    // Second, entirely separate process, same kit folder.
+    const r2 = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '/rooms', '/exit', '5']) })
+    const readBack = r2.stdout.includes(body)
+    const didNotRecreate = !r2.stdout.includes('created a new room for this kit')
+    // The data really landed inside the kit folder — this is the launcher's
+    // `cd /d "%~dp0"` doing its job, and it is why this leg exists.
+    const dataInKit = existsSync(join(kit, 'data', 'keys')) && existsSync(join(kit, 'data', 'corestore'))
+    if (posted && readBack && didNotRecreate && dataInKit) ok++
+    else if (!firstBad) firstBad = { i, posted, readBack, didNotRecreate, dataInKit, r2: r2.stdout.slice(0, 300) }
+  }
+  console.log(`  leg B: OK=${ok}/${runs}`)
+  check(`leg B: run 2 reopens run 1's room and reads its message back, ${runs}/${runs}`,
+    ok === runs, firstBad ? JSON.stringify(firstBad) : '')
+  return { ok, runs }
+}
+
+// ── main ──────────────────────────────────────────────────────────────────
+console.log('sealed-corridor-gate -- SC-5 independent verification (own driver, own controls)\n')
+
+try {
+  console.log(`building the sealed kit into ${OUT_DIR} (entry: kit/bare-guide-entry.mjs)...`)
+  execFileSync(process.execPath, [
+    join(meshRoot, 'kit', 'build-bare-kit.mjs'),
+    '--entry=kit/bare-guide-entry.mjs',
+    `--out=${OUT_DIR}`,
+  ], { cwd: meshRoot, stdio: 'pipe' })
+
+  check('build: app.bundle produced', existsSync(join(BUILT, 'app.bundle')))
+  check('build: bare.exe copied into the kit', existsSync(join(BUILT, 'bare.exe')))
+  check('build: run_bare_mesh.cmd produced (the layer this gate exists to drive)', existsSync(join(BUILT, 'run_bare_mesh.cmd')))
+  check('build: dist/reducer.wasm offloaded (without it the kit renders everything and silently cannot post)',
+    existsSync(join(BUILT, 'dist', 'reducer.wasm')))
+
+  const red = await provingGroundsRed()
+  if (!red) {
+    console.log('\nREFUSING TO REPORT POSITIVE RESULTS: at least one negative control did not go red.')
+    console.log('A driver that cannot report failure proves nothing by succeeding (Rule 1).')
+    console.log(`\n${checks} check(s), ${failures} failure(s).`)
+    console.log('\nSEALED CORRIDOR GATE RED (controls)')
+    cleanup()
+    process.exit(1)
+  }
+  console.log('  (all controls went red as required -- positive results below are admissible)')
+
+  await ceremonyThroughLauncher(RUNS)
+  await persistenceThroughLauncher(Math.min(RUNS, 16))
+} catch (err) {
+  check('gate did not throw', false, err?.message ?? String(err))
+} finally {
+  cleanup()
+}
+
+console.log(`\n${checks} check(s), ${failures} failure(s).`)
+console.log(failures === 0 ? '\nSEALED CORRIDOR GATE GREEN' : `\nSEALED CORRIDOR GATE RED (${failures} failure(s))`)
+process.exit(failures === 0 ? 0 : 1)
