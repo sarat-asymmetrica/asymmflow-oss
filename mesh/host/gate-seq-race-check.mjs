@@ -38,5 +38,29 @@ const allOk = [a, b, c].every((r) => r?.ok)
 const distinct = new Set(seqs).size === 3
 console.log(`ok=${allOk} seqs=${JSON.stringify(seqs)} distinct=${distinct}`)
 console.log(allOk && distinct ? 'SEQ RACE CHECK PASS' : 'SEQ RACE CHECK FAIL')
-try { rmSync(tmp, { recursive: true, force: true }) } catch {}
+// Cleanup, corrected 2026-07-20 (Sealed Corridor SC-0 baseline run): this
+// gate WAS leaking its `.gate-seq-race-<ts>/` directory into the repo on
+// every single run, and the bare `catch {}` hid it completely. Root cause:
+// on Windows, rmSync cannot remove files that are still open, and neither
+// the mesh node nor the bridge core had been closed — so the removal failed
+// silently, forever, and the stray dir showed up as untracked in `git
+// status` (found while establishing this campaign's regression baseline).
+//
+// Two fixes, both deliberate:
+//   1. close the core and the node FIRST, so the handles are actually
+//      released before the removal is attempted;
+//   2. if the removal STILL fails, SAY SO on stdout instead of swallowing
+//      it. Silent success is the worst failure mode (CAMPAIGN_REPORT.md §4)
+//      and a cleanup that silently does nothing is the same shape. The
+//      gate's own verdict deliberately does NOT depend on cleanup — a
+//      leaked temp dir is a hygiene problem, not a seq-race result, and
+//      conflating the two would make this probe answer a question it was
+//      not asked.
+try { core.close() } catch { /* best-effort */ }
+try { await hubPo.close() } catch { /* best-effort */ }
+try {
+  rmSync(tmp, { recursive: true, force: true })
+} catch (err) {
+  console.log(`(note: could not remove ${tmp} — ${err?.message ?? err}; remove it by hand, it is disposable)`)
+}
 process.exit(allOk && distinct ? 0 : 1)
