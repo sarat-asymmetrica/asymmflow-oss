@@ -84,11 +84,22 @@ import fs from '#fs'
 import hcrypto from 'hypercore-crypto'
 import { getRealStdio, createBridgeCore } from '../host/bare-bridge.mjs'
 import { deviceKeys } from '../host/capability.mjs'
+// SC-1 (Sealed Corridor campaign) additions — see `ensureMessengerCore`/
+// `openMessenger` below for how these are used. `createMeshNode` reopens a
+// previously-created room's Autobase; `createSocialRoomNode` (aliased,
+// same alias kit-repl.mjs's own create() uses) founds a fresh one with a
+// STABLE storage dir this file chooses, not the bridge core's own
+// `createSocialRoom` wire method's unpredictable `social-<hex>` pick.
+// `bare-registry.mjs` is the Bare-native port of kit-registry.mjs — see
+// that file's own header for the precedent this reuses.
+import { createMeshNode } from '../host/mesh-node.mjs'
+import { createSocialRoom as createSocialRoomNode } from '../host/social-room.mjs'
+import { loadRoomRegistry, saveRoomRegistryEntry } from './bare-registry.mjs'
 
 const DATA_DIR = './data'
 const KEYS_DIR = `${DATA_DIR}/keys`
 const SEED_FILE = `${KEYS_DIR}/bare-guide-device.seed`
-const ROOM_STORAGE_DIR = `${DATA_DIR}/corestore/bare-guide-room`
+const CORESTORE_DIR = `${DATA_DIR}/corestore`
 
 // ── pure helpers — byte-for-byte the same regex/logic as guide.mjs's own
 // (guide-spike.mjs unit-tests these directly there; bare-guide-spike.mjs
@@ -215,18 +226,52 @@ async function checkConnection(io, write) {
 
 let messengerCtx = null // lazily created, reused across menu visits in one session
 
-async function ensureMessengerCore() {
+// SC-1 (Sealed Corridor campaign): PHASE3_GUIDE_REPORT.md §5 flagged this
+// exact gap -- "each fresh run prints 'created a new room' again... not a
+// regression... but a real limitation." This function now ports kit-host.mjs's
+// own reopen loop (GL-5 discipline: state must survive a real process
+// restart, not just an in-memory reconnect) so a device's room comes back
+// automatically instead of vanishing every run. `write` is the guide's own
+// output function (see runGuide) so a per-room reopen failure can be
+// reported to the person at the keyboard the same plain way kit-host.mjs's
+// `log(...)` callback does -- never silently, and never by crashing the
+// other rooms' reopen or the guide itself.
+async function ensureMessengerCore(write) {
   if (messengerCtx) return messengerCtx
   const seed = loadOrCreateSeed()
   const keys = deviceKeys(seed)
-  const core = createBridgeCore({ rooms: new Map(), actor: 'guide', deviceKeys: keys, storageDir: ROOM_STORAGE_DIR })
+  const core = createBridgeCore({ rooms: new Map(), actor: 'guide', deviceKeys: keys, storageDir: CORESTORE_DIR })
   messengerCtx = { core, keys, nextId: 1 }
+
+  // Reopen every room this device previously created -- same discipline as
+  // kit-host.mjs's own boot loop, ported verbatim in spirit: createMeshNode
+  // against the SAME storage dir + same authorityPub/encryptionKey/bootstrap
+  // it was opened with originally is mesh-node.mjs's own reopen contract
+  // (kit-registry.mjs's header: "same storage dir + same keys IS the same
+  // device waking up, not a new identity"). A single entry that fails to
+  // reopen must not abort the others or crash the guide -- it is logged as
+  // one plain sentence and skipped, exactly like kit-host.mjs's own catch.
+  for (const entry of loadRoomRegistry(KEYS_DIR)) {
+    try {
+      const node = await createMeshNode({
+        storage: `${CORESTORE_DIR}/${entry.storage}`,
+        bootstrap: entry.bootstrap || null,
+        authorityPub: entry.authorityPub,
+        mode: 'room',
+        encryptionKey: entry.encryptionKey ? Buffer.from(entry.encryptionKey, 'hex') : undefined,
+      })
+      core.registerRoom(node.key, node)
+    } catch (err) {
+      write?.(`(could not reopen a saved room -- ${err.message})\n`)
+    }
+  }
+
   return messengerCtx
 }
 
 async function openMessenger(io, write) {
   await ensureFirewall(io, write)
-  const ctx = await ensureMessengerCore()
+  const ctx = await ensureMessengerCore(write)
   const call = (method, params) => ctx.core.dispatch({ id: ctx.nextId++, method, params })
 
   write('\n')
@@ -237,10 +282,40 @@ async function openMessenger(io, write) {
   let listed = await call('listRooms', {})
   let roomKey = listed.result?.[0]?.roomKey
   if (!roomKey) {
-    const created = await call('createSocialRoom', { title: 'kitchen table' })
-    if (!created.ok) { write(`(could not open a room: ${created.error})\n`); return }
-    roomKey = created.result.roomKey
+    // DEVIATION, declared (same one kit-repl.mjs's own create() declares,
+    // ported here verbatim in spirit): bypass the bridge core's OWN
+    // `createSocialRoom` wire method, which picks an unpredictable
+    // `social-<hex>` storage dir every call -- GL-5 reopen discipline needs
+    // a STABLE directory name to reopen against after a restart, and
+    // Corestore doesn't reliably expose the path it was opened with back
+    // out. Only one social room is ever auto-created by this guide (the
+    // "kitchen table" kit, one shared room per device -- kit-host.mjs's own
+    // kitchen-table UX doc), so a single fixed dir name is correct here and
+    // needs no random/unique id generation at all -- deliberately simpler
+    // than kit-repl.mjs's own `room-${randomUUID()}`, which exists there to
+    // support MULTIPLE named rooms via repeated /create, a case this guide
+    // does not have. The room is registered into the SAME core `rooms` Map
+    // either way, so every dispatch method behaves identically afterward --
+    // only the creation path differs.
+    const dirName = 'room-guide'
+    const encryptionKey = hcrypto.randomBytes(32)
+    const node = await createSocialRoomNode({
+      creatorKeys: ctx.keys, storage: `${CORESTORE_DIR}/${dirName}`,
+      title: 'kitchen table', encryptionKey, ts: Date.now(), actor: 'guide',
+    })
+    ctx.core.registerRoom(node.key, node)
+    saveRoomRegistryEntry(KEYS_DIR, {
+      roomKey: node.key, storage: dirName, authorityPub: ctx.keys.pubHex,
+      encryptionKey: encryptionKey.toString('hex'), bootstrap: null, title: 'kitchen table',
+    })
+    roomKey = node.key
     write('(created a new room for this kit -- "kitchen table")\n')
+  } else {
+    // Reception-Grade voice (A2.1): plain, short, no hex on the happy path
+    // -- the earlier conversation was found again, not a new one. Never
+    // print the raw 64-hex room key to the client here.
+    const title = listed.result[0].title || 'kitchen table'
+    write(`(found your earlier conversation again -- "${title}")\n`)
   }
 
   for (;;) {
