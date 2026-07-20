@@ -37,7 +37,7 @@ its runbook is the deliverable that hands it over.
 | **SC-4** | sealed build gates, verifier section, field runbook | builder refuses on a missing addon (proven red-provable); verifier's corridor phase is opt-in; runbook written from a ceremony actually driven |
 | **SC-5** | independent gate, own driver, own controls | §5 |
 
-## 3. The five findings that mattered — none came from a passing test
+## 3. The six findings that mattered — none came from a passing test
 
 **1. You could post, but you could not READ.** The messenger's only view was
 `/rooms`, printing `last: <preview>` — the last message in canonical
@@ -72,7 +72,27 @@ trivial one-file copy succeeding while a 62 MB tree failed. That is capacity,
 not AV. Cause: gate harnesses staging ~62–73 MB per run and leaking it; 41
 abandoned kit directories totalling 2.37 GB were reclaimed, then 36 more.
 
-**5. The guide double-spaced every line it printed, since Phase 2.** `write` is
+**5. Every device called itself `guide`, so two machines could mint the SAME
+message id.** `msgId` is `{actor}:{seq}` and each device computes its next seq
+from its OWN local view, so two different physical machines both named `guide`
+could independently land on the same id for two different messages. Reproduced
+live: a founder's post came back `(not posted -- duplicate msgId "guide:4")`
+after the joiner's post happened to take that seq. **This is silent message
+loss on a real corridor** — the failure surfaces as a message that simply never
+appears. It was invisible to every prior gate because a single device only ever
+collides with itself; SC-3a was the first mission to put two real devices in
+one room. Fixed by deriving each device's actor from its own public key
+(`guide-${pubHex.slice(0,8)}`), which makes the collision structurally
+impossible while keeping the identity stable across restarts.
+
+> **Record correction:** this fix is committed inside `fb9dce8`, whose message
+> describes only the `/read` gap. Four agents shared one working tree, and the
+> coder's edit was swept into the orchestrator's commit — the SC-1 coder
+> flagged this same pattern independently. The commit message is therefore
+> incomplete, and rather than rewrite history the correction is recorded here,
+> where the campaign's durable record lives.
+
+**6. The guide double-spaced every line it printed, since Phase 2.** `write` is
 `console.log` (and must stay — `stdout.write` hangs 30/30 on a real pipe),
 which appends a newline to strings that already end in one. The entire menu
 rendered with a blank line between every row. It survived because **every gate
@@ -82,7 +102,7 @@ the blank lines between them. Green suite, broken-looking client surface.
 ## 4. The method lesson this campaign adds
 
 The Sealed Ship's §4 ended at five rules. This wave earns a sixth, and it is
-the through-line of all five findings above:
+the through-line of all six findings above:
 
 > **6. Assertions inherit the blind spots of the surface they read.** Every
 > finding above was invisible to a green gate for the same structural reason:
