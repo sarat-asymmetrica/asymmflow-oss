@@ -202,3 +202,47 @@ difference between a passing proof and a 100% lossy channel.** A shell pipe and 
 are not interchangeable, and only one of them models the system we are building. That is now
 Rule 4, and a permanent regression test is being built so this class of error cannot recur
 silently.
+
+---
+
+## Appendix 2 — `bare-readline` hangs under a spawned pipe; the guide is immune (2026-07-20)
+
+P0-B, verifying which packages the sealed kit can carry, found `bare-readline` **hangs
+0/10 under a real spawned pipe** with piped stdin, while working fine under a shell pipe
+and unbundled. Isolated with two standalone diagnostics: subprocess-only 5/5 clean,
+readline-only 5/5 hang. Gate-confirmed independently: 2/2 HANG on the readline-only entry.
+
+This is the same shell-pipe-vs-spawned-pipe gap that Rule 4 exists to catch, found a third
+time, in a third component. A shell-pipe-only test would have called it a pass.
+
+**`bare-guide.mjs` is immune, and not by luck.** Its coder hand-rolled the FIFO stdin
+discipline over raw stdio events rather than using `readline` — a decision made for reuse
+reasons (the Phase 2 ndjson framer already proved the technique) before this defect was
+known. Gate-verified across all three topologies with identical results:
+
+| topology | messenger opened | message posted | goodbye |
+|---|---|---|---|
+| all-at-once spawned pipe | yes | yes | yes |
+| paced spawned pipe (500ms gaps) | yes | yes | yes |
+| shell pipe | yes | yes | yes |
+
+Root cause of the `bare-readline` hang is undiagnosed (candidates: a raw-mode/TTY
+assumption a pipe does not satisfy, or Bare's pipe primitive delivering data differently
+than `bare-readline` expects). It is **not** on our path and was not chased.
+
+### A near-miss worth recording, because it is the campaign's signature error again
+
+Before the table above, the gate ran the guide through a spawned pipe and measured
+`posted=false` on 5/5 runs — and came close to reporting a topology-dependent defect in a
+delivered artifact. There was no defect. **The test input omitted the firewall offer's
+answer line**, so every subsequent line shifted by one and `5` (Close) was consumed as the
+menu selection. The guide was behaving correctly the entire time.
+
+That is the seventh instance in this campaign of a probe measuring something other than
+what its author believed, and the third belonging to the orchestrator. The rule has to run
+in **both** directions: a RED result is no more trustworthy than a GREEN one until the
+harness itself is verified. The same session also produced three consecutive false
+"failures" of the kit launcher that were purely Git Bash mangling `cmd.exe /c`.
+
+**Diagnose before reporting. A defect claimed against another agent's work costs more to
+retract than it costs to verify.**

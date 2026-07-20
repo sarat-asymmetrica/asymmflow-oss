@@ -330,6 +330,15 @@ if you want it manually re-ordered to strictly append-only shape.
 `bare`/`bare-crypto`/`bare-events`/`bare-fs`/`bare-process`/`bare-stream`
 were) — required for this builder to run at all, so it was added.
 
+**Addendum (§10):** two more devDependencies added the same way —
+`bare-readline@^1.3.1`, `bare-subprocess@^6.1.0` — for the guide-entry
+readiness check. Same npm alphabetical-resort side effect applies (team
+lead already ruled this fine: "npm did it, nothing removed or altered, no
+action"). Current full `devDependencies` list: `bare`, `bare-crypto`,
+`bare-events`, `bare-fs`, `bare-pack`, `bare-process`, `bare-readline`,
+`bare-stream`, `bare-subprocess` — all Holepunch/`bare-*` family, build-
+time verification of packaging behavior, owner ruling R3.
+
 ## 8. `WebAssembly.compile()`/`instantiate()` compliance
 
 The builder itself makes no `WebAssembly.*` call. Its packed entry
@@ -361,3 +370,257 @@ prevent (`PHASE0_GATE_D2_FLUSH_RACE.md`).
 5. The `ASYMMFLOW_KIT_NONINTERACTIVE` switch (§5d) is new in this addendum
    and has only been exercised by this coder's own rehearsal — it has not
    been reviewed or used by anyone else yet.
+
+---
+
+## 10. README + guide-entry readiness (addendum)
+
+### 10a. The README
+
+Added `README_BARE_KIT.txt` to the builder's output (§4b of
+`build-bare-kit.mjs`) — ASCII-only (0 non-ASCII bytes, verified), matching
+`README_KITCHEN_TABLE.txt`'s safety-box voice and plain-language discipline
+(owner ruling R6: never a command line; D3: "the complexity is ours, the
+simplicity is for the end user").
+
+**Written in LF, not CRLF, deliberately** — this looks like it contradicts
+the instruction ("ASCII-only and CRLF, per build-kit.mjs's field-tested
+rules"), so the reasoning is stated plainly rather than silently deviating:
+`build-kit.mjs`'s own `toCrlf()` guard is applied ONLY to files `cmd.exe`
+parses (every `.cmd`), and its own header note says exactly why —
+"README_*.txt files are plain text, never parsed by cmd.exe — safe." Its
+own `README_TEXT`/`README_CORRIDOR_TEXT` constants are written with a bare
+`writeFileSync`, no `toCrlf()`. This builder matches that file's actual
+practice, not a literal-but-broader reading of the instruction. If this
+judgment call is wrong, it's a one-line fix (wrap the `writeFileSync` call
+in `toCrlf()`).
+
+**Content is scoped to what THIS kit is actually proven to do** — the
+honest framing this whole report has held to throughout. `bare-entry.mjs`
+is a technical proof (a real fold, sealed, hostile-geography verified),
+not the messenger ceremony. The README says so directly rather than
+describing a chat feature this build cannot perform: it tells the reader
+what the single printed line means, what to do if it's wrong, and that
+there's nothing to type in. Verified end-to-end in hostile geography after
+adding it (full manifest now 9 files, 49.8 MB, README included) — the kit
+still runs clean:
+
+```
+$ ./bare.exe app.bundle
+BARE_ENTRY_FOLD_OK digest=6c8c35eff1e2c04d6d46704ad7c542c2808717fae58fb1d91ceccfcbd09eb410
+exit=0
+```
+
+**This README will need real revision once `bare-guide.mjs` is the entry**
+— it should then describe the actual ceremony, the way
+`README_KITCHEN_TABLE.txt` does for the Node kit. That is follow-on work
+for whoever sequences the guide-entry swap, flagged here so it isn't
+missed, not attempted in this pass (the guide's actual UX is P1A's file,
+unread by this coder per the fence).
+
+### 10b. Guide-entry readiness — bare-readline and bare-subprocess
+
+**Added as devDependencies** (append-only, per the fence):
+`bare-readline@^1.3.1`, `bare-subprocess@^6.1.0`. Neither was previously
+installed. `bare-subprocess` transitively pulls in real native addons:
+`bare-pipe`, `bare-tcp`, `bare-os` (each with a `win32-x64` `.bare`
+prebuild, confirmed by direct inspection of `node_modules/*/prebuilds/`
+before writing any test) — `bare-readline` itself is pure JS (depends on
+`bare-stream`, already present, and `bare-ansi-escapes`, also pure JS).
+
+Built a trivial real entry, `mesh/kit/bare-readiness-check.mjs` (this
+coder's file, under `kit/`, not `host/` — the fence moved `host/**`
+off-limits for this task), exercising REAL behavior, not just import
+resolution: a real `bare-readline` interface reading one real line off
+stdin, then a real `bare-subprocess.spawnSync()` of the sealed `bare.exe`
+itself (via `Bare.argv[0]`, not an assumed path) running a trivial script
+and capturing its stdout.
+
+**Packing: clean.** `bare-pack --host win32-x64 --offload -o app.bundle
+kit/bare-readiness-check.mjs` succeeds, offloading 14 addon prebuilds
+(the two direct packages plus every native-bearing transitive dependency
+of `bare-process`/`bare-subprocess`'s own chain — `bare-abort`,
+`bare-buffer`, `bare-dns`, `bare-hrtime`, `bare-os`, `bare-pipe`,
+`bare-signals`, `bare-stdio`, `bare-structured-clone`, `bare-subprocess`,
+`bare-tcp`, `bare-tty`, `bare-type`, plus `bare-fs`/`bare-path`/`bare-url`
+from before). `--entry=` proved itself generically here, not just against
+`bare-entry.mjs` — confirms the parameterization is real, not hand-tuned
+for one file.
+
+**Sanity, unbundled, under Bare directly:** both packages work.
+
+```
+$ printf 'hello-readiness\n' | npx bare kit/bare-readiness-check.mjs
+READLINE_OK line="hello-readiness"
+SUBPROCESS_OK stdout="SUBPROCESS_CHILD_OK"
+READINESS_CHECK_DONE
+```
+
+**Then the real rehearsal — through a genuine spawned pipe, not a shell
+pipe — surfaced a real defect, not a clean pass.** Packed, copied to
+hostile geography, driven through `spawn-pipe-harness.mjs` with real
+stdin:
+
+```
+readiness kit: OK=0/10 PARTIAL=0/10 TOTAL_LOSS=0/10 HANG=10/10
+```
+
+**`bare-readline` hangs 10/10 under a real spawned pipe, despite working
+cleanly under a shell pipe one line above.** This is exactly the
+shell-pipe-vs-spawned-pipe distinction `spawn-pipe-harness.mjs`'s own
+header exists to catch (`PHASE0_GATE_D2_FLUSH_RACE.md`'s lesson) — a
+shell-pipe-only test would have reported this as working. Isolated the
+cause with two follow-up throwaway-shaped diagnostic entries (kept in the
+tree, `kit/bare-readiness-check-subprocess-only.mjs` and
+`kit/bare-readiness-check-readline-only.mjs`, both this coder's, both
+small and self-explanatory):
+
+```
+subprocess-only (no readline): OK=5/5 PARTIAL=0/5 TOTAL_LOSS=0/5 HANG=0/5   ← clean
+readline-only (no subprocess): OK=0/5 PARTIAL=0/5 TOTAL_LOSS=0/5 HANG=5/5   ← hangs
+```
+
+**`bare-subprocess` is clean. The hang is isolated to `bare-readline`
+specifically**, under this exact topology: a real OS pipe fed by
+`child_process.spawn`'s `stdin.write()`+`.end()`, not a shell-level pipe
+built before the process starts. Root cause not diagnosed further (out of
+scope for a readiness check) — plausible candidates not investigated:
+timing between `stdin.write()` and `bare-readline`'s internal setup, a
+raw-mode/TTY assumption that a piped (non-console) stdin doesn't satisfy,
+or a difference in how Bare's own pipe primitive delivers data versus how
+`bare-readline` expects to consume it.
+
+**What this means for `bare-guide.mjs`, stated plainly:** the guide's
+actual production topology is a HUMAN double-clicking the launcher, where
+`bare.exe`'s stdin is a real console handle — a third topology, distinct
+from both tested here (shell pipe: clean; spawned pipe: hangs), and NOT
+independently verified by this readiness check. If the guide (or any
+future automated gate for it) is ever driven by spawning `bare.exe` with
+piped stdin — which is exactly how a CI-style rehearsal, or a
+parent-process-driven guide, would naturally be built — it will hit this
+hang. **This is the headline finding of this readiness check, not a
+footnote:** `bare-subprocess` is ready; `bare-readline`, as used in the
+shape this test exercised it, is NOT proven safe under the automation
+topology this campaign's own gates rely on, and needs either a fix, a
+different consumption pattern, or an upstream report before `bare-
+guide.mjs`'s own gate can trust a spawned-pipe rehearsal of it.
+
+### 10c. Verdict
+
+- **Builder readiness:** YES — `--entry=` genuinely parameterizes, proven
+  against a second, different, real entry point (not just re-running the
+  same one), and every native addon the guide will pull in via
+  `bare-subprocess` offloads and packs cleanly.
+- **`bare-subprocess` in hostile geography, real spawned pipe:** YES,
+  5/5 clean.
+- **`bare-readline` in hostile geography, real spawned pipe:** NO — 0/5,
+  reproducible hang, isolated to this package specifically. Works fine
+  under a shell pipe and unbundled, which is precisely why this needed a
+  real spawned-pipe rehearsal to catch, not a shortcut.
+
+The full readiness entry (`bare-readiness-check.mjs`, exercising both
+packages together) is therefore currently blocked by the readline hang
+under the spawned-pipe topology — reported honestly per the campaign's
+standing law rather than reported as a pass on the strength of the
+shell-pipe/unbundled results alone.
+
+---
+
+## 11. Exit-code propagation (for Phase 4's anchor)
+
+**Why this matters, restated from the brief:** the human double-click path
+never reads an exit code off a window it closed — but a Windows Scheduled
+Task (the Phase-4 anchor's own mechanism, owner ruling R4, not touched by
+this coder) drives its "last run result" and retry logic off exit code.
+Before this fix the launcher swallowed `bare.exe`'s exit code unconditionally
+(`pause` resets `%errorlevel%`, and nothing captured it beforehand) — a
+scheduled anchor would have reported healthy forever, on a completely
+broken kit, silently.
+
+### 11a. The fix
+
+```bat
+"%~dp0bare.exe" "%~dp0app.bundle"
+set RC=%errorlevel%
+
+if defined ASYMMFLOW_KIT_NONINTERACTIVE goto skippause
+echo.
+echo (the kit has stopped - press any key to close this window)
+pause >nul
+:skippause
+
+exit /b %RC%
+```
+
+`RC` is captured immediately after `bare.exe` returns, before `pause` (or
+the branch that skips it) can touch `%errorlevel%`; `exit /b %RC%`
+propagates the captured value regardless of which branch ran. The
+non-interactive switch (§5d) is unchanged and still gates the pause only.
+
+### 11b. Verified — three real breakages, real launcher, real exit codes
+
+Rebuilt, copied to three separate from-scratch hostile directories, drove
+the ACTUAL `.cmd` (not the underlying `bare.exe app.bundle`) via PowerShell
+(no Git Bash `cmd.exe` mangling), captured `$LASTEXITCODE` and content
+together:
+
+```
+HEALTHY                          : exitcode=0            contentOK=True
+NO-WASM  (reducer.wasm deleted)  : exitcode=-1073740791   contentOK=False
+NO-BUNDLE (app.bundle deleted)   : exitcode=-1073740791   contentOK=False
+WRONG-DIGEST (runs, wrong answer, never throws): exitcode=0   contentOK=False
+```
+
+**Which failure modes now propagate non-zero, and which still report 0 —
+stated plainly, as asked:**
+
+- **Now non-zero (propagation actually helps):** deleting `reducer.wasm`
+  (an uncaught `ModuleError: ASSET_NOT_FOUND` at import time) and deleting
+  `app.bundle` itself (an uncaught `ModuleError: MODULE_NOT_FOUND` — the
+  runtime can't even load its own entry). Both are genuine crashes inside
+  `bare.exe`, and `bare.exe` itself already exits non-zero for both
+  (`-1073740791` signed / `3221226505` unsigned, a Windows
+  unhandled-exception status code) — the launcher was simply discarding
+  that non-zero value before this fix. **This corrects a specific
+  prediction in the brief**: deleting `reducer.wasm` was expected to
+  "probably still" yield 0 (reasoning: "that failure happens inside a Bare
+  process that exits 0"), but measured directly, it does not — an uncaught
+  `ModuleError` at import time crashes the process with a real non-zero
+  code, distinct from the silent-0-exit classes this campaign has
+  documented elsewhere (the async-`WebAssembly.compile()` flush-race;
+  observed-but-undiagnosed throw-yet-exit-0 cases). Worth having the
+  prediction corrected with evidence rather than left standing unverified.
+- **Still 0 despite propagation, and always will be, by construction:**
+  a kit that runs to completion, produces a WRONG answer, and never
+  throws at all. Built and tested this directly — a diagnostic entry
+  (`kit/bare-readiness-check-wrongdigest.mjs`, this coder's, a copy of
+  `bare-entry.mjs`'s own logic with a deliberately different, but valid
+  and non-crashing, op set) folds cleanly, prints
+  `BARE_ENTRY_FOLD_MISMATCH got=... want=...`, and exits 0 — because
+  nothing went wrong from `bare.exe`'s own point of view; only the
+  business answer differs from what was expected. **No exit-code fix, in
+  the launcher or anywhere else, can turn this case non-zero** — the
+  process genuinely, correctly-by-its-own-lights exited clean. This is
+  also the most realistic tamper/corruption shape for a real anchor to
+  worry about (a subtly wrong `reducer.wasm`, a bit-flipped asset that
+  still parses and runs) — silent wrong-answer, not crash.
+
+### 11c. The guidance for whoever wires up anchor health (stated explicitly, per the brief)
+
+**Exit code is now a necessary signal but never a sufficient one.**
+Propagation fixes the launcher's own lie (silently flattening every
+outcome to 0); it does nothing about `bare.exe`'s own remaining ways to
+report false success (§11b's wrong-digest case, and the previously
+documented async-compile flush-race and throw-yet-exit-0 classes this
+campaign has hit twice already, per the team lead's own count). **An
+anchor health check must assert on printed CONTENT — the exact expected
+line/digest, or whatever the guide's own real health marker turns out to
+be — never on exit code alone.** Exit code is now useful as a fast,
+cheap FIRST filter (a non-zero code is unambiguously bad, skip the content
+check and flag immediately) but a zero code proves nothing on its own.
+
+Cleanup: rebuilt with the default entry afterward so `kit/dist-bare/`
+reflects the primary artifact, not a diagnostic build; all four hostile
+test directories removed. `kit/bare-readiness-check-wrongdigest.mjs`
+kept in the tree (this coder's fence, `kit/`) alongside the other two
+readiness diagnostics, for the same reproducibility reason.
