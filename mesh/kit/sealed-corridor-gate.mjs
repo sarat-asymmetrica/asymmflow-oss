@@ -356,6 +356,15 @@ try {
     join(meshRoot, 'kit', 'build-bare-kit.mjs'),
     '--entry=kit/bare-guide-entry.mjs',
     `--out=${OUT_DIR}`,
+    // The guide reaches these through menu [1]'s DYNAMIC import of
+    // bare-connection-check.mjs (dynamic because a static one makes the guide
+    // un-loadable under Node — see bare-guide.mjs's checkConnection for the
+    // measurement). bare-pack DOES follow that dynamic specifier today,
+    // verified 2026-07-20. This flag is what stops that from being a silent
+    // assumption: if bare-pack ever stops resolving it, the BUILD fails here
+    // rather than the field failing quietly with a kit that renders its whole
+    // ceremony and can never reach the network.
+    '--require-addons=udx-native,sodium-native,bare-tcp,bare-dns',
   ], { cwd: meshRoot, stdio: 'pipe' })
 
   check('build: app.bundle produced', existsSync(join(BUILT, 'app.bundle')))

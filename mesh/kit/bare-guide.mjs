@@ -95,10 +95,34 @@ import { deviceKeys } from '../host/capability.mjs'
 import { createMeshNode } from '../host/mesh-node.mjs'
 import { createSocialRoom as createSocialRoomNode } from '../host/social-room.mjs'
 import { loadRoomRegistry, saveRoomRegistryEntry } from './bare-registry.mjs'
+// SC-3b's connection check is imported DYNAMICALLY, inside checkConnection()
+// — see that function. It is deliberately NOT a static import here, and the
+// reason is measured, not stylistic: see the comment at its use site.
 
 const DATA_DIR = './data'
 const KEYS_DIR = `${DATA_DIR}/keys`
 const SEED_FILE = `${KEYS_DIR}/bare-guide-device.seed`
+// SC-1 deviation 3, gate-reviewed and confirmed harmless (documented per the
+// reviewer's ask, not left implicit): this used to be ROOM_STORAGE_DIR
+// (`${DATA_DIR}/corestore/bare-guide-room`), a single fixed subdirectory.
+// It is now the PARENT corestore dir, matching kit-host.mjs's own
+// `corestoreDir` convention -- required so `${CORESTORE_DIR}/${entry.
+// storage}` (the reopen loop, below) and the create path's own
+// `${CORESTORE_DIR}/${dirName}` land in the SAME place a stable per-room
+// subdirectory can be chosen under. This also changes what `createBridgeCore`'s
+// OWN `storageDir` option means for its wire methods (`createSocialRoom`/
+// `redeemInvite` in bare-bridge.mjs, both join `storageDir` with their own
+// subdir) -- rooms created through THOSE wire methods would now land at
+// `data/corestore/social-<hex>` instead of `data/corestore/bare-guide-room/
+// social-<hex>`. Confirmed harmless: grepping this file, `openMessenger`'s
+// REPL only ever dispatches `listRooms` and `post` (see `call('...')`
+// below) -- `createSocialRoom`/`redeemInvite` are never reached from this
+// guide today (this file's own create path bypasses them entirely, per the
+// DEVIATION comment at the create call site), and no prior version of this
+// guide ever persisted a room, so there is no existing on-disk layout under
+// the old `ROOM_STORAGE_DIR` to migrate. A future mission that wires `/join`
+// (SC-3's ceremony) will reach `redeemInvite` for the first time and should
+// re-confirm this note is still true before relying on it.
 const CORESTORE_DIR = `${DATA_DIR}/corestore`
 
 // ── pure helpers — byte-for-byte the same regex/logic as guide.mjs's own
@@ -216,12 +240,55 @@ async function ensureFirewall(io, write) {
 
 // ── menu actions ─────────────────────────────────────────────────────────
 
+// SC-3b (Sealed Corridor): this stopped being an honest stub. The real DHT
+// bootstrap + NAT checks now run in-process from bare-connection-check.mjs,
+// which wraps bare-probe.mjs's OWN checks (exported, never reimplemented, so
+// the diagnostic vocabulary a field contact reads aloud stays byte-identical
+// to the probe's). In-process is not a preference: a bare-pack'd sealed kit
+// has no bare-probe.mjs FILE on disk to spawn.
+//
+// WHY THIS DOES NOT RUN THE PUNCH TEST (check 4), stated here as well as in
+// that module: the punch needs a second live machine and a pasted key, and
+// SC0_PORT_MAP.md §1 measured a single punch taking up to 45s and coming back
+// RED 1 time in 7 even with a verified negative control. A "quick diagnostic"
+// menu item that blocks for 45s with nobody to dial it would be worse than
+// the stub it replaces. Menu [2] performs a REAL two-sided connection, which
+// is the stronger test — and the module's own closing line says exactly that
+// to the person at the keyboard rather than leaving the gap silent.
+//
+// `runConnectionCheck` is contractually safe to call from inside this menu
+// loop: it never throws, never hangs past its own bound, and never calls
+// exit() (proven by that mission's gate, not asserted). `io.ask` is passed
+// through unchanged so its bounded retry offer uses the guide's own
+// FIFO-queue stdin, never a second reader.
+//
+// WHY THE IMPORT IS DYNAMIC AND MUST STAY DYNAMIC — measured, not preferred.
+// bare-connection-check.mjs imports bare-probe.mjs, which top-level-imports
+// `bare-process`, whose graph reaches `bare-abort` — a native addon that
+// needs `require.addon`, a Bare-only API. A STATIC import here therefore
+// makes this whole file un-loadable under Node: verified directly, `node
+// kit/bare-guide.mjs` dies in `bare-abort/index.js:1` before printing a
+// single byte. That is not hypothetical breakage — bare-guide-spike.mjs
+// drives this guide under BOTH `process.execPath` and `bare.exe` (its
+// layer-2 "spawn(node)" legs), so a static import silently deletes half the
+// existing regression suite.
+//
+// Deferring it to the call site keeps every other path dual-runtime and
+// costs only that menu [1] is Bare-only — which is honest, because the check
+// it performs is Bare-only anyway.
+//
+// THE TRADE THIS CREATES, and how it is covered: bare-pack's static
+// traverser is what decides which native addons get offloaded into the
+// sealed kit, so a dynamic specifier risks the campaign's signature
+// broken-but-green shape (the kit renders its whole ceremony and silently
+// cannot do the thing). That risk is NOT left to inference — the corridor
+// build passes `--require-addons` to build-bare-kit.mjs, which refuses to
+// produce a kit missing them. If bare-pack ever stops resolving this form,
+// the BUILD fails loudly instead of the field failing quietly.
 async function checkConnection(io, write) {
   await ensureFirewall(io, write)
-  write('\n')
-  write('This step is not available yet in the Bare kit.\n')
-  write('(no Bare-native connection check exists in this build -- this is an honest gap,\n')
-  write(' not a fake result. Use the messenger option to confirm the mesh itself works.)\n')
+  const { runConnectionCheck } = await import('./bare-connection-check.mjs')
+  await runConnectionCheck({ write, ask: (prompt) => io.ask(prompt) })
 }
 
 let messengerCtx = null // lazily created, reused across menu visits in one session
@@ -252,9 +319,27 @@ async function ensureMessengerCore(write) {
   // reopen must not abort the others or crash the guide -- it is logged as
   // one plain sentence and skipped, exactly like kit-host.mjs's own catch.
   for (const entry of loadRoomRegistry(KEYS_DIR)) {
+    const storagePath = `${CORESTORE_DIR}/${entry.storage}`
+    // Gate finding (SC1_REPORT.md §5b): createMeshNode/Corestore does NOT
+    // throw when a registered room's storage folder is missing (checked
+    // directly against Corestore's real behavior, not assumed) -- Corestore
+    // silently CREATES a fresh empty store at that path instead, and since
+    // a founder's own room always has `bootstrap: null`, Autobase then
+    // founds a brand-new base there with a DIFFERENT key than the
+    // registry's roomKey. Left unguarded that is worse than a caught
+    // exception: it fabricates a phantom, empty "room" this guide would
+    // then greet as "found your earlier conversation again" -- silently
+    // wrong, not silently safe. The fix is a plain existence check BEFORE
+    // ever calling createMeshNode, so no phantom store is written to disk
+    // as a side effect of merely trying to reopen a folder that is gone
+    // (someone deleted it by hand is the realistic field case).
+    if (!fs.existsSync(storagePath)) {
+      write?.('(could not reopen a saved room -- its storage folder is missing)\n')
+      continue
+    }
     try {
       const node = await createMeshNode({
-        storage: `${CORESTORE_DIR}/${entry.storage}`,
+        storage: storagePath,
         bootstrap: entry.bootstrap || null,
         authorityPub: entry.authorityPub,
         mode: 'room',
@@ -396,7 +481,34 @@ async function menuLoop(io, write) {
  */
 export async function runGuide({ io } = {}) {
   const realIo = io ?? await getRealStdio()
-  const write = (s) => realIo.write(s)
+  // DOUBLE-SPACING FIX (Sealed Corridor, found at the SC-3b integration gate
+  // by actually LOOKING at a sealed run's output instead of only asserting
+  // substrings on it).
+  //
+  // The bug: `getRealStdio()`'s `write` is `console.log(str)` — and it MUST
+  // stay `console.log`, because RULE 2 (PHASE0_NOTES_D2_FLUSH_RACE.md)
+  // measured `bare-process`'s `stdout.write()` HANGING 30/30 on a real
+  // spawned pipe. But `console.log` appends its own newline, and essentially
+  // every string this guide writes already ends in one. Result: every single
+  // client-facing line has been rendering with a blank line after it since
+  // Phase 2 — the menu, the questions, the verdict, all of it double-spaced.
+  //
+  // Why nobody caught it: every gate in this campaign asserts with
+  // `.includes(...)` on substrings, which is completely blind to the blank
+  // lines between them. The suite was green and the client-facing surface
+  // looked broken. That is a small, cosmetic instance of exactly the failure
+  // shape this campaign keeps naming — a green proof that was not proving
+  // what we believed.
+  //
+  // The fix strips ONE trailing newline before handing the string to
+  // console.log, which re-adds it. Net effect per call is unchanged bytes for
+  // the common `write('...\n')` case, and `write('\n')` still yields exactly
+  // one blank line. RULE 2 is untouched — this is still console.log.
+  //
+  // Prompts (`write('> ')`, no trailing newline) still land on their own line,
+  // because console.log always terminates. That is unchanged behavior, not a
+  // regression, and it cannot be fixed without the banned proc.stdout.write.
+  const write = (s) => realIo.write(typeof s === 'string' && s.endsWith('\n') ? s.slice(0, -1) : s)
   const guideIo = createGuideIO(realIo)
   write('Welcome. This will walk you through connecting to the other computer.\n')
   await menuLoop(guideIo, write)
