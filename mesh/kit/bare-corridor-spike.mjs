@@ -491,7 +491,16 @@ async function runCeremonyRound(tag, lan) {
     send(A.child, 'connect')
     send(A.child, '')
 
-    await expectLine(A.reader, (l) => l.includes('Here is the code for the OTHER computer'), 20000, 'A invite intro')
+    // 90s, not 20s like every later wait — this FIRST wait is the only one
+    // that absorbs the whole cold boot (bare.exe start + Defender scanning a
+    // freshly copied unsigned 45 MB exe + bundle load + reducer wasm + room
+    // founding); every wait after it runs in a warm process. Measured at the
+    // SC-5 merge gate (2026-07-20): with 20s this bound produced exactly one
+    // false red in 32 otherwise-green rounds (run 1: 15/16, the miss HERE and
+    // only here; run 2: 16/16) — the same cold-start class sealed-corridor-
+    // gate.mjs's own leg C already widened its timeout for, same reasoning:
+    // measure the kit, not the machine's load. A genuine wedge still fails.
+    await expectLine(A.reader, (l) => l.includes('Here is the code for the OTHER computer'), 90000, 'A invite intro')
     const codeLine = await expectLine(A.reader, (l) => l.trim().length > 100, 20000, 'A invite code line')
     const inviteCode = degroup(codeLine)
 

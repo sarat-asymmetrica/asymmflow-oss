@@ -579,7 +579,24 @@ async function corridorLeg(runs) {
       if (!await B.waitFor(/code for the OTHER computer/i, 90000)) { why = 'B never printed its pairing code'; throw 0 }
       const pairingCode = findPairingCode(B.output)
       if (!pairingCode) { why = 'B pairing code did not parse'; throw 0 }
-      B.send('')  // the LAN address prompt — Enter to keep waiting on hyperswarm
+      // MERGE-GATE FIX (2026-07-20, found by this leg's own first full run):
+      // the first version sent '' here — "Enter to keep waiting on
+      // hyperswarm" — which silently made leg D a HYPERSWARM-ONLY test. On
+      // this network that is the one path the campaign's own convention says
+      // must be MEASURED, never gated (SC-0: firewalled/AMBER; SC-2 measured
+      // the swarm leg at 11/16 and gated only TCP): the run came back 11/16
+      // with every failure "B never became writable", clean exits both
+      // sides — the DHT fraction, reproduced to the digit, reported as a kit
+      // failure. The harness was gating the ISP's firewall (Rule 6:
+      // assertions inherit the blind spots — and the environment — of the
+      // surface they read). The fix drives the DETERMINISTIC path the guide
+      // really offers (the LAN hint, exactly as bare-corridor-spike.mjs's own
+      // gated leg does): capture A's printed TCP port and paste
+      // 127.0.0.1:<port> at B's LAN prompt. Hyperswarm stays live alongside
+      // (both paths race, first connection wins — the guide's real shape);
+      // its unassisted fraction is run 1's recorded measurement, not a gate.
+      const portMatch = await A.waitFor(/port (\d+)/i, 15000)
+      B.send(portMatch ? `127.0.0.1:${portMatch[1]}` : '')
 
       // ---- founder grants, joiner completes
       A.send(pairingCode)

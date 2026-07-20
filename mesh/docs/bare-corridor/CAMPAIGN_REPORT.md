@@ -141,7 +141,35 @@ Git Bash mangling `cmd.exe /c` — reproduced again today).
 driver refuses to report positive results at all, rather than noting it and
 continuing.
 
-<!-- FINAL NUMBERS: filled from the N=16 run below -->
+**Final numbers** (2026-07-20, run at the merge gate by Fable after the
+orchestrator's terminal crashed mid-collection; two full runs of the gate,
+two full runs of the SC-3a spike):
+
+| leg | result |
+|---|---|
+| negative controls (×3, run first) | all red as required, both runs |
+| leg A — full ceremony through the REAL launcher | **16/16** (both runs; 0 hang, 0 partial) |
+| leg B — persistence across a real restart | **16/16** (both runs) |
+| leg C — six malformed-registry fixtures | **18/18** (both runs) |
+| leg D — THE CORRIDOR, two sealed kits, both ways | **16/16** (run 2, deterministic path) |
+| leg D unassisted-hyperswarm fraction (run 1, measured) | 11/16 — see finding 7 |
+| SC-3a spike, LAN-assisted ceremony | run 1: 15/16 (cold-boot bound, isolated — SC3A_REPORT §3.3), run 2: **16/16** |
+| SC-3a spike, hyperswarm-only (measured) | 3/5, 2/5 |
+
+**Finding 7 — the gate's own leg D gated the wrong path** (recorded here
+because it is finding class Rule-6, same as the other six, and it happened to
+the INDEPENDENT gate itself): leg D's first version answered B's LAN prompt
+with Enter — "keep waiting on hyperswarm" — which silently made the
+campaign's decisive leg a hyperswarm-only test on a network SC-0 had already
+characterised as firewalled/AMBER. It came back 11/16, every failure "B never
+became writable", clean exits both sides — SC-2's measured swarm fraction,
+reproduced to the digit, reported as a kit failure. The harness was gating
+the ISP's firewall. Fixed at the merge gate: leg D now drives the
+deterministic path the guide really offers (A's printed TCP port pasted at
+B's LAN prompt, hyperswarm live alongside — the guide's real shape), and the
+unassisted fraction is recorded above as the measurement it always was.
+16/16 followed immediately. *Assertions inherit the blind spots — and the
+environment — of the surface they read.*
 
 ## 6. Regression — unchanged suites, re-run
 
