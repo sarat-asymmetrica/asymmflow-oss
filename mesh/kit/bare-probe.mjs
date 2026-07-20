@@ -140,7 +140,7 @@ export function toJsonReport(state, timestamp = new Date().toISOString()) {
   }
 }
 
-function withTimeout(promise, ms, label) {
+export function withTimeout(promise, ms, label) {
   let timer
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
@@ -167,7 +167,7 @@ function onLine(socket, handler) {
 
 // ── the real, networked checks (1-4 identical logic to probe.mjs) ─────────
 
-async function checkDht(say) {
+export async function checkDht(say) {
   const dht = new HyperDHT()
   const dhtTotal = dht.bootstrapNodes.length
   try {
@@ -181,7 +181,7 @@ async function checkDht(say) {
   }
 }
 
-function checkNat(dht, say) {
+export function checkNat(dht, say) {
   const firewalled = !!dht.firewalled
   const addr = dht.remoteAddress()
   say(firewalled
@@ -195,7 +195,7 @@ function checkNat(dht, say) {
   return { firewalled, publicHost: addr?.host ?? null, publicPort: addr?.port ?? null }
 }
 
-function printCgnatCard(say, publicHost) {
+export function printCgnatCard(say, publicHost) {
   say('')
   say('CGNAT CHECK (ask SPOC to do this — takes 30 seconds):')
   say(`  Compare the address above with the router's WAN address.`)
