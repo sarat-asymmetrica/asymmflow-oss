@@ -144,19 +144,129 @@ cpSync(BARE_EXE_SRC, join(distOut, 'bare.exe'))
 // exercise the real .cmd repeatedly without relying on fragile piped-stdin
 // invocation quirks (team lead's own cmd.exe //c + cygpath -w findings,
 // PHASE3_KIT_REPORT.md §5d).
+// EXIT-CODE PROPAGATION (PHASE3_KIT_REPORT.md §11): the human double-click
+// path never reads an exit code off a closed window, but the ANCHOR runs as
+// a Windows Scheduled Task, and Task Scheduler's own health reporting/retry
+// logic/"last run result" column IS driven by exit code — a launcher that
+// swallows it would report success on a broken kit forever, silently. `set
+// RC=%errorlevel%` captures bare.exe's code IMMEDIATELY after it runs,
+// before `pause` (which resets errorlevel to 0 on success) can clobber it;
+// `exit /b %RC%` at the end propagates the captured value regardless of
+// which branch (paused or skipped) ran in between. THIS DOES NOT MAKE EXIT
+// CODE TRUSTWORTHY — Bare itself exits 0 on real failure modes (silent
+// total stdout loss, PHASE0_GATE_D2_FLUSH_RACE.md; an uncaught throw,
+// observed independently by two coders today) — propagation removes ONE
+// layer of lying (the launcher's own), not all of them. See §11 for exactly
+// which failure modes this does and does not turn non-zero; anchor health
+// checks MUST also assert on content, never on exit code alone.
 const RUN_BARE_MESH_CMD = `@echo off
 setlocal
 cd /d "%~dp0"
 
 "%~dp0bare.exe" "%~dp0app.bundle"
+set RC=%errorlevel%
 
 if defined ASYMMFLOW_KIT_NONINTERACTIVE goto skippause
 echo.
 echo (the kit has stopped - press any key to close this window)
 pause >nul
 :skippause
+
+exit /b %RC%
 `
 writeFileSync(join(distOut, 'run_bare_mesh.cmd'), toCrlf(RUN_BARE_MESH_CMD))
+
+// ── 4b. README — the client-facing document build-kit.mjs's own
+// README_KITCHEN_TABLE.txt is the model for (voice, safety box, plain
+// language, no CLI/paths — owner ruling R6 + D3). ASCII-only, same
+// discipline as every .cmd in this file (a non-ASCII byte was found to
+// corrupt cmd.exe's batch parser under some codepages — .txt files aren't
+// parsed by cmd.exe so that specific defect can't reproduce here, but
+// staying ASCII keeps this file readable/printable everywhere regardless).
+//
+// WRITTEN IN LF, DELIBERATELY, NOT run through toCrlf() — build-kit.mjs's
+// own README_TEXT does the same (its CRLF rule is scoped to files cmd.exe
+// PARSES; its own header note says so explicitly: "README_*.txt files are
+// plain text, never parsed by cmd.exe — safe"). Matching that file's own
+// actual practice, not just its literal words.
+//
+// HONESTY, not the ceremony script: this builder's proven entry
+// (bare-entry.mjs) is a technical proof that the sealed packaging works —
+// it is NOT yet the messenger ceremony build-kit.mjs's Node kit ships.
+// Writing a README that describes a chat ceremony this kit cannot yet
+// perform would violate the same honesty law this whole campaign runs on.
+// This README describes what a build of THIS kit is proven to do today —
+// see PHASE3_KIT_REPORT.md §10 for a note on what changes once
+// bare-guide.mjs is the entry.
+const README_TEXT = `ASYMMFLOW MESH -- SEALED BARE KIT (technical proof build)
+=============================================================
+
+*******************************************************************
+*  READ THIS BOX FIRST                                             *
+*                                                                   *
+*  - This kit is ONE self-contained folder. It touches NOTHING     *
+*    outside itself -- no other program, no other folder on this   *
+*    computer, no company system, no network.                      *
+*  - Nothing here is installed on your computer. Nothing is left   *
+*    behind anywhere else. Deleting this folder removes everything *
+*    it ever did.                                                  *
+*  - This build uses only made-up, synthetic demo numbers. There   *
+*    is nothing to type in -- it runs on its own.                  *
+*******************************************************************
+
+What this is
+-------------
+A small, self-contained technical check. It proves that this folder can
+run completely on its own -- on a computer with nothing else installed --
+and still do real work correctly.
+
+This is NOT yet the full messenger described in other AsymmFlow Mesh
+kits. It is the foundation underneath it: the same sealed-folder idea,
+the same "double-click and it just works" promise, proven on a small,
+real task first, before the full conversation feature is built on top of
+it. If you were sent this folder, you were probably asked to confirm it
+runs cleanly on your machine -- that is all this build is for.
+
+What happens when you run it
+--------------------------------
+1. Double-click run_bare_mesh.cmd. A black window opens.
+2. It runs a real internal check -- the same calculation this project's
+   business logic always runs -- entirely inside this folder.
+3. It prints ONE line telling you the result. If everything is working,
+   that line starts with:
+       BARE_ENTRY_FOLD_OK
+   followed by a long string of letters and numbers. That string is a
+   fingerprint of the result -- if you are asked to confirm the kit
+   worked, read that whole line back (or copy-paste it) exactly as
+   printed.
+4. The window stays open with a short message at the bottom. Press any
+   key to close it whenever you are done reading.
+
+If something looks wrong
+----------------------------
+- If the line does NOT start with BARE_ENTRY_FOLD_OK, or the window
+  closes immediately without printing anything, something is wrong with
+  this copy of the folder -- copy-paste (or photograph) everything the
+  window shows and send it to whoever gave you this kit. Do not try to
+  fix it yourself; there is nothing to configure.
+- If Windows shows a security warning before the window opens (some
+  computers ask about running a program from an unfamiliar publisher),
+  that is normal for a small self-contained tool like this one -- choose
+  "Run anyway" / "More info -> Run anyway" if you trust whoever sent you
+  this folder.
+- This kit never asks you to type anything, never asks for a password,
+  and never needs the internet to produce its result.
+
+What you need
+---------------
+- A Windows computer. Nothing else -- no installers, no accounts, no
+  internet connection required for this check.
+
+That's it -- this build has one job, and the single line it prints is the
+whole answer.
+`
+
+writeFileSync(join(distOut, 'README_BARE_KIT.txt'), README_TEXT)
 
 // ── 5. portable.flag — presence-alone marker, DP1 plane convention
 //    (build-kit.mjs's own marker file, same shape here). ───────────────────

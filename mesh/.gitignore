@@ -17,3 +17,10 @@ kit/dist-bare/
 .bare-bridge-worker-storage/
 .bare-bridge-spike-*/
 host/.stdio-seam-tmp/
+
+# Runtime data written by the kit/guide when run from the repo (DP1 plane layout:
+# data/corestore + data/keys as siblings). The `corestore/` rule above already
+# catches the store, but NOT data/keys/ — and that holds real key material. Ignore
+# the whole plane rather than relying on a partial match.
+data/
+kit/.gate-worker-storage/
