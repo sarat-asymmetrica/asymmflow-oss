@@ -387,6 +387,14 @@ async function spawnPipeCheck(check) {
   const meshDir = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const selfScript = new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
   const stdioCheckScript = new URL('./bare-spike/stdio-check.mjs', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+  // The --stdio-worker branch's default storageDir is a fixed relative
+  // path (mesh/.bare-bridge-worker-storage) so a real worker's data
+  // persists across restarts by design -- but THIS spike's own runs are
+  // disposable, and a stale directory from a previous run would let two
+  // "createSocialRoom" calls silently accumulate rooms instead of testing
+  // a clean boot each time. Wiped before AND after this leg.
+  const workerStorageDir = `${meshDir}/.bare-bridge-worker-storage`.replace(/\/{2,}/g, '/')
+  try { fsForFixture.rmSync(workerStorageDir, { recursive: true, force: true }) } catch { /* fine if absent */ }
 
   function runWorker(cmd, args, requests, { timeoutMs = 20000 } = {}) {
     return new Promise((resolvePromise) => {
@@ -450,4 +458,6 @@ async function spawnPipeCheck(check) {
     caughtTheKnownBug,
     `got ${brokenLines.length} line(s) (expected 2 if healthy), timedOut=${brokenResult.timedOut}: ${JSON.stringify(brokenLines)}`)
   console.log(`  (negative control detail: stdio-check.mjs produced ${JSON.stringify(brokenLines)}, exitCode=${brokenResult.exitCode}, timedOut=${brokenResult.timedOut})`)
+
+  try { fsForFixture.rmSync(workerStorageDir, { recursive: true, force: true }) } catch { /* best-effort */ }
 }
