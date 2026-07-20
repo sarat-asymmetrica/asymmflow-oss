@@ -111,6 +111,66 @@ function runLauncher({ kitDir, stdin, timeoutMs = 90000 }) {
   })
 }
 
+/**
+ * runLauncherInteractive({ kitDir }) — the corridor's own driver.
+ *
+ * `runLauncher` above writes a fixed stdin script and ends the stream. A real
+ * two-sided ceremony CANNOT be driven that way, and the reason is inherent
+ * rather than incidental: the joiner mints a fresh writer key at join time,
+ * the founder must type THAT key in, and neither value exists until the other
+ * process has already run. There is no script to precompute. The harness has
+ * to play the part the second human plays.
+ *
+ * Same discipline as everywhere else here: a real `cmd.exe /c` spawn of the
+ * REAL launcher, `shell:false`, real OS pipes, content assertions only, and a
+ * per-wait timeout so a stall is reported as a stall instead of hanging the
+ * gate. `waitFor` resolves with the regex match, so a caller reads a value
+ * out of live stdout rather than guessing at line offsets.
+ */
+function runLauncherInteractive({ kitDir }) {
+  const comspec = process.env.ComSpec || 'C:\\Windows\\System32\\cmd.exe'
+  const child = spawn(comspec, ['/c', join(kitDir, 'run_bare_mesh.cmd')], {
+    cwd: kitDir,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    shell: false,
+    env: { ...process.env, ASYMMFLOW_KIT_NONINTERACTIVE: '1' },
+  })
+  let out = ''
+  let closed = false
+  let exitCode = null
+  child.stdout.on('data', (d) => { out += d.toString('utf8') })
+  child.stderr.on('data', (d) => { out += d.toString('utf8') })
+  const done = new Promise((r) => child.on('close', (c) => { closed = true; exitCode = c; r(c) }))
+  child.on('error', () => { closed = true })
+
+  return {
+    get output() { return out },
+    get closed() { return closed },
+    get code() { return exitCode },
+    /** Type a line, exactly as a human would (CRLF, like a real console). */
+    send(line) { try { child.stdin.write(line + '\r\n') } catch { /* peer gone */ } },
+    /** Resolve with the regex match once it appears in live stdout, or null on timeout/exit. */
+    waitFor(re, timeoutMs = 60000) {
+      return new Promise((resolve) => {
+        const t0 = Date.now()
+        const iv = setInterval(() => {
+          const m = out.match(re)
+          if (m) { clearInterval(iv); resolve(m); return }
+          if (closed) { clearInterval(iv); resolve(null); return }
+          if (Date.now() - t0 > timeoutMs) { clearInterval(iv); resolve(null) }
+        }, 250)
+      })
+    },
+    async finish(timeoutMs = 30000) {
+      const t = setTimeout(() => { try { child.kill('SIGKILL') } catch { /* gone */ } }, timeoutMs)
+      await done
+      clearTimeout(t)
+      return out
+    },
+    kill() { try { child.kill('SIGKILL') } catch { /* gone */ } },
+  }
+}
+
 const tmpDirs = []
 function hostileDir(tag) {
   // The '#'-in-path defect (merge-gate finding 2026-07-20) breaks Bare addon
@@ -403,6 +463,103 @@ async function registryRobustness(runsPer) {
   }
 }
 
+// ── POSITIVE LEG D: THE CORRIDOR — two sealed kits, both REAL launchers ───
+//
+// This is the campaign's actual claim, and it is the only leg here that can
+// make it. Everything above proves one kit works; this proves two kits become
+// one room and that a message crosses BOTH ways.
+//
+// It also closes a gap SC-2 declared honestly and could not close itself: its
+// harness replicates rooms with NO encryption key, because it deliberately
+// bypasses social-room.mjs. The GUIDE creates rooms WITH a randomBytes(32)
+// encryption key, so this leg is the first thing in the campaign to carry an
+// ENCRYPTED room across a real socket between two sealed processes.
+//
+// The pairing code cannot be scripted in advance — the joiner mints it at join
+// time — so this drives both kits interactively and relays between them,
+// playing the part the second human plays.
+
+/** First non-empty line after a marker — the guide prints codes on their own
+ * line under a heading, and matching that shape is more robust than counting
+ * blank lines (whose number changed once already today, when the double-
+ * spacing bug was fixed). */
+function lineAfter(output, marker) {
+  const i = output.indexOf(marker)
+  if (i === -1) return null
+  for (const raw of output.slice(i + marker.length).split('\n').slice(1)) {
+    const line = raw.trim()
+    if (line) return line
+  }
+  return null
+}
+
+const stripSpaces = (s) => (s ?? '').replace(/[\s ​]+/g, '')
+
+async function corridorLeg(runs) {
+  console.log(`\n== leg D: THE CORRIDOR — two sealed kits, both REAL launchers, N=${runs} ==`)
+  let ok = 0
+  const failures = []
+
+  for (let i = 1; i <= runs; i++) {
+    const kitA = freshKit('legD-a')
+    const kitB = freshKit('legD-b')
+    const A = runLauncherInteractive({ kitDir: kitA })
+    const B = runLauncherInteractive({ kitDir: kitB })
+    const msgB = `${MARK}-from-B-${i}`
+    const msgA = `${MARK}-from-A-${i}`
+    let why = null
+
+    try {
+      // ---- founder side: reach the invite code
+      if (!await A.waitFor(/ASYMMFLOW MESH -- GUIDE \(Bare\)/, 60000)) { why = 'A never reached the menu'; throw 0 }
+      A.send('2'); A.send('skip'); A.send('connect'); A.send('')
+      if (!await A.waitFor(/code for the OTHER computer/i, 90000)) { why = 'A never offered an invite code'; throw 0 }
+      const inviteCode = stripSpaces(lineAfter(A.output, 'code for the OTHER computer'))
+      if (!inviteCode || !inviteCode.startsWith('asymm-room')) { why = `A's invite code did not parse: ${JSON.stringify(inviteCode)}`; throw 0 }
+
+      // ---- joiner side: paste it, read back the pairing code
+      if (!await B.waitFor(/ASYMMFLOW MESH -- GUIDE \(Bare\)/, 60000)) { why = 'B never reached the menu'; throw 0 }
+      B.send('2'); B.send('skip'); B.send('connect'); B.send(inviteCode)
+      if (!await B.waitFor(/code for the OTHER computer/i, 90000)) { why = 'B never printed its pairing code'; throw 0 }
+      const pairingCode = stripSpaces(lineAfter(B.output, 'code for the OTHER computer'))
+      if (!pairingCode) { why = 'B pairing code did not parse'; throw 0 }
+      B.send('')  // the LAN address prompt — Enter to keep waiting on hyperswarm
+
+      // ---- founder grants, joiner completes
+      A.send(pairingCode)
+      if (!await B.waitFor(/joined -- you can post now|already joined this room/i, 180000)) {
+        why = 'B never became writable (the corridor did not form)'; throw 0
+      }
+
+      // ---- B -> A
+      B.send(msgB)
+      if (!await B.waitFor(new RegExp(`posted, seq \\d+`), 60000)) { why = 'B could not post'; throw 0 }
+      A.send('/rooms')
+      if (!await A.waitFor(new RegExp(msgB.replace(/[-]/g, '\\-')), 120000)) { why = 'B\'s message never reached A'; throw 0 }
+
+      // ---- A -> B
+      A.send(msgA)
+      if (!await A.waitFor(new RegExp(`posted, seq \\d+`), 60000)) { why = 'A could not post'; throw 0 }
+      B.send('/rooms')
+      if (!await B.waitFor(new RegExp(msgA.replace(/[-]/g, '\\-')), 120000)) { why = 'A\'s message never reached B'; throw 0 }
+
+      ok++
+    } catch { /* `why` already set; fall through to teardown */ }
+
+    A.send('/exit'); A.send('5')
+    B.send('/exit'); B.send('5')
+    await Promise.all([A.finish(20000), B.finish(20000)])
+    if (why) failures.push({ round: i, why, aTail: A.output.slice(-300), bTail: B.output.slice(-300) })
+    A.kill(); B.kill()
+    releaseKit(kitA); releaseKit(kitB)
+  }
+
+  console.log(`  leg D: OK=${ok}/${runs}`)
+  check(`leg D: two sealed kits form ONE room and a message crosses BOTH ways (${ok}/${runs})`,
+    ok === runs, failures.length ? JSON.stringify(failures[0]).slice(0, 600) : '')
+  return { ok, runs }
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 console.log('sealed-corridor-gate -- SC-5 independent verification (own driver, own controls)\n')
 
@@ -448,6 +605,13 @@ try {
   // runs; stated here so the smaller N is a declared choice rather than an
   // unexplained shortfall.
   await registryRobustness(3)
+
+  // Leg D is opt-in until SC-3a's ceremony has landed and settled, so this
+  // gate stays runnable (and green-or-red for the RIGHT reasons) while that
+  // file is still being edited. `--corridor` turns it on; the final gate runs
+  // with it.
+  if (argv.includes('--corridor')) await corridorLeg(Math.min(RUNS, 16))
+  else console.log('\n(leg D — the two-kit corridor — skipped; pass --corridor to run it)')
 } catch (err) {
   check('gate did not throw', false, err?.message ?? String(err))
 } finally {
