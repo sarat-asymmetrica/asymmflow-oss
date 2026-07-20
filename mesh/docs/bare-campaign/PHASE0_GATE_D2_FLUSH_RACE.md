@@ -30,7 +30,7 @@
 > Binding rules are therefore THREE, not one — see P0-D's §4 and the campaign rules below.
 
 **Date:** 2026-07-20 · **Author:** orchestrator (Opus 4.8), run personally
-**Status:** root-caused to a single trigger; **our shipped code is not exposed**
+**Status:** TWO bugs; mitigated by four binding rules — see the correction above
 **Relation to P0-D:** P0-D's independent root-cause mission was running in parallel; this is
 the orchestrator's own measurement of the decisive question. Both should be read together.
 
@@ -133,15 +133,27 @@ The rule matters more than the current clean state, because the defect's signatu
 coder reaching for `await WebAssembly.compile()` because it "looks more modern" would
 reintroduce a 33% silent data-loss rate with every suite still passing.
 
-## Consequences for the DP4 seam
+## Consequences for the DP4 seam — CORRECTED
 
-**The stdio transport is NOT inherently unsafe under Bare.** The frame channel itself is
-clean — timers, fs callbacks, and async continuations all deliver reliably. The risk was
-real but is confined to one API we do not use and now may not use.
+~~The stdio transport is NOT inherently unsafe under Bare.~~ **That conclusion was written
+before Bug B was known and is withdrawn.** It was drawn from a shell-pipe test and does not
+survive the production topology.
 
-Phase 2's bridge should still treat frame delivery as verifiable rather than assumed
-(P1-A was briefed to make dropped frames detectable rather than silent), but this removes
-the possibility that the seam is fundamentally lossy.
+The accurate statement is narrower and conditional:
+
+> The stdio transport is safe **only under the four binding rules**. It is emphatically NOT
+> safe by default: the default-looking way to write a frame (`bare-process`'s
+> `process.stdout.write()`) deadlocks 30/30 on a pipe, and the default-looking way to load
+> wasm (`await WebAssembly.compile()`) silently drops output. Both defaults are wrong, and
+> both fail in ways a casual test reports as success.
+
+The seam is usable — P0-D measured the real `stdio-check.mjs` at 30/30 clean with zero loss
+and zero hangs once its writes moved to `console.log` — but "usable under specific
+constraints we discovered the hard way" is a materially different claim from "not inherently
+unsafe", and the difference is exactly what would have shipped a lossy bridge to a client.
+
+Phase 2's bridge treats frame delivery as **verified**, not assumed, and is gated through a
+real spawn pipe (Rule 4).
 
 ## What this does NOT establish
 
