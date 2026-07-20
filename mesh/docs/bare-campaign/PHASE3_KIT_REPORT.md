@@ -624,3 +624,341 @@ reflects the primary artifact, not a diagnostic build; all four hostile
 test directories removed. `kit/bare-readiness-check-wrongdigest.mjs`
 kept in the tree (this coder's fence, `kit/`) alongside the other two
 readiness diagnostics, for the same reproducibility reason.
+
+---
+
+## 12. Integration: `--entry=kit/bare-guide.mjs` — the real guided ceremony
+
+**Verdict, stated up front: NO — the sealed kit does NOT run the guided
+ceremony from hostile geography under the real production topology.** It
+packs. It runs correctly unbundled, and under a shell pipe. Under a real
+spawned pipe — the topology this campaign's own binding rules exist
+because of, and the one a scripted rehearsal or any future automated gate
+would use — it produces **zero bytes of output on stdout or stderr and
+exits 0**, reproduced through both the raw `bare.exe app.bundle` pipeline
+and the actual `.cmd` launcher. This is reported as a defect to route, per
+the explicit instruction, not fixed — `bare-guide.mjs` and
+`bare-bridge.mjs` (the likely site of the actual bug, via
+`getRealStdio()`) are P1A's files and were not touched.
+
+### 12a. Dependency reality check (item 1 of the brief)
+
+Read `bare-guide.mjs` in full before testing anything (not touched,
+read-only). Confirmed directly from its own header and imports: **neither
+`bare-readline` nor `bare-subprocess` is used.** The guide hand-rolls its
+own FIFO-queue stdin discipline directly over `bare-bridge.mjs`'s
+`getRealStdio()` raw data/end events (`createGuideIO`), and every menu
+action that would need `bare-subprocess` (firewall elevation, scheduled-
+task install/remove) is an honest, clearly-labeled stub — no child process
+is ever spawned. **§10's offload verification of those two packages is
+therefore moot for this entry** — it remains valid evidence for a
+*different* future file that does use them, but it does not describe what
+`bare-guide.mjs` actually needs.
+
+**What the guide's real dependency closure looks like, from an actual
+build** (`bare-pack --host win32-x64 --offload -o app.bundle
+kit/bare-guide.mjs`, real, not simulated):
+
+```
+      1.81 MB  app.bundle
+     45.14 MB  bare.exe
+      0.11 MB  node_modules/bare-abort/prebuilds/win32-x64/bare-abort.bare
+      1.30 MB  node_modules/bare-crypto/prebuilds/win32-x64/bare-crypto.bare
+      0.16 MB  node_modules/bare-fs/prebuilds/win32-x64/bare-fs.bare
+      0.11 MB  node_modules/bare-hrtime/prebuilds/win32-x64/bare-hrtime.bare
+      0.11 MB  node_modules/bare-inspect/prebuilds/win32-x64/bare-inspect.bare
+      0.17 MB  node_modules/bare-os/prebuilds/win32-x64/bare-os.bare
+      0.11 MB  node_modules/bare-path/prebuilds/win32-x64/bare-path.bare
+      0.12 MB  node_modules/bare-pipe/prebuilds/win32-x64/bare-pipe.bare
+      0.12 MB  node_modules/bare-signals/prebuilds/win32-x64/bare-signals.bare
+      0.11 MB  node_modules/bare-stdio/prebuilds/win32-x64/bare-stdio.bare
+      0.12 MB  node_modules/bare-tty/prebuilds/win32-x64/bare-tty.bare
+      0.12 MB  node_modules/bare-type/prebuilds/win32-x64/bare-type.bare
+      0.17 MB  node_modules/bare-url/prebuilds/win32-x64/bare-url.bare
+      0.14 MB  node_modules/fs-native-extensions/prebuilds/win32-x64/fs-native-extensions.bare
+      0.15 MB  node_modules/quickbit-native/prebuilds/win32-x64/quickbit-native.bare
+      7.81 MB  node_modules/rocksdb-native/prebuilds/win32-x64/rocksdb-native.bare
+      0.22 MB  node_modules/simdle-native/prebuilds/win32-x64/simdle-native.bare
+      0.78 MB  node_modules/sodium-native/prebuilds/win32-x64/sodium-native.bare
+      0.00 MB  portable.flag
+      0.00 MB  README_BARE_KIT.txt
+      0.00 MB  run_bare_mesh.cmd
+
+total: 23 file(s), 58.9 MB
+```
+
+**Packs cleanly, no `MODULE_NOT_FOUND`, no manual pruning needed** — the
+same structural property every prior build in this report has had.
+`rocksdb-native` (7.81 MB, the single largest addon) confirms the guide's
+messenger path really does reach corestore's storage layer, consistent
+with `createBridgeCore`'s real `storageDir` option.
+
+**One thing conspicuously ABSENT from this manifest and worth flagging
+loudly: no `dist/reducer.wasm`.** Confirmed by listing the copied hostile
+directory before running anything — no `dist/` folder at all. This traces
+to `apply-bare.mjs`'s DEFAULT self-locating path (`new URL('../dist/
+reducer.wasm', import.meta.url)`, unchanged since Phase 2 — this coder's
+own file, but out of fence for this task, not edited) — `bare-pack`'s
+static asset detector only recognizes the literal `import.meta.asset()`/
+`require.asset()` syntax (established in Phase 0, §4c), not a dynamic
+`new URL(..., import.meta.url)` construction, so it is never offloaded.
+**This is a second, independent gap from the total-loss finding below** —
+see §12d for why it wasn't reached by this rehearsal's actual script, but
+it WILL surface the moment `openMessenger`'s reducer-backed `post`/
+`createSocialRoom` calls actually execute inside a *working* packed guide,
+via `mesh-node.mjs` → `#apply` → `apply-bare.mjs`'s default `loadModule()`
+hitting a virtual bundle path with no real file behind it. Reporting this
+as a second finding, not silently folding it into §12c's headline one —
+they are different bugs with different fixes (one is a stdio/output
+defect, the other is an asset-resolution gap in a file this coder
+authored and would normally fix, but is fenced off from touching in this
+task).
+
+### 12b. Sanity — unbundled and shell-piped: WORKS
+
+Scripted the exact ceremony from the brief (menu → messenger → post a
+real message → `/exit` → close), unbundled, driven by a shell pipe:
+
+```
+$ printf '2\n\nhello from rehearsal\n/exit\n5\n' | npx bare kit/bare-guide.mjs
+Welcome. This will walk you through connecting to the other computer.
+====================================
+  ASYMMFLOW MESH -- GUIDE (Bare)
+====================================
+[1] Check the connection
+[2] Open the messenger
+...
+Before we connect, this computer needs one quick permission.
+...
+Opening the messenger now.
+...
+(created a new room for this kit -- "kitchen table")
+>
+  (posted, seq 2)
+>
+====================================
+  ASYMMFLOW MESH -- GUIDE (Bare)
+====================================
+...
+> 
+Goodbye -- this window is safe to close.
+```
+
+**Full ceremony, correct, matches the team lead's own independent
+verification.** This corroborates the "14/14 gate pass" — it is real, for
+the topology it was tested under.
+
+### 12c. THE FINDING — real spawned pipe, packed, hostile geography: TOTAL SILENT LOSS
+
+Packed (§12a), copied to a from-scratch hostile directory (no npm tree, no
+source — confirmed by listing it), then driven through the SAME topology
+this campaign's own binding rules were written for: a real
+`child_process.spawn` pipe, `stdin.write()`+`.end()` after spawn, a
+parent reading `stdout`/`stderr` via `'data'` events — via
+`spawn-pipe-harness.mjs`, self-tested first (harness self-test PASS, same
+as every prior rehearsal in this report):
+
+```
+guide ceremony: OK=0/5 PARTIAL=0/5 TOTAL_LOSS=5/5 HANG=0/5
+  outcome=TOTAL_LOSS code=0 matched=false
+  stdout: "" (zero bytes)
+  stderr: "" (zero bytes)
+  (identical on all 5 runs)
+```
+
+**Zero output, on either stream, every single time. Exit code 0.** Not a
+truncation (`PARTIAL` would mean some output arrived) — total, complete
+loss, indistinguishable from a process that never ran at all if you only
+look at the exit code. This is precisely the signature the campaign's own
+`PHASE0_GATE_D2_FLUSH_RACE.md` now documents as "Bug B" territory (its
+title was corrected today to "TWO causes" for exactly this class of
+failure) — RULE 4 in that document states this outright: *"gate the seam
+through a real `child_process.spawn` pipe... A green in-process run proves
+nothing about the seam — that is exactly how `stdio-check.mjs` passed for
+a day while dropping 100% of its payloads."* This rehearsal is that same
+lesson landing on `bare-guide.mjs`, today, on the first real attempt to
+gate it through the topology that matters.
+
+**Ruled out before reporting, not assumed:**
+- **Not a `./data` directory problem.** Pre-created `data/keys/` and
+  `data/corestore/bare-guide-room/` in the hostile copy before rerunning
+  — identical zero-output result.
+- **Not a stdin-write timing race.** Delayed the `stdin.write()` by 200 ms
+  after spawn (giving the process time to fully initialize before any
+  input arrives) via a direct `node:child_process` script (not the
+  harness, to rule out anything harness-specific) — identical result:
+  `CODE=0 STDOUT_LEN=0 STDERR_LEN=0`.
+- **Not specific to the raw binary invocation.** Reproduced through the
+  ACTUAL `.cmd` launcher (§4/§11's file, unmodified), piped via
+  PowerShell, both with `ASYMMFLOW_KIT_NONINTERACTIVE` set and unset:
+  ```
+  switch SET:   exitcode=0, output length=0
+  switch UNSET: exitcode=0, output length=2 (only the launcher's own
+                trailing "(the kit has stopped...)" line — the guide's
+                own output is still completely absent either way)
+  ```
+
+### 12d. The switch/stdin interaction (item 3 of the brief) — no conflict found, but inconclusive
+
+With the switch UNSET, the launcher's trailing message printed correctly
+after the scripted input was exhausted (the extra line fed for the
+`pause` was consumed correctly, no evidence of the switch swallowing an
+input the guide needed) — but because the guide itself produced zero
+output in every configuration tested, this check could not be exercised
+against WORKING guide output, only against the already-broken state. If
+§12c's defect is fixed upstream, this specific interaction should be
+re-verified against real ceremony output, not assumed clear from this
+result alone.
+
+### 12e. Negative control (item 4 of the brief)
+
+Per the brief's own suggestion, the coder's approach (a fixture with the
+"Goodbye" line removed) is exactly what `isSuccess()` in this rehearsal's
+own driver already does structurally — it requires four specific content
+markers including the literal `"Goodbye -- this window is safe to
+close."` string, so ANY kit (this real one included, as it turned out)
+that fails to produce that line is correctly classified as failing. The
+harness's own `selfTest()` (run before every rehearsal in this report,
+including this one) is the standing negative-control proof that the
+rehearsal mechanism itself can report red — confirmed again here
+(PASS, same four-fixture result as every prior run). A dedicated
+"Goodbye"-stripped fixture was not built as a SEPARATE artifact because
+the real kit already, unintentionally, provided the negative case this
+rehearsal needed to prove it can fail correctly.
+
+### 12f. What this means, and what does not follow from it
+
+**Does NOT follow:** that the guide is broken as authored, or that P1-A's
+own 14/14 gate was invalid on its own terms — §12b shows the ceremony
+logic is completely correct under the topology it was apparently tested
+under (unbundled and/or shell-piped). **Does follow:** the guide has not
+yet been proven to survive the ONE topology that will actually matter the
+moment anyone automates testing it, or the moment it is driven by
+anything other than a live interactive console — and given RULE 2's own
+text ("never write frames through `bare-process`'s `process.stdout.write()`
+... use `console.log()`"), the most likely site to check first is whatever
+`getRealStdio().write()` (`bare-bridge.mjs`, unread by this coder, P1A's
+file) actually calls under the hood. This is a hypothesis for whoever
+routes the fix, not a diagnosis this coder is claiming to have made —
+out of fence, not investigated further.
+
+### 12g. Final sealed manifest (guide entry) — the number that actually ships
+
+```
+      1.81 MB  app.bundle
+     45.14 MB  bare.exe
+     11.53 MB  node_modules/**  (18 offloaded native addon prebuilds, sum)
+      0.00 MB  portable.flag
+      0.00 MB  README_BARE_KIT.txt
+      0.00 MB  run_bare_mesh.cmd
+
+total: 23 file(s), 58.9 MB
+```
+
+(Full per-file breakdown in §12a.) This is **9 MB larger** than the
+`bare-entry.mjs` build (49.8 MB) — the guide's real messenger path pulls
+in the full corestore/hypercore storage stack (`rocksdb-native` alone is
+7.8 MB) that the simple fold-only demo never touched.
+
+**`kit/dist-bare/` was rebuilt with the default entry (`bare-entry.mjs`)
+after this task's testing**, so the artifact currently on disk is the
+proven-clean one from §1–§11, not the guide build — the guide build is
+reproducible on demand via `--entry=kit/bare-guide.mjs` but is not left as
+the checked-in default while §12c's defect is open. `README_BARE_KIT.txt`
+(§10a) also still describes the `bare-entry.mjs` fold-proof, not the
+guide's ceremony — it needs the revision already flagged in §10a once
+this defect is resolved and the guide becomes the real default entry.
+
+### 12h. What is NOT verified (addendum to §9)
+
+1. **Root cause of the total-loss defect** — not diagnosed beyond ruling
+   out `./data` and stdin-timing (§12c). The actual mechanism (a
+   `process.stdout.write()`-shaped hang/loss per RULE 2, an async-compile
+   race per RULE 1, or something specific to `bare-bridge.mjs`'s own I/O
+   layer) is unknown and out of this coder's fence to investigate further.
+2. **A genuinely live, interactive console** (not a pipe at all — the
+   actual human double-click experience) was not tested; every rehearsal
+   in this report, including this one, drives stdin through some form of
+   pipe. It remains possible (though untested) that the true console path
+   works even though every piped path tested does not — or that it fails
+   identically. Neither is established.
+3. **The `dist/reducer.wasm` asset-offload gap** (§12a) was not exercised
+   end-to-end because the total-loss defect (§12c) prevented the
+   ceremony from ever reaching a point where its absence would surface
+   through observed output — it is a real, separately-reasoned finding,
+   not one confirmed by a reproduction of its own failure mode.
+4. Everything already listed in §6/§9 — no clean VM, no macOS/Linux, no
+   two-machine corridor, no firewall/anchor real mutation (the guide's
+   own honest stubs, not this coder's scope).
+
+---
+
+## §12a — GATE CORRECTION: the guide-entry failure is a BUNDLING bug, not the flush race
+
+**Author:** orchestrator (Opus 4.8) · **Date:** 2026-07-20
+
+§12 reports the guide-entry kit producing zero bytes with exit 0 and attributes it to
+"Bug B's signature", pointing at `getRealStdio().write()`. **That attribution is wrong**,
+and the correct cause is a different class of defect entirely.
+
+### The discriminator §12 did not run
+
+§12 compared *bundled + spawned pipe* (fails) against *unbundled + shell pipe* (works) —
+two variables changed at once, so the result cannot isolate either. Measured separately:
+
+| build | topology | result |
+|---|---|---|
+| **unbundled** | real spawned pipe | **WORKS** — opened, posted, goodbye |
+| bundled | real spawned pipe | zero bytes, exit 0 |
+| bundled | shell pipe | zero bytes, exit 0 |
+| bundled | no stdin at all | zero bytes, exit 0 |
+
+It fails in **every** topology when bundled and succeeds in **every** topology when not.
+The variable is **bundling**, not the pipe. §12's "works under a shell pipe" was the
+UNBUNDLED case; the bundled shell-pipe run also produces zero bytes.
+
+### Root cause, bisected
+
+Packing progressively smaller entries:
+
+- a bundle importing `host/bare-bridge.mjs` alone → imports fine, 4 exports
+- a bundle whose entry prints, then imports `kit/bare-guide.mjs` → prints
+  `STEP1 entry reached`, then `STEP2 guide imported`, and **no menu**
+
+The guide imports cleanly; `runGuide()` is never called. `kit/bare-guide.mjs:344-346`:
+
+```js
+const argv = typeof Bare !== 'undefined' ? Bare.argv : process.argv
+const isMain = argv[1] && new URL(import.meta.url).pathname.replace(…) === argv[1].replace(…)
+if (isMain) await runGuide()
+```
+
+Inside a bundle `argv[1]` is the **bundle's** path (`…/app.bundle`) while
+`import.meta.url` is the **virtual** path within it (`/kit/bare-guide.mjs`). They can never
+be equal, so `isMain` is structurally false whenever bundled, `runGuide()` never runs, and
+Bare exits 0 on the silent no-op so nothing surfaces.
+
+The guard is *correct* for script invocation — the file's header even records that
+`Bare.argv[1]` was checked empirically rather than assumed. It simply cannot hold in packed
+form.
+
+### Fix routed
+
+A thin Bare-only entry (`kit/bare-guide-entry.mjs`) importing and calling the already-
+exported `runGuide()` — the same shape as `host/bare-entry.mjs`, which packs and runs
+correctly today. Explicitly NOT making the guard bundle-aware: "detect whether I am the
+bundle's main" is the fragile-assumption class that has produced seven separate wrong
+findings in this campaign.
+
+### Why this matters beyond the bug
+
+Every component was green — guide 14/14, bridge 45/45, kit 10/10, probe 15/15 — and the
+**composition** still failed silently. Integration is a distinct gate, not a formality
+after component gates pass. It earned its place here.
+
+### Method note for the record
+
+Two variables were changed between the working and failing observations, which is what
+produced the misattribution. When a green case and a red case differ in more than one
+respect, the comparison identifies nothing — vary one axis at a time. This is the same
+root failure as the campaign's other six probe errors, in a new costume.
