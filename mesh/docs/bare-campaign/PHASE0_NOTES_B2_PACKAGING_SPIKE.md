@@ -19,7 +19,7 @@ workaround verified end-to-end in hostile geography. See §0.**
 | 3 | Native addons (sodium-native/udx-native/etc.) | **DEFAULT EMBEDDING IS BROKEN.** `--offload-addons` WORKS, verified in hostile geo. | `bare-pack --offload-addons ...` |
 | 4a | `import.meta.url` self-location inside a bundle | **RESOLVES TO A VIRTUAL PATH INSIDE THE BUNDLE, NOT A REAL DIRECTORY.** Every one of the 23 `fileURLToPath(import.meta.url)` call sites in mesh/host + mesh/kit will break if bundled as-is. | must switch to bundle-aware asset loading (§4) |
 | 4b | Loading `reducer.wasm` (a non-JS 3.96MB binary) | Default embedding produces an unreadable virtual path (`bare-fs.readFileSync` can't read inside a `.bundle` file). **`--offload`/`--offload-assets` WORKS**, verified in hostile geo. | `bare-pack --offload ...` + `import.meta.asset()` |
-| 4c | `node:fs`/`node:url`/`node:path` (Node-style specifiers, what `apply.mjs` actually uses) | **NEITHER `node:fs` NOR PLAIN `fs` IS A BARE BUILTIN.** Confirmed by direct `bare -e require()` — zero resolution candidates. Must import `bare-fs`/`bare-path`/`bare-url` (real npm packages) by name. | source-level import rewrite required |
+| 4c | `node:fs`/`node:url`/`node:path` (Node-style specifiers, what `apply.mjs` actually uses) | **CORRECTED by the gate — see §8/§4 note below.** The claim "neither `node:fs` nor plain `fs` resolves" was a probe artifact (`bare -e` evaluates as ESM, where `require` doesn't exist, so it fails for every specifier including good ones — no negative control was run). Re-measured with real `.mjs` files + `await import()`: `node:fs`/`node:path`/`node:url`/`node:net` DO alias onto `bare-fs`/etc when run from inside `node_modules` context; `node:crypto`/`node:os`/`node:readline` do not. In hostile geography (no `node_modules`) ALL of them fail, `node:fs` and `bare-fs` alike — Bare has no true builtins, `node:fs` is a resolved alias, not a polyfill. Full re-measurement: `mesh/docs/bare-campaign/PHASE0_GATE_B2_RESOLUTION.md`. **The recommended action is unchanged**: no `node:` specifier in anything destined for the sealed artifact — rewrite to `bare-fs`/`bare-path`/`bare-url`/`bare-crypto`/`bare-os` — because the alias table is undocumented internal policy, doesn't cover the full Node surface (crypto/os/readline have no alias), and pack-time behavior (§8) makes the difference concrete regardless of the runtime alias question. | source-level import rewrite required (now for determinism + full-surface-coverage reasons, not because `node:fs` is unconditionally broken) |
 | 5 | Double-click `.cmd` launcher, CRLF, no PATH | **YES, works end-to-end.** | see §5, CRLF-verified, `%~dp0`-relative |
 | 6 | Sealed folder size | ~48 MB total (bare.exe dominates at 45.1 MB) for a corestore+hypercore+hyperswarm+wasm payload | see §6 |
 
@@ -226,6 +226,24 @@ const WASM_PATH = join(__dirname, '..', 'dist', 'reducer.wasm')
 ```
 
 ### 4a. `node:fs`/`node:url`/`node:path` do not exist under Bare at all
+
+> **CORRECTION (post-gate):** the runtime claim in this subsection — "neither
+> `node:fs` nor plain `fs` resolves to anything under Bare, zero candidates" —
+> was measured with a flawed probe (`bare.exe -e "require(...)"`, which
+> evaluates as ESM where `require` doesn't exist at all, so it fails
+> identically for every specifier including working ones; no negative
+> control was run to catch this). The gate re-measured with real `.mjs`
+> files and `await import()`: `node:fs`/`node:path`/`node:url`/`node:net`
+> **do** alias onto `bare-fs`/etc when `node_modules` is present, though
+> `node:crypto`/`node:os`/`node:readline` do not. In hostile geography (no
+> `node_modules`) all of them fail alike, `node:fs` and `bare-fs` included —
+> Bare has no true builtins; `node:fs` is a resolved alias from disk, not a
+> polyfill. Full transcript: `PHASE0_GATE_B2_RESOLUTION.md`. **The pack-time
+> failure quoted immediately below is unaffected by this correction** — it
+> was reproduced again with a genuine negative control in §8, and stands.
+> The recommended fix (rewrite to `bare-fs`/`bare-path`/`bare-url`/etc.) is
+> unchanged; see the corrected row in §0.
+
 
 First bare-pack attempt using this exact code failed to even **pack**:
 
@@ -481,3 +499,71 @@ own code.
    `mesh/host/apply.mjs` (read-only, to replicate its exact pattern) and
    copying `mesh/dist/reducer.wasm` (read-only copy into the scratchpad).
    No mesh source was modified, per the brief's constraint.
+
+---
+
+## 8. Pack-time resolution of `node:`-prefixed specifiers (post-gate follow-up)
+
+**Question:** does `bare-pack` resolve `node:`-prefixed specifiers at pack
+time — separate from the runtime-alias question the gate corrected in §4a's
+note — and is that a hard blocker or just hygiene? Includes a genuine
+negative control this time (an import of a package name that cannot possibly
+exist), so a real resolution failure is distinguishable from a probe
+artifact.
+
+Three tiny entry files, packed from inside `p0b-pack/` (where `node_modules`
+is present, i.e. the *best case* for resolution):
+
+```js
+// pt-nodefs.mjs
+import { readFileSync } from 'node:fs'
+
+// pt-barefs.mjs
+import { readFileSync } from 'bare-fs'
+
+// pt-nonexistent.mjs  (negative control — this package cannot exist)
+import { thing } from 'this-package-definitely-does-not-exist-xyz123'
+```
+
+```
+$ bare-pack --host win32-x64 -o pt-nodefs.bundle pt-nodefs.mjs
+Bail: ModuleTraverseError: MODULE_NOT_FOUND: Cannot find module 'node:fs'
+  imported from '...pt-nodefs.mjs'
+pack exit=1
+
+$ bare-pack --host win32-x64 -o pt-barefs.bundle pt-barefs.mjs
+pack exit=0
+
+$ bare-pack --host win32-x64 -o pt-nonexistent.bundle pt-nonexistent.mjs
+Bail: ModuleTraverseError: MODULE_NOT_FOUND: Cannot find module
+  'this-package-definitely-does-not-exist-xyz123' imported from
+  '...pt-nonexistent.mjs'
+pack exit=1
+```
+
+**`node:fs`'s pack-time failure is byte-for-byte the same error shape,
+`ModuleTraverseError: MODULE_NOT_FOUND`, same exit code, as the genuine
+negative control.** `bare-pack`'s static traverser cannot tell `node:fs`
+apart from a package that does not exist on npm at all — it has no special
+case for `node:`-prefixed specifiers, unlike the Bare *runtime* (§4a's
+correction), which does resolve some of them via an alias table when
+`node_modules` is present. Completed the round trip on the one that packed:
+
+```
+$ bare-pack --host win32-x64 --offload-addons -o pt-barefs-out/pt-barefs.bundle pt-barefs.mjs
+pack exit=0
+$ cd pt-barefs-out && bare.exe pt-barefs.bundle
+bare-fs OK, typeof readFileSync: function
+run exit=0
+```
+
+**Verdict: this is a hard blocker at pack time, not merely hygiene.**
+Whatever the Bare runtime's alias table does or doesn't cover (§4a), it is
+irrelevant to Phase 2/3 — `bare-pack` itself refuses to traverse past a
+`node:`-prefixed import and the build fails before a bundle is even
+produced. Every `node:fs`/`node:path`/`node:url`/`node:crypto`/`node:os`/
+etc. specifier in any file that will be reachable from the sealed artifact's
+entry point **must** be rewritten to its `bare-*` equivalent before that file
+can be bundled at all. This confirms the team lead's binding rule (no
+`node:` specifier in anything destined for the sealed artifact) is not just
+good practice — it is required for `bare-pack` to run.
