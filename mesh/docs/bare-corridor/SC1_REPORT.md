@@ -17,6 +17,19 @@ appeared — the campaign's own method rules exist for exactly this
 situation. **The gate verdict on this specific finding is the reviewer's
 call, not mine; I have not marked this mission done pending that call.**
 
+A **second, more severe environmental issue** appeared later the same round
+and is characterized in §5c: `fs.cpSync(..., {recursive:true})` on the
+sealed kit's output directory failed 100% with `EINPROGRESS` for two
+consecutive full gate runs, reproduced with a bare one-line Node script
+completely outside this spike, against BOTH `kit/.sc1-dist` and the shared
+`kit/dist-bare` — then cleared on its own with no code change. This is a
+Windows/Node-level filesystem issue, not a defect in `bare-registry.mjs`/
+`bare-guide.mjs`. Fixed the spike's own robustness gap it exposed (a bare
+`try {} finally {}` with no `catch` — one bad copy used to crash the whole
+process instead of being recorded as one failed cycle); did not and could
+not fix the underlying environmental cause. **Final gate run after the
+issue cleared: 41/41 green.**
+
 ## 1. Verdict
 
 **YES — the sealed guide now reopens its room across a process restart**,
@@ -404,6 +417,64 @@ tail shows it was still mid-ceremony, not a wrong answer already given).
 The positive claim ("when it completes, it completes correctly") is
 supported by every completed run across all four executions, with zero
 counterexamples.
+
+## 5c. A second environmental finding: `fs.cpSync` recursive copy failing 100% with `EINPROGRESS`, self-clearing, root cause not determined
+
+While re-verifying the gate after §5b's fixes, a re-run crashed the whole
+spike process (an uncaught exception, not a reported failure — see below
+for the fix). The proximate cause: `cpSync(bundleDir, hostileDir, {
+recursive: true })` threw `EINPROGRESS, unknown error '\\?\C:\...'`.
+
+**First, a real gap in this spike's own robustness, fixed:** every cycle
+loop had `try { ... } finally { cleanup() }` with **no `catch`** — an
+unexpected error inside the try still propagated and killed the process,
+losing every check result gathered so far. That is precisely the "one bad
+entry must never take down the rest" law this campaign (and
+`kit-registry.mjs` itself) already states, applied here to the GATE's own
+robustness rather than the guide's. Fixed: a `robustCopy()` helper (up to 4
+attempts, short backoff) plus a proper `catch` on all three cycle loops
+that records an `ERROR` outcome and continues, never crashes.
+
+**Then, investigated rather than assumed fixed:** the very next full run
+came back with `EINPROGRESS` on **100% of copies — all 16 reopen cycles,
+all 5 negative-control-A cycles, all 9 registry-scenario cycles** — even
+with the retry/backoff in place, and even on a machine showing **zero**
+concurrent `bare.exe` processes at the time (ruled out the "other coders'
+load" hypothesis from §5b for THIS specific symptom). Isolated with direct,
+minimal repro scripts, outside the spike entirely:
+- A bare `cpSync(kit/.sc1-dist, mkdtempSync(...), {recursive:true})`
+  one-liner failed the same way.
+- Same failure copying `kit/dist-bare` (the OTHER coder's shared kit
+  output) — not specific to my private `--out=` directory.
+- Same failure copying to a NON-Temp destination (`mesh/scratch-copy-test`)
+  — not specific to the Temp directory.
+- A **trivial** one-file directory copied successfully in the same
+  moment, on the same machine — ruling out "cpSync itself is broken,"
+  narrowing this to something about copying a large tree of many native
+  binary files (`.bare`/`.exe`/`.node`) specifically.
+- A re-check moments later, no code or environment change made by me,
+  **succeeded** — the condition cleared on its own. The next full gate run
+  was clean: 41/41.
+
+**Best-supported hypothesis, not proven:** real-time antivirus scanning of
+freshly-written native binaries (bare.exe, `.bare` addon files) inside a
+large, repeatedly-rebuilt/recopied sealed-kit tree, worsened by multiple
+concurrent coding agents on this branch each building and copying their own
+sealed kits around the same time. This fits every observation above
+(large-binary-tree-specific, not Temp-specific, not source-directory-
+specific, self-clearing, correlated with a period of heavy concurrent
+build/copy activity across coders) but I did not — and could not, without
+touching real-time-protection settings, a system mutation outside my
+authority — directly confirm Defender (or any specific AV) was the actor.
+**Not fixed, because there is nothing in this mission's file ownership to
+fix**: `spawn-pipe-harness.mjs`, the OS/AV configuration, and the shared
+build-output contention are all outside `bare-registry.mjs`/
+`bare-guide.mjs`/`bare-registry-spike.mjs`. Flagged for whoever owns the
+corridor's field-machine hardening story (SC-4's runbook is the closest fit)
+— a real client machine's own antivirus could plausibly do the same thing
+to the sealed kit on first extraction, which the campaign's own README
+already anticipates in spirit ("SmartScreen/MOTW... download prompts") but
+this is a distinct symptom (a slow/blocked COPY, not a launch warning).
 
 ## 6. Deviations from the brief, and why
 
