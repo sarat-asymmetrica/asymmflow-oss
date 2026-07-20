@@ -36,7 +36,7 @@
 // Run: node kit/bare-registry-spike.mjs   (or: npm run sc1spike)
 
 import { runSpawnPipe, formatResult, selfTest } from '../host/spawn-pipe-harness.mjs'
-import { mkdtempSync, rmSync, existsSync, cpSync } from 'node:fs'
+import { mkdtempSync, rmSync, existsSync, cpSync, mkdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -116,15 +116,50 @@ function assertNoHash(label, p) {
   check(`${label}: hostile dir path contains no "#" (merge-gate finding -- "#" breaks Bare addon resolution)`, !p.includes('#'), p)
 }
 
-// ── layer 1: build the sealed kit once ─────────────────────────────────────
+// Robustness finding (this coder, this file, gate-review round): a plain
+// `cpSync(bundleDir, hostileDir, {recursive:true})` threw an uncaught
+// `EINPROGRESS`/`EBUSY` on this machine under heavy concurrent `bare.exe`
+// load (multiple coding agents spawning `bare.exe` at once -- see
+// SC1_REPORT.md §5b) and crashed the ENTIRE spike process mid-run, losing
+// every check result gathered so far. That is the exact "one bad cycle
+// takes down everything else" shape this campaign's own rules forbid
+// (kit-registry.mjs's "a corrupt registry must never crash boot", applied
+// here to this GATE's own robustness, not just the guide's). A few retries
+// with a short backoff is enough for a TRANSIENT Windows filesystem lock to
+// clear; if it never clears, the caller still gets a real thrown error to
+// catch and record as one failed cycle, not a crashed process.
+async function robustCopy(src, dest, attempts = 4) {
+  let lastErr
+  for (let i = 1; i <= attempts; i++) {
+    try { cpSync(src, dest, { recursive: true }); return } catch (err) {
+      lastErr = err
+      if (i < attempts) await new Promise((r) => setTimeout(r, 400 * i))
+    }
+  }
+  throw lastErr
+}
+
+// ── layer 1: build the sealed kit once, into a PRIVATE output dir ─────────
+// `--out=kit/.sc1-dist` (build-bare-kit.mjs's Sealed Corridor addition, the
+// orchestrator's own fix): the default `kit/dist-bare` is a SHARED target —
+// build-bare-kit.mjs unconditionally `rmSync`s its output dir before
+// writing, so two coders building concurrently into the default dir can
+// delete each other's kit mid-copy (observed once, see SC1_REPORT.md §5a).
+// Built ONCE here, then copied (cheap) into each of the N hostile dirs below
+// — the build itself (18 offloaded native addons) is not cheap enough to
+// repeat 16+ times. `kit/.sc1-dist/` is already covered by .gitignore.
 console.log('-- layer 1: build the sealed kit (kit/bare-guide-entry.mjs) --')
 let bundleDir = null
 try {
-  execFileSync(process.execPath, [join(meshRoot, 'kit', 'build-bare-kit.mjs'), '--entry=kit/bare-guide-entry.mjs'], { cwd: meshRoot, stdio: 'pipe' })
-  bundleDir = join(meshRoot, 'kit', 'dist-bare')
+  execFileSync(process.execPath, [
+    join(meshRoot, 'kit', 'build-bare-kit.mjs'),
+    '--entry=kit/bare-guide-entry.mjs',
+    '--out=kit/.sc1-dist',
+  ], { cwd: meshRoot, stdio: 'pipe' })
+  bundleDir = join(meshRoot, 'kit', '.sc1-dist')
   const requiredFiles = ['app.bundle', 'bare.exe']
   const built = requiredFiles.every((f) => existsSync(join(bundleDir, f)))
-  check('build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs produced app.bundle + bare.exe', built)
+  check('build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs --out=kit/.sc1-dist produced app.bundle + bare.exe', built)
   check('dist/reducer.wasm is present in the sealed kit manifest (posting requires it)', existsSync(join(bundleDir, 'dist', 'reducer.wasm')))
 } catch (err) {
   check('layer 1: sealed kit build did not throw', false, err?.message ?? String(err))
@@ -151,7 +186,7 @@ if (bundleDir && existsSync(join(bundleDir, 'app.bundle')) && existsSync(join(bu
     const hostileDir = freshHostileDir(`sc1-cycle-${i}-`)
     assertNoHash(`cycle ${i}`, hostileDir)
     try {
-      cpSync(bundleDir, hostileDir, { recursive: true })
+      await robustCopy(bundleDir, hostileDir)
       const exe = join(hostileDir, 'bare.exe')
       const scriptPath = join(hostileDir, 'app.bundle')
 
@@ -181,6 +216,14 @@ if (bundleDir && existsSync(join(bundleDir, 'app.bundle')) && existsSync(join(bu
           run2Tail: (r2r.stdout || '').slice(-300),
         })
       }
+    } catch (err) {
+      // A cycle that throws (e.g. a filesystem-level error that outlasted
+      // robustCopy's retries) is recorded as ONE failed cycle, never a
+      // crashed process -- see the robustCopy comment above for what this
+      // is defending against, measured on this exact machine this round.
+      reopenAgg.runs++
+      reopenAgg.totalLoss++
+      reopenAgg.results.push({ cycle: i, outcome: 'ERROR', error: err?.message ?? String(err) })
     } finally {
       cleanup(hostileDir)
     }
@@ -197,7 +240,7 @@ if (bundleDir && existsSync(join(bundleDir, 'app.bundle')) && existsSync(join(bu
     const hostileDir = freshHostileDir(`sc1-negctrl-${i}-`)
     assertNoHash(`negctrl ${i}`, hostileDir)
     try {
-      cpSync(bundleDir, hostileDir, { recursive: true })
+      await robustCopy(bundleDir, hostileDir)
       const exe = join(hostileDir, 'bare.exe')
       const scriptPath = join(hostileDir, 'app.bundle')
       const result = await runSpawnPipe({ exe, scriptPath, cwd: hostileDir, runs: 1, timeoutMs: 20000, stdin: RUN2_STDIN, isSuccess: freshDirSuccess })
@@ -207,6 +250,10 @@ if (bundleDir && existsSync(join(bundleDir, 'app.bundle')) && existsSync(join(bu
       negAgg.totalLoss += result.totalLoss
       negAgg.hang += result.hang
       negAgg.results.push({ cycle: i, outcome: result.results[0].outcome })
+    } catch (err) {
+      negAgg.runs++
+      negAgg.totalLoss++
+      negAgg.results.push({ cycle: i, outcome: 'ERROR', error: err?.message ?? String(err) })
     } finally {
       cleanup(hostileDir)
     }
@@ -214,12 +261,81 @@ if (bundleDir && existsSync(join(bundleDir, 'app.bundle')) && existsSync(join(bu
   console.log(`  ${formatResult('negative control A (fresh dir)', negAgg)}`)
   check(`negative control A: a run-2-shaped script against a directory that never saw run 1 does NOT find a room (must go red if reopen always claims success) -- ${NEG_N}/${NEG_N}`, negAgg.ok === NEG_N,
     JSON.stringify(negAgg.results.filter((r) => r.outcome !== 'OK')).slice(0, 800))
+
+  // ── layer 4: negative control C — a corrupt/dangling registry must never
+  //    crash boot (kit-registry.mjs's own standard, ported by bare-registry.
+  //    mjs -- exercised here for real, not just read-and-compared against
+  //    the source). Three shapes, per the gate reviewer's explicit ask:
+  //    malformed JSON, well-formed-but-not-an-array JSON, and a well-formed
+  //    entry whose storage folder does not exist on disk (the realistic
+  //    field case: someone deleted the folder by hand). The third one is
+  //    the ONE this coder found does NOT already behave safely by accident
+  //    -- see bare-guide.mjs's own comment at the fs.existsSync guard for
+  //    what was actually observed (Corestore silently fabricates a phantom
+  //    empty store instead of throwing) before this guard was added. ──────
+  console.log('\n-- layer 4: negative control C (malformed / dangling rooms.json must never crash boot) --')
+  const REGISTRY_N = 3
+  const NOT_CRASHED_STDIN = guideStdin(['2', 'skip', '/exit', '5'])
+  function notCrashedSuccess(stdout) {
+    return stdout.includes('Welcome.')
+      && stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
+      && stdout.includes('Goodbye -- this window is safe to close.')
+  }
+
+  async function runRegistryScenario(label, prefix, seedRegistryText, n, extraCheck) {
+    const agg = { runs: 0, ok: 0, partial: 0, totalLoss: 0, hang: 0, results: [] }
+    for (let i = 1; i <= n; i++) {
+      const hostileDir = freshHostileDir(`${prefix}-${i}-`)
+      assertNoHash(`${label} ${i}`, hostileDir)
+      try {
+        await robustCopy(bundleDir, hostileDir)
+        const keysDir = join(hostileDir, 'data', 'keys')
+        mkdirSync(keysDir, { recursive: true })
+        writeFileSync(join(keysDir, 'rooms.json'), seedRegistryText)
+        const exe = join(hostileDir, 'bare.exe')
+        const scriptPath = join(hostileDir, 'app.bundle')
+        const result = await runSpawnPipe({ exe, scriptPath, cwd: hostileDir, runs: 1, timeoutMs: 20000, stdin: NOT_CRASHED_STDIN, isSuccess: notCrashedSuccess })
+        agg.runs++
+        agg.ok += result.ok
+        agg.partial += result.partial
+        agg.totalLoss += result.totalLoss
+        agg.hang += result.hang
+        const r = result.results[0]
+        agg.results.push({ cycle: i, outcome: r.outcome, tail: r.outcome !== 'OK' ? (r.stdout || '').slice(-300) : undefined })
+        if (extraCheck) extraCheck(r.stdout, i)
+      } catch (err) {
+        agg.runs++
+        agg.totalLoss++
+        agg.results.push({ cycle: i, outcome: 'ERROR', error: err?.message ?? String(err) })
+      } finally {
+        cleanup(hostileDir)
+      }
+    }
+    console.log(`  ${formatResult(label, agg)}`)
+    check(`${label}: guide reaches the menu and says Goodbye without crashing, ${n}/${n}`, agg.ok === n,
+      JSON.stringify(agg.results.filter((r) => r.outcome !== 'OK')).slice(0, 800))
+  }
+
+  await runRegistryScenario('malformed JSON rooms.json', 'sc1-reg-badjson', '{ this is not valid json', REGISTRY_N)
+  await runRegistryScenario('well-formed but non-array rooms.json', 'sc1-reg-nonarray', JSON.stringify({ not: 'an array' }), REGISTRY_N)
+  await runRegistryScenario(
+    'dangling entry (storage folder missing)', 'sc1-reg-dangling',
+    JSON.stringify([{
+      roomKey: 'a'.repeat(64), storage: 'nonexistent-storage-dir', authorityPub: 'b'.repeat(64),
+      encryptionKey: null, bootstrap: null, title: 'ghost room',
+    }]),
+    REGISTRY_N,
+    (stdout, i) => check(
+      `dangling entry ${i}: guide reports the missing-storage-folder sentence instead of silently fabricating a phantom room`,
+      stdout.includes('(could not reopen a saved room -- its storage folder is missing)'),
+    ),
+  )
 } else {
-  check('layer 2/3 skipped: sealed kit was not built (see layer 1 failure above)', false)
+  check('layer 2/3/4 skipped: sealed kit was not built (see layer 1 failure above)', false)
 }
 
-// ── layer 4: negative control B — the harness's own selfTest() ────────────
-console.log('\n-- layer 4: negative control B (spawn-pipe-harness.mjs selfTest()) --')
+// ── layer 5: negative control D — the harness's own selfTest() ────────────
+console.log('\n-- layer 5: negative control D (spawn-pipe-harness.mjs selfTest()) --')
 const selfTestResult = await selfTest()
 for (const line of selfTestResult.detail) console.log(`  ${line}`)
 check('spawn-pipe-harness.mjs selfTest(): the shipped harness correctly distinguishes OK/HANG/TOTAL_LOSS/PARTIAL', selfTestResult.pass)
