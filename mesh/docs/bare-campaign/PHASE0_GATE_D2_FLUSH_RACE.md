@@ -1,4 +1,8 @@
-# Gate result: the Bare stdout loss is real, silent, and NARROW
+# Gate result: the Bare stdout loss is real, silent, and has TWO causes
+
+*(Original title: "…real, silent, and NARROW". Kept visible rather than rewritten away —
+"narrow" was true of Bug A and false of the seam as a whole, and the correction below is
+part of the record.)*
 
 > **⚠️ PARTLY SUPERSEDED — READ `PHASE0_NOTES_D2_FLUSH_RACE.md` (P0-D) ALONGSIDE THIS.**
 >
