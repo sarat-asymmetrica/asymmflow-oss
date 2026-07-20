@@ -56,6 +56,7 @@
     "bareparity": "npm run build && node host/bare-parity-spike.mjs",
     "bareparity:bare": "npx bare host/bare-parity-spike.mjs",
     "harnessselftest": "node host/spawn-pipe-harness.mjs --selftest",
+    "seqrace": "npm run build && node host/gate-seq-race-check.mjs",
     "stdioseam": "npm run build && node host/stdio-seam-spike.mjs",
     "buildbarekit": "npm run build && node kit/build-bare-kit.mjs"
   },

@@ -147,12 +147,20 @@ export function createBridgeCore({ rooms = new Map(), actor, deviceKeys: keys, s
     return max + 1
   }
 
-  async function takeSeq(node) {
+  function takeSeq(node) {
     const key = node.key
-    if (!seqCounters.has(key)) seqCounters.set(key, await nextSeqFor(node))
-    const seq = seqCounters.get(key)
-    seqCounters.set(key, seq + 1)
-    return seq
+    // NO await window between the has() check and the set(): the stdio
+    // transport dispatches pipelined frames concurrently (attachStdioTransport
+    // starts core.dispatch(msg) per line without awaiting), so an await here
+    // would let two ops on a cold counter both read max+1 and share a seq —
+    // which the fold's per-actor seq discipline then silently skips. The map
+    // holds a PROMISE of the next seq to hand out; claiming a seq is the
+    // synchronous set() of its successor promise, so concurrent callers chain
+    // instead of racing. (bridge-server.mjs kept the old shape safely only
+    // because it was per-socket; this bridge is one shared pipe.)
+    const nextP = Promise.resolve(seqCounters.has(key) ? seqCounters.get(key) : nextSeqFor(node))
+    seqCounters.set(key, nextP.then((s) => s + 1))
+    return nextP
   }
 
   function emit(event, params) {
@@ -306,7 +314,13 @@ export function createBridgeCore({ rooms = new Map(), actor, deviceKeys: keys, s
       const { bytes, ref: parsedRef } = await getAttachment(node.store, ref)
       let target = savePath
       const looksLikeDir = looksLikeDirPath(target) || (fs.existsSync(target) && fs.statSync(target).isDirectory())
-      if (looksLikeDir) target = joinPath(target, parsedRef.name || 'attachment')
+      // parsedRef.name is UNTRUSTED — any room writer controls it via the
+      // shared log. baseNameOf strips path separators so a crafted name
+      // ("..\\..\\evil") cannot escape the directory the caller chose.
+      if (looksLikeDir) {
+        const safeName = baseNameOf(parsedRef.name || '')
+        target = joinPath(target, (!safeName || safeName === '.' || safeName === '..') ? 'attachment' : safeName)
+      }
       fs.mkdirSync(dirnameOf(target), { recursive: true })
       fs.writeFileSync(target, bytes)
       // Deviation from bridge-server.mjs, declared: `path.resolve(target)`

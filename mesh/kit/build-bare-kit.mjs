@@ -121,6 +121,25 @@ execFileSync(process.execPath, [
 ], { stdio: 'inherit', cwd: meshRoot })
 if (!existsSync(bundlePath)) throw new Error('bare-pack reported success but app.bundle was not produced')
 
+// ── 2b. HARD GATE: the offloaded reducer must actually be in the kit ───────
+// bare-pack's asset detector recognises only the literal import.meta.asset()
+// syntax (PHASE0 §4c) — an entry that locates the wasm any other way packs
+// "green" and produces a kit that boots, draws its menu, says Goodbye, and
+// silently cannot post (the exact broken-but-green shape that cost Phase 3
+// two rounds). bare-guide-spike.mjs layer 4 gates this too, but the BUILDER
+// is what a field build actually runs — it must refuse on its own, not rely
+// on the phase suite having been run first.
+const offloadedWasm = join(distOut, 'dist', 'reducer.wasm')
+if (!existsSync(offloadedWasm)) {
+  throw new Error('bare-pack did not offload dist/reducer.wasm into the kit — '
+    + 'the entry file must reference it via a literal import.meta.asset(); '
+    + 'a kit built without it looks healthy and posts nothing')
+}
+if (statSync(offloadedWasm).size !== statSync(wasmPath).size) {
+  throw new Error(`offloaded reducer.wasm is ${statSync(offloadedWasm).size} bytes `
+    + `but the freshly built source is ${statSync(wasmPath).size} — stale or partial offload`)
+}
+
 // ── 3. the runtime binary — copied verbatim, never rebuilt ─────────────────
 cpSync(BARE_EXE_SRC, join(distOut, 'bare.exe'))
 
