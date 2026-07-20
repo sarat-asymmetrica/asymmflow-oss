@@ -1,5 +1,32 @@
 # Phase 0 — Gate verification of P0-C's verdict (orchestrator, independent re-run)
 
+> **⚠️ SUPERSEDED IN PART — READ THIS FIRST (appended 2026-07-20, after Phase 1b).**
+>
+> This document's headline verdict — that `go:wasmexport` does not eliminate the WASI
+> import table, so a shim is mandatory on both paths — **STANDS and was confirmed.**
+>
+> Its *secondary* finding is **WRONG and is retracted**: the claim that the reactor
+> eliminates six syscalls and needs "a 10-syscall shim with no I/O at all". The real
+> reducer's reactor build imports **15**, not 10. **Only `fd_read` is eliminated.** All
+> five no-`bare-fs`-backing syscalls (`fd_close`, `fd_fdstat_get`, `fd_fdstat_set_flags`,
+> `fd_prestat_get`, `fd_prestat_dir_name`) are still required.
+>
+> **Why this document was wrong, and it is my own error, not the coder's:** the 10 was
+> measured against a trivial `add()` probe — a limitation this document itself flagged in
+> its "What this does NOT establish" section, which then went ahead and used the number in
+> its conclusion anyway. The probe imported nothing that pulls in Go's `os` package, so
+> `os`'s stdio-fd-table init was dead-code-eliminated. The real reducer reaches `os`
+> transitively through `encoding/json`, `crypto/ed25519`, `crypto/sha256` and
+> `encoding/hex`, and that init survives linking regardless of entry-point style.
+>
+> Coder P0-C measured the real build and corrected the orchestrator. That is the doctrine
+> working as intended (D1: every claim cites evidence; a measurement beats an inference).
+>
+> **Authoritative numbers: `PHASE1B_REPORT.md`. Shim authors must budget for 15 syscalls,
+> including all five with no `bare-fs` backing.** The consequence: the reactor's value is
+> the warm-instance call pattern and the retirement of the temp-file channel — *not* a
+> cheaper shim. The Phase 1 decision matrix below must be read with that correction.
+
 **Date:** 2026-07-20 · **Verifier:** orchestrator (Opus 4.8), independently of coder P0-C
 **Why re-verified personally:** P0-C's verdict REFUTES a load-bearing premise written into
 the campaign spec itself (`FABLE_CAMPAIGN_BARE_RUNTIME.md` §2: *"a future `//go:wasmexport
