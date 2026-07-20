@@ -319,6 +319,15 @@ What you need
 
 writeFileSync(join(distOut, 'README_BARE_KIT.txt'), README_TEXT)
 
+// ── 4b. the clean-machine verifier — ships IN the kit so any field machine
+//    (clean VM, receptionist's PC, corridor laptop) can self-certify with a
+//    double-click before a ceremony. PowerShell 5.1 ships with Windows, so
+//    the verifier adds no dependency the kit doesn't already assume. Copied
+//    verbatim (already ASCII+CRLF at rest — same batch discipline as the
+//    launcher above). ─────────────────────────────────────────────────────
+cpSync(join(meshRoot, 'kit', 'verify_clean_machine.cmd'), join(distOut, 'verify_clean_machine.cmd'))
+cpSync(join(meshRoot, 'kit', 'verify-clean-machine.ps1'), join(distOut, 'verify-clean-machine.ps1'))
+
 // ── 5. portable.flag — presence-alone marker, DP1 plane convention
 //    (build-kit.mjs's own marker file, same shape here). ───────────────────
 writeFileSync(join(distOut, 'portable.flag'), [
