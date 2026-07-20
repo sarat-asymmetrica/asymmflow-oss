@@ -116,22 +116,38 @@ function assertNoHash(label, p) {
   check(`${label}: hostile dir path contains no "#" (merge-gate finding -- "#" breaks Bare addon resolution)`, !p.includes('#'), p)
 }
 
-// Robustness finding (this coder, this file, gate-review round): a plain
-// `cpSync(bundleDir, hostileDir, {recursive:true})` threw an uncaught
-// `EINPROGRESS`/`EBUSY` on this machine under heavy concurrent `bare.exe`
-// load (multiple coding agents spawning `bare.exe` at once -- see
-// SC1_REPORT.md §5b) and crashed the ENTIRE spike process mid-run, losing
-// every check result gathered so far. That is the exact "one bad cycle
-// takes down everything else" shape this campaign's own rules forbid
-// (kit-registry.mjs's "a corrupt registry must never crash boot", applied
-// here to this GATE's own robustness, not just the guide's). A few retries
-// with a short backoff is enough for a TRANSIENT Windows filesystem lock to
-// clear; if it never clears, the caller still gets a real thrown error to
-// catch and record as one failed cycle, not a crashed process.
+// Robustness finding (this coder, this file, gate-review round), CORRECTED
+// after the true root cause was found (see SC1_REPORT.md §5c -- the
+// retraction is left visible there, not silently fixed here without a
+// trace): a plain `cpSync(bundleDir, hostileDir, {recursive:true})` threw
+// `EINPROGRESS, unknown error '\\?\C:\...'` (errno 112) and crashed the
+// ENTIRE spike process mid-run. This coder's FIRST read of that was wrong:
+// `EINPROGRESS` reads like a transient race worth retrying, and the first
+// fix here was exactly that -- a retry loop. It is not transient: **errno
+// 112 is Windows' ERROR_DISK_FULL**, which Node has no errno mapping for
+// and surfaces under the misleading `EINPROGRESS` name instead. The C:
+// drive had reached zero bytes free (41 abandoned sealed-kit copies from
+// every gate harness in this campaign, 2.37 GB, found and reclaimed) --
+// found and documented in `kit/sealed-corridor-gate.mjs`'s own
+// `assertStagingRoom`, mirrored here for the same reason: retrying a full
+// disk cannot succeed, and retrying it is what buried the real cause the
+// first time. A short retry is still worth keeping for genuinely transient
+// errors (a real Windows file-lock race is a documented Node/Windows
+// quirk), but errno 112 / EINPROGRESS specifically is now special-cased to
+// fail FAST with the true explanation instead.
 async function robustCopy(src, dest, attempts = 4) {
   let lastErr
   for (let i = 1; i <= attempts; i++) {
     try { cpSync(src, dest, { recursive: true }); return } catch (err) {
+      if (err?.errno === 112 || err?.code === 'EINPROGRESS') {
+        throw new Error(
+          `staging failed copying to ${dest}: the disk is FULL (errno 112 = `
+          + `ERROR_DISK_FULL, which Node surfaces as the misleading "EINPROGRESS"). `
+          + `Not retried -- retrying a full disk cannot succeed. Free space in `
+          + `${tmpdir()} (check for leaked kit copies from earlier gate runs) and `
+          + `re-run. Original: ${err?.message ?? err}`,
+        )
+      }
       lastErr = err
       if (i < attempts) await new Promise((r) => setTimeout(r, 400 * i))
     }
@@ -163,6 +179,41 @@ try {
   check('dist/reducer.wasm is present in the sealed kit manifest (posting requires it)', existsSync(join(bundleDir, 'dist', 'reducer.wasm')))
 } catch (err) {
   check('layer 1: sealed kit build did not throw', false, err?.message ?? String(err))
+}
+
+// Pre-flight disk check, same reasoning as robustCopy's errno-112 special
+// case above and `sealed-corridor-gate.mjs`'s own `assertStagingRoom`: this
+// spike stages ~25 copies of a ~62 MB sealed kit (16 reopen cycles + 5
+// negative-control-A + 9 registry-scenario, ~1.5 GB total across the run).
+// Checking free space BEFORE burning through 20+ minutes of spawns to
+// discover the disk is full is strictly better than discovering it via a
+// cryptic mid-loop EINPROGRESS. Mirrors the sibling gate's approach rather
+// than inventing a different one; if free space can't be measured this
+// returns `null` and does NOT invent a verdict (never assert "fine" from
+// an unmeasurable state).
+function freeBytesOnTemp() {
+  try {
+    const out = execFileSync('cmd.exe', ['/c', 'dir', '/-c', tmpdir()], { encoding: 'utf8' })
+    const m = out.match(/(\d+)\s+bytes free/i)
+    return m ? Number(m[1]) : null
+  } catch { return null }
+}
+const KIT_STAGE_BYTES = 70 * 1024 * 1024 // ~62 MB kit, rounded up with headroom
+const STAGES_THIS_RUN = 30 // 16 + 5 + 9, rounded up
+{
+  const free = freeBytesOnTemp()
+  if (free !== null && free < KIT_STAGE_BYTES * 3) {
+    check(
+      `pre-flight: enough free disk to stage ~${STAGES_THIS_RUN} sealed-kit copies (~${((KIT_STAGE_BYTES * STAGES_THIS_RUN) / 1e9).toFixed(1)} GB)`,
+      false,
+      `only ${(free / 1e6).toFixed(0)} MB free in ${tmpdir()} -- Windows reports a resulting disk-full `
+      + 'condition through Node as "EINPROGRESS, unknown error" (errno 112 = ERROR_DISK_FULL), which '
+      + 'reads like a transient race and is not one (SC1_REPORT.md §5c). Check for leaked kit copies '
+      + 'from earlier gate runs before re-running.',
+    )
+  } else if (free !== null) {
+    check(`pre-flight: enough free disk to stage ~${STAGES_THIS_RUN} sealed-kit copies (${(free / 1e9).toFixed(1)} GB free)`, true)
+  }
 }
 
 const activeDirs = []

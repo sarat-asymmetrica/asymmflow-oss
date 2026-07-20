@@ -465,6 +465,24 @@ counterexamples.
 > supplemented. The `robustCopy()` retry helper this section added is still
 > a genuine improvement to the spike's own robustness and stays.
 
+> **Follow-up by this coder, same round, after reading the correction
+> above:** `bare-registry-spike.mjs`'s own `robustCopy()` mirrors
+> `sealed-corridor-gate.mjs`'s fix now — errno 112 / `EINPROGRESS` is no
+> longer retried (retrying a full disk cannot succeed and is what buried
+> the cause the first time) and fails fast with the true explanation. Also
+> added a pre-flight `freeBytesOnTemp()` check (same technique: `cmd.exe
+> /c dir`, no new dependency) before the cycle loops start, so a full disk
+> is reported in one line before burning ~25 spawns discovering it the hard
+> way. Confirmed this spike's own `cleanup()` was not itself a leak source
+> — no abandoned `sc1-*` directories were found in `%TEMP%` when checked.
+> Full gate re-run with both fixes in place: **42 checks, 1 failure** — the
+> pre-flight disk check passed (plenty of space after the reclaim), the
+> reopen leg was 16/16, negative control A was 5/5, and the ONE failure was
+> a `HANG` on the malformed-JSON registry scenario's cycle 2 — §5b's STILL
+> OPEN, separate, genuinely intermittent finding, not this disk issue (its
+> own decoder-ring message never fired, confirming this run's failure was
+> not disk-related).
+
 *(original text follows, unedited)*
 
 
