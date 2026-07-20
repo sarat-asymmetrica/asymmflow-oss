@@ -143,7 +143,7 @@ cpSync(BARE_EXE_SRC, join(distOut, 'bare.exe'))
 // same code path up to this point — skips the pause so a rehearsal can
 // exercise the real .cmd repeatedly without relying on fragile piped-stdin
 // invocation quirks (team lead's own cmd.exe //c + cygpath -w findings,
-// PHASE3_KIT_REPORT.md §5e).
+// PHASE3_KIT_REPORT.md §5d).
 const RUN_BARE_MESH_CMD = `@echo off
 setlocal
 cd /d "%~dp0"

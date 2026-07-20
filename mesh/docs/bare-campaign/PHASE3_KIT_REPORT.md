@@ -174,14 +174,13 @@ distinguish this deliberately-broken kit from the working one would be
 exactly the kind of tool this campaign has already caught twice today
 producing a false "green."
 
-### 5d. The actual double-click artifact, not just the underlying binary
+### 5d. The actual double-click artifact — first pass, then hardened after gate pre-flight
 
-`runSpawnPipe` proves the `bare.exe app.bundle` pipeline; it does not by
-itself prove the `.cmd` a human actually double-clicks behaves the same,
-because `run_bare_mesh.cmd` ends in `pause >nul`, which blocks forever
-waiting for a keystroke — a real difference from a fire-and-forget script.
-Verified this separately, invoking the launcher the way a human would
-(via `cmd.exe`, with a keypress fed to satisfy the trailing `pause`):
+`runSpawnPipe` (§5b/5c) proves the `bare.exe app.bundle` pipeline directly.
+It does not by itself prove the `.cmd` a human actually double-clicks
+behaves the same, because `run_bare_mesh.cmd` ends in `pause >nul`, which
+blocks forever waiting for a keystroke — a real difference from a
+fire-and-forget script. First verification, one-shot, piped a keypress:
 
 ```
 $ "x" | cmd.exe /c ".\run_bare_mesh.cmd"
@@ -191,8 +190,66 @@ BARE_ENTRY_FOLD_OK digest=6c8c35eff1e2c04d6d46704ad7c542c2808717fae58fb1d91ceccf
 EXITCODE=0
 ```
 
-The real launcher, in hostile geography, produces the correct digest and
-the expected closing prompt.
+**The team lead independently gate-tested this same kit** (before this
+addendum) and raised exactly the right concern back: `pause >nul` is
+correct and must stay — it's what lets a client actually read the outcome
+instead of the window vanishing — but a rehearsal that only ever fires one
+piped keystroke isn't the same as proving the real launcher survives
+**repeated** automated invocation the way a statistical rehearsal needs.
+They also hit real Git-Bash-specific invocation traps (`cmd.exe /c` gets
+MSYS-mangled; a bare relative filename isn't found without `cygpath -w`)
+and, critically, demonstrated their own standing rule in the process: their
+first three attempts LOOKED like a failing kit and were entirely their own
+broken invocation — exactly the "can this rehearsal go RED for the right
+reason" question this document already applies to the harness itself (§5a),
+now applied to the invocation layer too.
+
+**Response: added a documented, explicit non-interactive switch to the
+launcher itself** (`ASYMMFLOW_KIT_NONINTERACTIVE`), rather than have the
+rehearsal quietly substitute `bare.exe app.bundle` for the real `.cmd`:
+
+```bat
+"%~dp0bare.exe" "%~dp0app.bundle"
+
+if defined ASYMMFLOW_KIT_NONINTERACTIVE goto skippause
+echo.
+echo (the kit has stopped - press any key to close this window)
+pause >nul
+:skippause
+```
+
+Unset (every human double-click, always): identical behavior to before,
+verified explicitly, no env var:
+
+```
+$ "y" | cmd.exe /c ".\run_bare_mesh.cmd"
+BARE_ENTRY_FOLD_OK digest=6c8c35eff1e2c04d6d46704ad7c542c2808717fae58fb1d91ceccfcbd09eb410
+(the kit has stopped - press any key to close this window)
+```
+
+Set (rehearsal only): re-ran the FULL rehearsal through the **actual
+launcher file**, not the underlying binary, avoiding the Git-Bash traps by
+driving it from PowerShell (native `cmd.exe /c`, no MSYS path mangling):
+
+```
+$env:ASYMMFLOW_KIT_NONINTERACTIVE = "1"
+10x: & cmd.exe /c ".\run_bare_mesh.cmd"   →  all 10 matched the exact expected digest, exitcode=0
+
+NEGATIVE CONTROL (same kit, reducer.wasm deleted), same real launcher, 5x:
+run 1..5: matched=False, exitcode=0, output contains
+  "Uncaught ModuleError: ASSET_NOT_FOUND: Cannot find asset '../dist/reducer.wasm'..."
+```
+
+**10/10 real launcher invocations correct; 5/5 negative-control launcher
+invocations correctly detected as broken.** One finding worth its own line:
+**through the `.cmd` wrapper, `cmd.exe`'s own reported exit code was 0 in
+both the passing AND the deliberately-broken runs** — `run_bare_mesh.cmd`
+never propagates `bare.exe`'s own exit code (`if defined
+ASYMMFLOW_KIT_NONINTERACTIVE goto skippause` falls through to the end of
+the script regardless of what came before). This is a live, concrete
+demonstration of why every assertion in this report is content-based, never
+exit-code-based — at the launcher layer, exit code carries **zero**
+information about success either way.
 
 ## 6. What this rehearsal does NOT prove
 
@@ -288,13 +345,19 @@ prevent (`PHASE0_GATE_D2_FLUSH_RACE.md`).
 1. Everything in §6, restated for completeness: no genuinely clean VM, no
    macOS/Linux, no real client ceremony, no persistent-data rebuild
    discipline, no firewall/anchor/probe parity, no two-machine corridor.
-2. `bare-guide.mjs` as the entry — does not exist yet; this builder's
-   `--entry=` parameter is designed for it but has not been run against it.
+2. `bare-guide.mjs` as the entry — landed in the tree partway through this
+   task (`mesh/kit/bare-guide.mjs`, P1A-wasi-shim's, seen as an untracked
+   file appearing mid-session) but was NOT read, touched, or run through
+   this builder — `--entry=kit/bare-guide.mjs` remains an untested (though
+   designed-for) path. Confirming it packs and rehearses clean is follow-on
+   work, explicitly not claimed here.
 3. The `devDependencies` alphabetical-reorder side effect noted in §7 —
    not reverted; flagged for the team lead's call.
-4. Whether `kit/dist-bare/`'s existing `.gitignore` entry
-   (`mesh/.gitignore` already lists `kit/dist-bare/` — confirmed present
-   before this task started) was added by this coder or pre-existed from
-   anticipation of this work; not investigated further, not load-bearing
-   either way since the effect (build output never committed) is correct
-   regardless of who added it.
+4. `kit/dist-bare/`'s `.gitignore` entry — confirmed by the team lead
+   (commit `b993936`) to be their own addition, made because the root
+   `.gitignore`'s `dist/` pattern does not match `dist-bare/` and this
+   builder's 45 MB `bare.exe` would otherwise have landed in the repo on
+   the next broad `git add`. Not this coder's doing; noted for the record.
+5. The `ASYMMFLOW_KIT_NONINTERACTIVE` switch (§5d) is new in this addendum
+   and has only been exercised by this coder's own rehearsal — it has not
+   been reviewed or used by anyone else yet.
