@@ -121,10 +121,30 @@ function hostileDir(tag) {
   tmpDirs.push(d)
   return d
 }
+// Copying a ~63 MB kit repeatedly, on a machine that may also be running other
+// sealed-kit gates, hits transient Windows filesystem errors (EINPROGRESS,
+// EBUSY, EPERM — antivirus and the OS both hold handles briefly). Observed
+// live 2026-07-20: one `EINPROGRESS` aborted a whole gate run mid-leg.
+//
+// This retry is HARNESS ROBUSTNESS ONLY and it is important to be precise
+// about what that means: it must never mask a failure of the thing under
+// test. It does not, because it only ever retries SETUP (creating and
+// populating a fresh directory) and never retries a ceremony run or
+// reinterprets a ceremony result. A setup that cannot be completed after
+// three attempts still throws.
 function freshKit(tag) {
-  const d = hostileDir(tag)
-  cpSync(BUILT, d, { recursive: true })
-  return d
+  let lastErr = null
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const d = hostileDir(tag)
+    try {
+      cpSync(BUILT, d, { recursive: true })
+      return d
+    } catch (err) {
+      lastErr = err
+      console.log(`  (setup retry ${attempt}/3 for ${tag}: ${err?.code ?? ''} ${err?.message ?? err})`)
+    }
+  }
+  throw new Error(`could not stage a fresh kit for ${tag} after 3 attempts: ${lastErr?.message ?? lastErr}`)
 }
 function cleanup() {
   if (KEEP) { console.log(`\n(--keep: left ${tmpDirs.length} temp dir(s) in place)`); return }
@@ -237,6 +257,71 @@ async function persistenceThroughLauncher(runs) {
   return { ok, runs }
 }
 
+// ── POSITIVE LEG C: the registry cannot brick the kit ─────────────────────
+// Independent of SC-1's own spike, deliberately: SC-5's charter is its own
+// controls, and "a corrupt registry must never crash boot" is inherited
+// verbatim from kit-registry.mjs as LAW. Law that is never executed is prose.
+//
+// Each fixture is written into a real kit's data/keys/rooms.json and the kit
+// is then driven through the REAL launcher. The bar is deliberately low and
+// absolute: whatever the registry says, the client must still reach the menu
+// and still get a clean Goodbye. A kit that dies on a malformed JSON file is
+// a kit that a field machine can brick by half-writing one file during a
+// power cut.
+const REGISTRY_FIXTURES = [
+  ['invalid JSON', '{not json at all'],
+  ['well-formed JSON that is not an array', '{"rooms":[]}'],
+  ['an array of nonsense', '[1,2,3]'],
+  ['an entry pointing at a storage folder that does not exist', JSON.stringify([{
+    roomKey: 'a'.repeat(64), storage: 'room-that-was-deleted', authorityPub: 'b'.repeat(64),
+    encryptionKey: null, bootstrap: null, title: 'gone',
+  }], null, 2)],
+  ['an entry with a malformed encryptionKey', JSON.stringify([{
+    roomKey: 'c'.repeat(64), storage: 'room-guide', authorityPub: 'd'.repeat(64),
+    encryptionKey: 'not-hex-at-all', bootstrap: null, title: 'bad key',
+  }], null, 2)],
+  ['an empty file', ''],
+]
+
+async function registryRobustness(runsPer) {
+  console.log(`\n== leg C: a broken registry must not brick the kit, N=${runsPer} per fixture ==`)
+  for (const [label, contents] of REGISTRY_FIXTURES) {
+    let ok = 0
+    let firstBad = null
+    for (let i = 1; i <= runsPer; i++) {
+      const kit = freshKit('legC')
+      mkdirSync(join(kit, 'data', 'keys'), { recursive: true })
+      writeFileSync(join(kit, 'data', 'keys', 'rooms.json'), contents)
+      // 150s, not 60s. The first version of this leg used 60s and produced
+      // two HANGs with COMPLETELY EMPTY stdout — which is NOT the signature
+      // of a kit wedged mid-ceremony (that leaves partial output); it is the
+      // signature of a process that had not yet produced its first byte.
+      // That run was made while three other sealed-kit gates were saturating
+      // the same machine, so TWO axes had changed at once (Rule 2) and the
+      // red was not attributable. The timeout is raised here so the leg
+      // measures the kit rather than the machine's load; a genuine wedge
+      // still fails, it just is not confused with a slow cold start.
+      const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '/exit', '5']), timeoutMs: 150000 })
+      const survived = r.stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
+        && r.stdout.includes('Goodbye -- this window is safe to close.')
+        && !r.hang
+      if (survived) ok++
+      else if (!firstBad) {
+        firstBad = {
+          i, hang: r.hang, ms: r.ms,
+          // An empty stdout on a hang is diagnostically different from a
+          // truncated one — surfaced explicitly so a future reader is not
+          // left guessing which shape they are looking at.
+          stdoutEmpty: r.stdout.trim().length === 0,
+          out: r.stdout.slice(0, 300), err: r.stderr.slice(0, 200),
+        }
+      }
+    }
+    check(`leg C: ${label} -- kit still reaches the menu and closes cleanly (${ok}/${runsPer})`,
+      ok === runsPer, firstBad ? JSON.stringify(firstBad) : '')
+  }
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 console.log('sealed-corridor-gate -- SC-5 independent verification (own driver, own controls)\n')
 
@@ -267,6 +352,12 @@ try {
 
   await ceremonyThroughLauncher(RUNS)
   await persistenceThroughLauncher(Math.min(RUNS, 16))
+  // N=3 per fixture, deliberately: these are CORRECTNESS proofs (does a
+  // malformed file crash the kit — yes or no), not rate measurements, so
+  // Rule 5's N>=16 does not apply. Six fixtures at N=3 is eighteen launcher
+  // runs; stated here so the smaller N is a declared choice rather than an
+  // unexplained shortfall.
+  await registryRobustness(3)
 } catch (err) {
   check('gate did not throw', false, err?.message ?? String(err))
 } finally {
