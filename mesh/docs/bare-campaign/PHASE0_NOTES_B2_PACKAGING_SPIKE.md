@@ -502,6 +502,166 @@ own code.
 
 ---
 
+## 9. `apply-bare.mjs`'s dynamic-import ternary — confirmed broken, condition-map fix verified
+
+**Trigger:** `mesh/host/apply-bare.mjs` (P1-A's file, read-only, not edited)
+selects its fs module at runtime via
+`const fsMod = isBare ? await import('bare-fs') : await import('node:fs')`.
+The team lead's hypothesis: `bare-pack`'s traverser is static and (per §8)
+treats `node:fs` identically to a nonexistent package, so this file — never
+run through `bare-pack` before, only run directly — would be a Phase 3
+blocker hiding in code that currently looks green.
+
+### 9a. Does the static traverser follow a dynamic `await import()` inside a ternary?
+
+Copied `apply-bare.mjs` and `wasi-preview1-lite.mjs` unmodified into
+`p0b-pack/apply-bare-test/host/`, with `mesh/dist/reducer.wasm` copied to a
+matching relative `dist/` sibling (read-only copies; neither original was
+edited). Sanity-checked first: a minimal `entry.mjs` calling
+`applyViaWasm([])` runs correctly under both plain Node and unbundled
+`bare.exe` (both branches of the ternary work fine un-packed — confirms
+these two files are functionally sound; this spike is purely about
+packaging).
+
+```
+$ bare-pack --host win32-x64 --offload -o packed-out/entry.bundle entry.mjs
+Bail: ModuleTraverseError: MODULE_NOT_FOUND: Cannot find module 'node:fs'
+  imported from '.../host/apply-bare.mjs'
+bare-pack exit=1
+```
+
+**Confirmed: the traverser DOES walk into the dynamic `await import()` inside
+the ternary and resolves both branches statically**, exactly the same
+`node:fs` failure mode as §8's negative-control-backed finding. This is
+actually the **better** of the two possible outcomes the team lead named —
+a traverser that ignored dynamic imports would have packed successfully and
+then thrown at runtime the first time the `node:fs` branch was reached
+(never, since `isBare` is always true inside the sealed artifact — a latent
+landmine). Instead it fails loud, at build time, before a bundle is ever
+produced. Still a real Phase 3 blocker as the file is currently written:
+`apply-bare.mjs` cannot be packed today.
+
+### 9b. The `imports` condition-map fix — VERIFIED end-to-end in hostile geography
+
+Built a scratchpad copy, `apply-bare-condmap.mjs`, replacing the ternary with
+a static import of a subpath key:
+
+```js
+import * as fsMod from '#fs'
+```
+
+alongside a `package.json` in the same scratchpad root:
+
+```json
+{
+  "name": "condmap-test",
+  "type": "module",
+  "imports": {
+    "#fs": {
+      "bare": "bare-fs",
+      "default": "fs"
+    }
+  }
+}
+```
+
+**One correction found along the way:** the team lead's sketch used
+`"default": "node:fs"`. Under plain Node this throws
+`ERR_INVALID_PACKAGE_TARGET: Invalid "imports" target "node:fs"` —
+Node rejects a `node:`-prefixed target string in a package `imports` map on
+this Node version (v22.17.0). Changing the default target to the legacy
+bare specifier `"fs"` (no `node:` prefix) resolves cleanly under Node. Use
+`"default": "fs"` in the real recipe, not `"node:fs"`.
+
+Pack-time result:
+
+```
+$ bare-pack --host win32-x64 --offload -o packed-out/entry.bundle entry.mjs
+bare-pack exit=0
+```
+
+**Clean pack, no `MODULE_NOT_FOUND`.** Inspected the bundle header to confirm
+*which* branch was actually resolved — not just that packing succeeded:
+
+```
+"#fs":"/../node_modules/bare-fs/index.js"
+```
+
+and confirmed the `default`/`fs` branch was never even touched — no `fs`
+resolution or embedded `fs.js` anywhere in the header. **The `bare` condition
+is selected and the `default` branch is discarded entirely at pack time**,
+which is exactly the property needed: one source file, dual-runtime by
+construction, packable.
+
+Combined this fix with the already-verified `import.meta.asset()` pattern
+from §4c for the reducer.wasm self-location hazard (the realistic composed
+Phase 2 recipe, not a second untested mechanism), and ran the full chain in
+**true hostile geography**:
+
+```
+$ cp -r packed-out/. hostile-geo-test-7/  &&  cp bare.exe hostile-geo-test-7/
+$ cd hostile-geo-test-7 && find . -type f
+./bare.exe
+./dist/reducer.wasm
+./entry.bundle
+./node_modules/bare-fs/prebuilds/win32-x64/bare-fs.bare
+./node_modules/bare-path/prebuilds/win32-x64/bare-path.bare
+./node_modules/bare-url/prebuilds/win32-x64/bare-url.bare
+
+$ ./bare.exe entry.bundle
+applyViaWasm ran, result type: object
+CONDMAP_ENTRY_DONE
+exit=0
+```
+
+**PASS.** Real `bare-fs` resolution via the condition map, real
+`import.meta.asset()`-located `reducer.wasm` read, real WASI instantiation,
+real `applyViaWasm()` call, zero PATH/npm-tree dependency — not just a
+clean pack exit code.
+
+### 9c. The copy-pasteable recipe
+
+**`package.json`** (proposed addition — NOT applied; the team lead will
+sequence this edit):
+
+```json
+{
+  "imports": {
+    "#fs": { "bare": "bare-fs", "default": "fs" }
+  }
+}
+```
+
+**Consumer file** (e.g. `apply-bare.mjs`), replace the ternary with:
+
+```js
+import * as fs from '#fs'
+// use fs.readFileSync(...) etc. exactly as before — same API shape on both
+// bare-fs and Node's fs for the calls this file makes.
+```
+
+For any file that also needs to locate a sibling binary asset by its own
+position (the `reducer.wasm` case), pair this with the already-verified
+`import.meta.asset('./relative/path')` + `--offload`/`--offload-assets`
+recipe from `PHASE0_NOTES_B2_PACKAGING_SPIKE.md` §4c — the two fixes are
+independent and compose cleanly, as demonstrated above.
+
+**Generalizes beyond `#fs`:** the same `imports` map can carry `#path`,
+`#url`, `#crypto`, `#os`, etc. subpath keys for every other `node:`-prefixed
+module a dual-runtime file needs, each with its own `{bare: ..., default:
+...}` pair (`bare-path`/`path`, `bare-url`/`url`, `bare-crypto`/`crypto`,
+`bare-os`/`os`) — one `package.json` stanza serves every dual-runtime file
+in Phase 2, not just this one.
+
+**When NOT to use this pattern:** `wasi-preview1-lite.mjs`'s existing
+approach — zero imports, all I/O injected by the caller — remains strictly
+better where it applies (no condition map needed at all, packs trivially,
+one shim body serves both runtimes with no static-resolution surface). The
+condition-map pattern is for files that must directly touch a runtime
+primitive with no possible injection seam (like `apply-bare.mjs`'s need to
+`readFileSync` the wasm module itself) — use dependency injection first,
+condition maps only when injection isn't available.
+
 ## 8. Pack-time resolution of `node:`-prefixed specifiers (post-gate follow-up)
 
 **Question:** does `bare-pack` resolve `node:`-prefixed specifiers at pack

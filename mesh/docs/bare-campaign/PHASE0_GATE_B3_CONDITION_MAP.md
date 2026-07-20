@@ -56,22 +56,44 @@ the property we need.
 
 ## THE RECIPE (copy-pasteable, binding for Phase 2)
 
+> **CORRECTED 2026-07-20 — the `default` targets must NOT carry the `node:` prefix.**
+> This document's first version wrote `"default": "node:fs"`. That throws
+> `ERR_INVALID_PACKAGE_TARGET` under Node v22.17.0 — Node rejects a `node:`-prefixed target
+> inside an `imports` map. Caught by coder P0-B and re-verified here:
+> `"default": "node:fs"` → ERR_INVALID_PACKAGE_TARGET; `"default": "fs"` → resolves clean.
+>
+> **My original verification was incomplete and that is why the error survived it.** I tested
+> the map (1) under Bare directly, (2) at pack time, (3) in hostile geography — but never
+> under **Node**, which is half the point of a *dual*-runtime recipe. The bare branch was
+> exercised three ways; the default branch was never executed at all. A dual-runtime claim
+> requires running both runtimes. Recorded because it is the same class of gap as the two
+> earlier broken probes: **the control you skip is the one that was hiding the defect.**
+
 In `mesh/package.json`:
 
 ```json
 "imports": {
-  "#fs":      { "bare": "bare-fs",      "default": "node:fs" },
-  "#path":    { "bare": "bare-path",    "default": "node:path" },
-  "#url":     { "bare": "bare-url",     "default": "node:url" },
-  "#crypto":  { "bare": "bare-crypto",  "default": "node:crypto" },
-  "#os":      { "bare": "bare-os",      "default": "node:os" },
-  "#readline":{ "bare": "bare-readline","default": "node:readline" },
-  "#net":     { "bare": "bare-tcp",     "default": "node:net" }
+  "#fs":      { "bare": "bare-fs",      "default": "fs" },
+  "#path":    { "bare": "bare-path",    "default": "path" },
+  "#url":     { "bare": "bare-url",     "default": "url" },
+  "#crypto":  { "bare": "bare-crypto",  "default": "crypto" },
+  "#os":      { "bare": "bare-os",      "default": "os" },
+  "#readline":{ "bare": "bare-readline","default": "readline" },
+  "#net":     { "bare": "bare-tcp",     "default": "net" }
 }
 ```
 
-Consumers write `import fs from '#fs'` — never `node:fs`, never a runtime ternary. One
+Consumers write `import * as fs from '#fs'` — never `node:fs`, never a runtime ternary. One
 source file, both runtimes, packable.
+
+`bare-pack` resolves ONLY the `bare` branch and discards `default` entirely at pack time —
+confirmed by P0-B reading the emitted bundle header, which maps
+`"#fs" → node_modules/bare-fs/index.js` with no trace of the default branch.
+
+**Prefer dependency injection where it applies.** `wasi-preview1-lite.mjs`'s zero-import
+shape (I/O handed in by the caller) is strictly better than a condition map and packs
+trivially. Use condition maps only where a file must touch a runtime primitive directly —
+e.g. reading the wasm module off disk.
 
 Two caveats before this is applied wholesale:
 
