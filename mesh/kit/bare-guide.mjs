@@ -328,6 +328,23 @@ export async function runGuide({ io } = {}) {
   guideIo.close()
   write('\nGoodbye -- this window is safe to close.\n')
   if (messengerCtx) messengerCtx.core.close()
+  // RULE 3 (PHASE0_GATE_D2_FLUSH_RACE.md): an explicit exit call is
+  // LOAD-BEARING, never relied-upon-natural-drain -- found live in this
+  // file, not just cited from the doc: the sealed kit driven from a
+  // hostile from-scratch directory HUNG intermittently (1 hang in 4
+  // sampled spawn-pipe runs) before this fix. Root cause: nothing in this
+  // function ever called `process.exit()`/`Bare.exit()`; it relied on the
+  // process exiting naturally once stdin reached EOF and no other work was
+  // pending -- exactly the "let the loop drain naturally" shape RULE 3
+  // warns produces a 10/10 hang in bare-bridge.mjs's own worker. Only
+  // guarded by `!io` so a caller that injects its own `io` (a future
+  // direct-import test with a fake stdio, not a real spawned process)
+  // never has ITS OWN process killed out from under it -- the real exit
+  // only fires when this function owns the real stdio it was given.
+  if (!io) {
+    if (typeof Bare !== 'undefined') Bare.exit(0)
+    else process.exit(0)
+  }
 }
 
 // ── entry point ──────────────────────────────────────────────────────────
