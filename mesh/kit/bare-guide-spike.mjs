@@ -192,6 +192,11 @@ console.log('\n-- layer 4: the sealed, bare-pack\'d kit, from a from-scratch dir
     const requiredFiles = ['app.bundle', 'bare.exe']
     const built = requiredFiles.every((f) => existsSync(join(bundleDir, f)))
     check('layer 4: build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs produced app.bundle + bare.exe', built)
+    // GATED (promoted from "reported" once kit/bare-guide-entry.mjs's
+    // setWasmSource(import.meta.asset(...)) injection landed): the manifest
+    // must contain the offloaded reducer.wasm, or posting is guaranteed to
+    // fail downstream with no chance of passing the content assertion below.
+    check('layer 4: dist/reducer.wasm is present in the sealed kit manifest (the asset-offload fix)', existsSync(join(bundleDir, 'dist', 'reducer.wasm')))
     if (built) {
       hostileDir = mkdtempSync(join(tmpdir(), 'bare-guide-sealed-'))
       cpSync(bundleDir, hostileDir, { recursive: true })
@@ -200,40 +205,22 @@ console.log('\n-- layer 4: the sealed, bare-pack\'d kit, from a from-scratch dir
       const result = await runSpawnPipe({
         exe: join(hostileDir, 'bare.exe'), scriptPath: join(hostileDir, 'app.bundle'), cwd: hostileDir,
         runs: 2, timeoutMs: 20000, stdin: CEREMONY_STDIN,
-        // The gate for THIS phase's own defect (the isMain guard being
-        // unreachable once bundled): the menu renders and the ceremony
-        // reaches a clean close. Posting a message going through to the
-        // reducer is checked SEPARATELY below, not folded into this
-        // predicate -- see the note after this block for why.
+        // GATED, per the lead's explicit ask: the full ceremony, including
+        // an ACTUAL post reaching the reducer ("posted, seq" marker) --
+        // not just the menu/close shell. Both defects this phase closed
+        // (the isMain guard AND the wasm asset injection) are covered by
+        // one predicate now that both are fixed.
         isSuccess: (stdout) =>
           stdout.includes('Welcome.') &&
           stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)') &&
           stdout.includes('kitchen table') &&
+          /posted, seq \d+/.test(stdout) &&
+          stdout.includes('a real sealed-kit message') &&
           stdout.includes('Goodbye -- this window is safe to close.'),
       })
       console.log(`  ${formatResult('sealed kit ceremony', result)}`)
-      check('layer 4: the SEALED kit renders the menu, opens the messenger, and closes cleanly (the isMain-guard fix)', result.ok === result.runs,
+      check('layer 4: the SEALED kit renders the menu, posts a REAL message through the reducer, and closes cleanly', result.ok === result.runs,
         result.results.find((r) => r.outcome !== 'OK') ? JSON.stringify(result.results.find((r) => r.outcome !== 'OK')).slice(0, 400) : '')
-
-      // Message-posting is reported, not asserted as a pass/fail gate on
-      // THIS phase's deliverable: reducer.wasm's asset offload for a
-      // guide-entry build is a SEPARATE, already-identified defect
-      // (apply-bare.mjs's default self-location uses `new URL(...,
-      // import.meta.url)`, which bare-pack's static asset detector does
-      // not recognise -- only `import.meta.asset()` is -- routed to
-      // P0-B/packaging, not this file's to fix or to touch). Recorded
-      // honestly either way, per this phase's own standing rule.
-      const anyOutput = result.results.map((r) => r.stdout).join('\n---\n')
-      const posted = /posted, seq \d+/.test(anyOutput)
-      const knownAssetBug = /ENOENT.*reducer\.wasm/i.test(anyOutput)
-      if (posted) {
-        console.log('  (message posting through the sealed kit SUCCEEDED -- the reducer.wasm asset bug appears to be fixed)')
-      } else if (knownAssetBug) {
-        console.log('  (message posting FAILED with the known, separately-owned reducer.wasm asset-offload bug -- exact ENOENT reproduced, not this phase\'s defect, not fixed here)')
-      } else {
-        console.log('  (message posting failed with an UNRECOGNIZED error -- worth a fresh look, not the known asset bug)')
-        console.log(`  detail: ${anyOutput.slice(0, 600)}`)
-      }
     }
   } catch (err) {
     check('layer 4: sealed kit build/run did not throw', false, err?.message ?? String(err))
