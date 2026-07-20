@@ -962,3 +962,127 @@ Two variables were changed between the working and failing observations, which i
 produced the misattribution. When a green case and a red case differ in more than one
 respect, the comparison identifies nothing — vary one axis at a time. This is the same
 root failure as the campaign's other six probe errors, in a new costume.
+
+---
+
+## 13. `kit/bare-guide-entry.mjs` lands — re-rehearsed, corrected input sequence
+
+P1A's thin entry (`kit/bare-guide-entry.mjs`, unconditional `await
+runGuide()`, no `isMain` guard — the fix for §12's real root cause)
+landed during this task. Rehearsed immediately, not held for later, per
+the standing instruction not to wait idle.
+
+### 13a. Corrected input sequence
+
+The team lead's own correction: the firewall-offer step consumes ONE
+line of input (`io.ask('Press Enter to continue, or type skip...')`) —
+missing this in the scripted sequence desyncs every subsequent prompt by
+one line, which cost them 20 minutes chasing a phantom defect. Used
+`skip` explicitly (unambiguous; empty-Enter also falls through to the
+same honest-stub branch per `bare-guide.mjs`'s own code, but `skip` is
+the documented choice): `2 / skip / <message> / /exit / 5`.
+
+### 13b. Built, packed, rehearsed — item 1 (isMain fix): CONFIRMED WORKING
+
+```
+$ node kit/build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs
+bare-pack --host win32-x64 --offload -o kit/dist-bare/app.bundle kit/bare-guide-entry.mjs
+total: 23 file(s), 58.9 MB
+```
+
+Copied to a fresh hostile directory (no npm tree, no source — confirmed
+by listing it), driven through `spawn-pipe-harness.mjs` (self-test PASS
+first, as always) with the corrected script, real spawned pipe, 5 runs —
+**and separately through the actual `.cmd` launcher via PowerShell**
+(avoiding the Git Bash traps):
+
+```
+guide ceremony (guide-entry): OK=0/5 PARTIAL=5/5 TOTAL_LOSS=0/5 HANG=0/5
+```
+
+Every run now produces the FULL ceremony trail — menu renders, firewall
+offer works, messenger opens, a room is created — confirming **the
+`isMain` fix genuinely resolves §12's total-silent-loss defect.** Real
+output, every time, not zero bytes.
+
+### 13c. Item 4 (the wasm offload bug): STILL OPEN, confirmed by direct evidence, not assumed
+
+`bare-guide-entry.mjs` does not yet call `setWasmSource(import.meta.asset(
+'../dist/reducer.wasm'))` (checked directly — grepped both the entry and
+`bare-guide.mjs` itself for `setWasmSource`/`import.meta.asset`, neither
+appears). **Manifest check confirms no `dist/reducer.wasm` was offloaded**
+— exactly §12a's prediction, verified again on the real current build, not
+assumed carried over from last time:
+
+```
+$ find kit/dist-bare -maxdepth 1 -iname dist
+(no match — no dist/ directory at all)
+```
+
+The ceremony now runs far enough to hit it directly, live, in hostile
+geography — real reproduction, not a hypothesis:
+
+```
+> hello from rehearsal
+  (not posted -- ENOENT: no such file or directory, open
+    "\\?\C:\...\bare-guide-hostile-2\app.bundle\dist\reducer.wasm")
+> /exit
+====================================
+  ASYMMFLOW MESH -- GUIDE (Bare)
+====================================
+...
+> 5
+
+Goodbye -- this window is safe to close.
+```
+
+**Worth noting plainly: this is a GRACEFUL failure, not a crash.** The
+guide's own `openMessenger` catches the post error and prints `(not
+posted -- ...)` rather than throwing — the menu loop continues normally,
+`/exit` and `5` work, and the exact `"Goodbye -- this window is safe to
+close."` line prints. Confirmed identically through the real `.cmd`
+launcher (`exitcode=0 menu=True posted=False goodbye=True`).
+
+### 13d. The rehearsal's own negative control (item 3 of the prior brief) — satisfied by the real broken artifact
+
+Per the instruction ("you have a real broken artifact now rather than a
+synthetic one — use it; if your rehearsal would have passed the zero-byte
+build, fix the rehearsal"): this build genuinely IS broken (message
+posting fails) and the rehearsal's own content assertion —
+`/\(posted, seq \d+\)/.test(stdout)` — correctly does NOT match, so every
+one of the 5 spawned-pipe runs is classified `PARTIAL`, never `OK`. **The
+rehearsal correctly flags the current real build as failing.** No
+synthetic fixture was needed; the live defect served as its own negative
+control, exactly as instructed.
+
+### 13e. Current overall verdict — does the sealed kit run the FULL ceremony from hostile geography?
+
+**Not yet — one defect down, one still open.** The `isMain` total-silent-
+loss defect (§12) is genuinely fixed and reconfirmed here. The
+`reducer.wasm` offload gap (§12a's second finding) is still open and now
+directly observed blocking the messenger's actual purpose (posting a real
+message through the reducer) rather than merely predicted from the
+manifest. **The rehearsal itself is ready and staged** — same driver,
+same corrected input sequence, same content assertions — to re-run the
+instant `bare-guide-entry.mjs` adds the `setWasmSource(import.meta.asset(
+'../dist/reducer.wasm'))` call. Not held idle: this section documents a
+real, current, reproducible state, not a placeholder.
+
+### 13f. README — NOT updated yet, and why
+
+Item 5 of the prior brief asked for `README_BARE_KIT.txt` to describe the
+real ceremony "since it will finally be true." **It is not yet true** —
+message posting still fails in the current build (§13c) — so the README
+was deliberately left describing the fold-proof (§10a) rather than a
+ceremony that doesn't fully work end-to-end yet. Updating it now would
+repeat the exact honesty failure this report has avoided throughout:
+describing a capability the shipped artifact cannot yet perform. Staged
+for the moment §13c actually resolves and re-verifies clean, not before.
+
+### 13g. Cleanup
+
+Restored `kit/dist-bare/` to the default entry (`bare-entry.mjs`,
+proven-clean, no open defects) after this rehearsal, consistent with
+every prior task in this report — the checked-in build is never the
+most-recently-tested diagnostic one. Hostile directory and scratchpad
+driver script removed.

@@ -28,6 +28,61 @@ behind one isn't wired yet.
 Old `mesh/kit/guide.mjs`/`guide-spike.mjs` (Node line) untouched, still
 green — the rollback path stays warm, exactly as required.
 
+**SEALED KIT: YES, the full ceremony runs from hostile geography.** A real
+defect surfaced during kit integration (found by P0-B, root-caused by the
+campaign lead, fixed here) — see §1a below — is now fixed and verified: a
+`bare.exe app.bundle` built from `kit/bare-guide-entry.mjs`, copied whole
+to a from-scratch temp directory, driven over a real spawned pipe,
+correctly renders the menu, answers the firewall offer, opens the
+messenger, lists rooms, and prints the exact "Goodbye" line — 2/2 stable
+runs. One thing in that same ceremony does NOT yet work: posting a message
+through the sealed kit fails with `ENOENT ... reducer.wasm` — a SEPARATE,
+already-identified, differently-owned defect (apply-bare.mjs's asset
+resolution, not this file's to fix) — see §1a.
+
+### 1a. Root-caused defect, found and fixed this round
+
+**Symptom** (P0-B, kit integration): the sealed kit built with
+`kit/bare-guide.mjs` as entry produced ZERO bytes on stdout/stderr, exit
+code 0, every run — indistinguishable from success by exit status alone.
+
+**Root cause** (the campaign lead, bisected by packing progressively
+smaller entries): `bare-guide.mjs`'s own `isMain` guard —
+
+```js
+const argv = typeof Bare !== 'undefined' ? Bare.argv : process.argv
+const isMain = argv[1] && new URL(import.meta.url).pathname... === argv[1]...
+if (isMain) await runGuide()
+```
+
+— is correct for a real script invocation (`bare kit/bare-guide.mjs`:
+`argv[1]` and `import.meta.url` both name the same real file) but
+STRUCTURALLY FALSE once bundled: inside a `bare-pack` bundle, `argv[1]` is
+the bundle's own path (`.../app.bundle`) while `import.meta.url` resolves
+to the module's VIRTUAL path *inside* the bundle (`/kit/bare-guide.mjs`).
+The two can never compare equal, so `isMain` is false every time,
+`runGuide()` is never called, and Bare exits 0 on the silent no-op.
+
+**The fix** (per the lead's explicit direction, matching the precedent
+already proven by `host/bare-entry.mjs`): a new file,
+`kit/bare-guide-entry.mjs` — a thin, UNCONDITIONAL entry
+(`import { runGuide } from './bare-guide.mjs'; await runGuide()`, no
+guard at all) that `build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs`
+now packs, instead of `bare-guide.mjs` directly. `bare-guide.mjs`'s own
+`isMain` guard is UNCHANGED and remains correct for its own two real
+callers: `bare kit/bare-guide.mjs` (a real script invocation) and
+`bare-guide-spike.mjs`'s pure-helper imports (`normalizeCode`/
+`groupInFours`), which must NOT trigger a live guide session as a side
+effect of being imported for their exports.
+
+**Gated properly, per the lead's explicit ask** — a green unbundled run
+proves nothing about the bundled artifact (the exact RULE 4 lesson,
+recurring at a new layer): §3's layer 4 now builds the real sealed kit,
+copies it to a from-scratch directory, and drives it through a real
+spawned pipe, asserting on content (menu rendered, room created, the exact
+"Goodbye" line) — never on exit code, which was 0 in both the broken and
+the working case.
+
 ## 2. UX-law conformance table (against `PHASE0_NOTES_D_REVERIFY.md` §6)
 
 | UX-law item | Status | Detail |
@@ -74,14 +129,19 @@ and rolled its own; this phase does not repeat that).
 | 2 — real spawn-pipe, out-of-range menu choice handled gracefully, 2 runs each target | 2 | **PASS**, both targets OK=2/2 |
 | 3 — negative control A: `spawn-pipe-harness.mjs`'s own shipped `selfTest()` | 1 | **PASS** — correctly distinguishes OK/HANG/TOTAL_LOSS/PARTIAL on its own synthetic fixtures |
 | 3 — negative control B: a fixture copy of `bare-guide.mjs` with its closing "Goodbye" line deleted, driven through the SAME real spawn-pipe path as layer 2 | 1 | **PASS** — 3/3 runs correctly flagged as `TOTAL_LOSS` (not OK), proving THIS spike's own success predicate (not just the harness's generic one) can detect a broken guide |
+| 4 — the SEALED kit (`build-bare-kit.mjs --entry=kit/bare-guide-entry.mjs`), copied to a from-scratch temp directory, driven via `bare.exe app.bundle` over a real spawned pipe, 2 runs | 2 | **PASS** — build produced `app.bundle`+`bare.exe`; OK=2/2 on menu-rendered/room-created/Goodbye. Message posting reported separately (fails with the known, differently-owned `reducer.wasm` asset bug — not asserted as pass/fail against this phase's own deliverable, see §1a) |
 
-**14 checks total, 0 failures.** Re-run 3× back-to-back, 14/14 every time
-— stable, no flake observed. Also run from
+**16 checks total, 0 failures.** Re-run twice more back-to-back after
+layer 4 was added (16/16 both times), plus a manual 3× stability check of
+just the sealed-kit ceremony via a raw piped `bare.exe app.bundle`
+invocation outside the spike (2/2 clean each time, same result as the
+spike's own layer 4) — stable, no flake observed. Also run from
 `C:\Users\schan\AppData\Local\Temp\claude\...\scratchpad\p1a` (outside the
 repo tree, absolute script path) — same result, no leftover temp
-directories (every spawn-pipe scenario uses its own `mkdtempSync` cwd,
-cleaned up in a `finally` block; confirmed by listing both the hostile
-directory and the OS tmpdir post-run).
+directories (every spawn-pipe scenario, including layer 4's sealed-kit
+copy, uses its own `mkdtempSync` cwd, cleaned up in a `finally` block;
+confirmed by listing both the hostile directory and the OS tmpdir
+post-run).
 
 **The real end-to-end proof, stated plainly**: layer 2's "full menu flow"
 scenario is not a mock — it spawns the actual `bare-guide.mjs` over a real
@@ -124,12 +184,12 @@ neither is imported by `bare-guide.mjs`:
   (only read-and-compared against the source).
 - **A genuinely clean machine** — same standing caveat as every prior
   phase; Phase 4+'s hostile-machine rehearsal is the real gate for that.
-- **The sealed-kit packaging path with `bare-guide.mjs` as the actual
-  entry** — `build-bare-kit.mjs` (another coder's file, read-only here)
-  already names `kit/bare-guide.mjs` as its intended eventual `--entry`,
-  but this phase did not run `npm run buildbarekit --entry=kit/bare-guide.mjs`
-  or verify the packed bundle launches correctly — that is a packaging-side
-  gate, not this phase's.
+- **The `reducer.wasm` asset-offload defect's actual fix** — reproduced
+  and precisely diagnosed (§1a, §3 layer 4) but not fixed here; routed to
+  P0-B/packaging per the lead's direction (do not edit `apply-bare.mjs`).
+  Once fixed, layer 4's message-posting assertion should be promoted from
+  "reported" to "gated" — flagged in the spike's own code comment so this
+  isn't silently forgotten.
 - **Device-identity persistence across a REAL machine restart** — the
   `./data/keys/bare-guide-device.seed` file is written and re-read
   correctly within a single spike run (each spawn-pipe scenario uses a
@@ -147,8 +207,11 @@ neither is imported by `bare-guide.mjs`:
 ## 6. Files
 
 - `mesh/kit/bare-guide.mjs` — the ported guide (new).
-- `mesh/kit/bare-guide-spike.mjs` — the 14-check gate, both runtimes, two
-  negative controls (new).
+- `mesh/kit/bare-guide-entry.mjs` — the thin, unconditional sealed-kit
+  entry point (new, added this round to fix §1a's defect).
+- `mesh/kit/bare-guide-spike.mjs` — the 16-check gate: pure helpers, real
+  spawn-pipe scenarios, two negative controls, and the sealed-kit
+  from-scratch ceremony (new; layer 4 added this round).
 - `mesh/docs/bare-campaign/PHASE3_GUIDE_REPORT.md` — this file.
 
 Not touched: `mesh/kit/guide.mjs`, `mesh/kit/guide-spike.mjs`, the rest of
