@@ -156,3 +156,33 @@ the possibility that the seam is fundamentally lossy.
 - Exit code 0 on total output loss is itself alarming and is NOT explained here. Treat Bare
   exit codes as unreliable evidence of success generally; a second instance was observed
   independently during the condition-map gate, where a throwing process still exited 0.
+
+---
+
+## Appendix — gate's independent verification of the stdio-check.mjs result (2026-07-20)
+
+P0-D's most consequential claim (our own DP4 proof-of-concept silently drops 100% of its
+replies) was re-run personally by the orchestrator before being acted on, because it
+invalidates work this campaign had already marked PASS.
+
+Driver: Node parent, `spawn(bare, [script], { stdio: ['pipe','pipe','pipe'] })`, writing one
+ndjson request to `child.stdin` and collecting `child.stdout` via `'data'` events — the shape
+a real sidecar bridge is driven with. Same machine, same file, minutes apart:
+
+| driver | `{"event":"ready"}` | `{"echoed":…}` (the payload) | exit |
+|---|---|---|---|
+| shell pipe — how it was verified on 2026-07-19 | arrives | **arrives** | 0 |
+| real `spawn` pipe — production shape | 10/10 | **0/10 — every reply lost** | 0 (×10) |
+
+```
+runs=10  ready=10/10  echoed(payload)=0/10  exits={"0":10}
+```
+
+**CONFIRMED.** The `ready` line — written before the async boundary — always survives; the
+reply, written after, never does. Exit code 0 on every run.
+
+The lesson is about method, not about Bare: **the verification topology was the entire
+difference between a passing proof and a 100% lossy channel.** A shell pipe and a spawn pipe
+are not interchangeable, and only one of them models the system we are building. That is now
+Rule 4, and a permanent regression test is being built so this class of error cannot recur
+silently.
