@@ -303,7 +303,7 @@ async function provingGroundsRed() {
   {
     const kit = freshKit('ctl-corrupt')
     writeFileSync(join(kit, 'app.bundle'), 'this is not a bundle')
-    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', MARK, '/exit', '5']), timeoutMs: 45000 })
+    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '', MARK, '/exit', '5']), timeoutMs: 45000 })
     const looksHealthy = r.stdout.includes('Goodbye') && /posted, seq \d+/.test(r.stdout)
     allRed = check('control 1: a corrupted app.bundle is NOT reported as a healthy ceremony', !looksHealthy,
       `stdout was ${JSON.stringify(r.stdout.slice(0, 200))}`) && allRed
@@ -349,7 +349,11 @@ async function ceremonyThroughLauncher(runs) {
   let firstBad = null
   for (let i = 1; i <= runs; i++) {
     const kit = freshKit(`legA-${i}`)
-    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', `${MARK}-${i}`, '/rooms', '/exit', '5']) })
+    // '' answers the uniform fork question with Enter (= open/start the
+    // conversation on THIS computer, no invite, no network). See
+    // bare-guide.mjs's openMessenger for why that question is asked
+    // identically in both states.
+    const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '', `${MARK}-${i}`, '/rooms', '/exit', '5']) })
     const good = r.stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
       && /posted, seq \d+/.test(r.stdout)
       && r.stdout.includes(`${MARK}-${i}`)
@@ -378,10 +382,10 @@ async function persistenceThroughLauncher(runs) {
   for (let i = 1; i <= runs; i++) {
     const kit = freshKit(`legB-${i}`)
     const body = `${MARK}-persist-${i}`
-    const r1 = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', body, '/exit', '5']) })
+    const r1 = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '', body, '/exit', '5']) })
     const posted = /posted, seq \d+/.test(r1.stdout)
     // Second, entirely separate process, same kit folder.
-    const r2 = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '/rooms', '/exit', '5']) })
+    const r2 = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '', '/rooms', '/exit', '5']) })
     const readBack = r2.stdout.includes(body)
     const didNotRecreate = !r2.stdout.includes('created a new room for this kit')
     // The data really landed inside the kit folder — this is the launcher's
@@ -441,7 +445,7 @@ async function registryRobustness(runsPer) {
       // red was not attributable. The timeout is raised here so the leg
       // measures the kit rather than the machine's load; a genuine wedge
       // still fails, it just is not confused with a slow cold start.
-      const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '/exit', '5']), timeoutMs: 150000 })
+      const r = await runLauncher({ kitDir: kit, stdin: stdinScript(['2', 'skip', '', '/exit', '5']), timeoutMs: 150000 })
       const survived = r.stdout.includes('ASYMMFLOW MESH -- GUIDE (Bare)')
         && r.stdout.includes('Goodbye -- this window is safe to close.')
         && !r.hang
@@ -479,21 +483,73 @@ async function registryRobustness(runsPer) {
 // time — so this drives both kits interactively and relays between them,
 // playing the part the second human plays.
 
-/** First non-empty line after a marker — the guide prints codes on their own
- * line under a heading, and matching that shape is more robust than counting
- * blank lines (whose number changed once already today, when the double-
- * spacing bug was fixed). */
-function lineAfter(output, marker) {
-  const i = output.indexOf(marker)
-  if (i === -1) return null
-  for (const raw of output.slice(i + marker.length).split('\n').slice(1)) {
-    const line = raw.trim()
-    if (line) return line
+const stripSpaces = (s) => (s ?? '').replace(/\s+/g, '')
+
+/**
+ * Find a printed code by what the code IS, not by where it sits in prose.
+ *
+ * The first draft matched "first non-empty line after <marker>" and extracted
+ * `youlike(WhatsApp,email,amessage)--orreaditaloudingroupsoffour` — because the
+ * marker phrase appears MID-SENTENCE in the founder's explanation, so the
+ * "next line" was simply the rest of that sentence.
+ *
+ * Anchoring a gate on prose is fragile twice over: the wording is
+ * Reception-Grade copy that is expected to be revised by design, and the
+ * blank-line count around it already changed once today when the
+ * double-spacing bug was fixed. So match the VALUE instead — scan every line,
+ * strip the grouped-in-fours spacing, and return the first that satisfies a
+ * predicate about the code itself. This survives any rewording of the copy.
+ */
+function findCodeLine(output, predicate) {
+  for (const raw of output.split('\n')) {
+    const candidate = stripSpaces(raw)
+    if (candidate && predicate(candidate)) return candidate
   }
   return null
 }
 
-const stripSpaces = (s) => (s ?? '').replace(/[\s ​]+/g, '')
+/** The invite envelope is self-identifying (invite-code.mjs's PREFIX_V1/V2). */
+const findInviteCode = (output) => findCodeLine(output, (c) => /^asymm-room[12]\./.test(c))
+
+/** A pairing code is a bare z32 writer key: long, all base32-ish, and with no
+ * dots — so it can never be confused with the dotted invite envelope or with
+ * a line of prose. */
+const findPairingCode = (output) => findCodeLine(output, (c) => /^[0-9a-z]{40,}$/i.test(c))
+
+/**
+ * Wait for `text` to show up in a kit's room, RE-ASKING as we go.
+ *
+ * The bug this replaces, found at the gate and worth recording because it is
+ * a harness defect that looked exactly like a product defect: the first draft
+ * sent `/rooms` ONCE and then waited up to 120s for the message to appear in
+ * that output. But `/rooms` prints a SNAPSHOT. If replication had not landed
+ * at the instant it ran, nothing would ever change on screen no matter how
+ * long we waited — the harness was watching a still photograph for movement.
+ *
+ * It failed asymmetrically, which is what made it interesting: B->A passed
+ * (A happened to be asked after the message had landed) while A->B failed
+ * every time. An asymmetric result on a symmetric mechanism is a strong hint
+ * that the harness, not the mechanism, is what differs between the two
+ * directions.
+ */
+async function pollForMessage(kit, text, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  const re = new RegExp(text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&'))
+  while (Date.now() < deadline) {
+    if (re.test(kit.output)) return true
+    if (kit.closed) return false
+    // `/read`, NOT `/rooms`. This distinction is the whole finding: `/rooms`
+    // prints `lastPreview`, the LAST message in canonical (Seq, Actor) order,
+    // which a lower-seq arrival can never appear in. Asserting on it reported
+    // "the message never arrived" for messages that had already arrived —
+    // and, worse, it was the ONLY read surface the guide had, which is how a
+    // real product gap (two people on a corridor could not read each other)
+    // stayed invisible. `/read` prints the actual conversation.
+    kit.send('/read')
+    if (await kit.waitFor(re, 6000)) return true
+  }
+  return false
+}
 
 async function corridorLeg(runs) {
   console.log(`\n== leg D: THE CORRIDOR — two sealed kits, both REAL launchers, N=${runs} ==`)
@@ -514,14 +570,14 @@ async function corridorLeg(runs) {
       if (!await A.waitFor(/ASYMMFLOW MESH -- GUIDE \(Bare\)/, 60000)) { why = 'A never reached the menu'; throw 0 }
       A.send('2'); A.send('skip'); A.send('connect'); A.send('')
       if (!await A.waitFor(/code for the OTHER computer/i, 90000)) { why = 'A never offered an invite code'; throw 0 }
-      const inviteCode = stripSpaces(lineAfter(A.output, 'code for the OTHER computer'))
+      const inviteCode = findInviteCode(A.output)
       if (!inviteCode || !inviteCode.startsWith('asymm-room')) { why = `A's invite code did not parse: ${JSON.stringify(inviteCode)}`; throw 0 }
 
       // ---- joiner side: paste it, read back the pairing code
       if (!await B.waitFor(/ASYMMFLOW MESH -- GUIDE \(Bare\)/, 60000)) { why = 'B never reached the menu'; throw 0 }
       B.send('2'); B.send('skip'); B.send('connect'); B.send(inviteCode)
       if (!await B.waitFor(/code for the OTHER computer/i, 90000)) { why = 'B never printed its pairing code'; throw 0 }
-      const pairingCode = stripSpaces(lineAfter(B.output, 'code for the OTHER computer'))
+      const pairingCode = findPairingCode(B.output)
       if (!pairingCode) { why = 'B pairing code did not parse'; throw 0 }
       B.send('')  // the LAN address prompt — Enter to keep waiting on hyperswarm
 
@@ -531,17 +587,14 @@ async function corridorLeg(runs) {
         why = 'B never became writable (the corridor did not form)'; throw 0
       }
 
-      // ---- B -> A
+      // ---- B -> A, then A -> B, each polled rather than sampled once
       B.send(msgB)
-      if (!await B.waitFor(new RegExp(`posted, seq \\d+`), 60000)) { why = 'B could not post'; throw 0 }
-      A.send('/rooms')
-      if (!await A.waitFor(new RegExp(msgB.replace(/[-]/g, '\\-')), 120000)) { why = 'B\'s message never reached A'; throw 0 }
+      if (!await B.waitFor(/posted, seq \d+/, 60000)) { why = 'B could not post'; throw 0 }
+      if (!await pollForMessage(A, msgB, 120000)) { why = "B's message never reached A"; throw 0 }
 
-      // ---- A -> B
       A.send(msgA)
-      if (!await A.waitFor(new RegExp(`posted, seq \\d+`), 60000)) { why = 'A could not post'; throw 0 }
-      B.send('/rooms')
-      if (!await B.waitFor(new RegExp(msgA.replace(/[-]/g, '\\-')), 120000)) { why = 'A\'s message never reached B'; throw 0 }
+      if (!await A.waitFor(/posted, seq \d+/, 60000)) { why = 'A could not post'; throw 0 }
+      if (!await pollForMessage(B, msgA, 120000)) { why = "A's message never reached B"; throw 0 }
 
       ok++
     } catch { /* `why` already set; fall through to teardown */ }
