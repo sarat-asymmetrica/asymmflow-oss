@@ -10,9 +10,10 @@ built by re-deriving bridge-server.mjs's own logic from the SAME underlying
 host modules (mesh-node.mjs, capability.mjs, social-room.mjs,
 invite-code.mjs, attachments.mjs, export-transcript.mjs — reused, never
 reimplemented), fed through a real ndjson stdio transport, passes the same
-30-scenario behavioral suite bridge-spike.mjs gates on (38 checks here, one
-extra layer added — see §2) under **both** `node` and `npx bare`, including
-from outside the repo tree. The Node bridge line (`bridge-server.mjs` /
+30-scenario behavioral suite bridge-spike.mjs gates on **plus a real
+`child_process.spawn`-driven leg** (45 checks total under Node, 37 under
+Bare — see §2) under **both** `node` and `npx bare`, including from outside
+the repo tree. The Node bridge line (`bridge-server.mjs` /
 `bridge-spike.mjs`) is untouched and still green — the rollback path stays
 warm.
 
@@ -26,36 +27,66 @@ map) and the `#fs`/`#crypto` condition-map entries this file's `attach`/
 still imports `node:crypto` + `./apply.mjs` directly, unmigrated) remains
 open — see §3.
 
-## 2. 30-check results, both runtimes
+**A THIRD round of correction happened mid-phase, and it mattered more than
+either blocker above.** This file's own FIRST flush-race investigation
+(shell pipes, §4's earlier draft) reported "0 truncations in 45 runs" —
+which was true, and also not evidence of much: the campaign lead
+independently re-tested with the REAL production topology
+(`child_process.spawn`, parent reading `stdout.on('data')`) and found TWO
+real bugs the shell-pipe method could not see (`PHASE0_NOTES_D2_FLUSH_
+RACE.md`). `bare-bridge.mjs` was fixed for both (RULE 1/2/3 below) and
+`bare-bridge-spike.mjs` gained a real spawn-driven leg plus a negative
+control that independently reproduces one of the two bugs against the
+campaign's own known-broken script. This is the accurate, current account;
+§4 below is written against it, not the earlier draft.
 
-`bare-bridge-spike.mjs` runs a superset of bridge-spike.mjs's 30 checks:
-the same scenario (anchored PO room, hub+desk, malformed-frame resilience,
-listRooms/roomState, post + expectation validation + urgency float,
-claimRoom/releaseClaim, attach→fetchAttachment sha256 round-trip,
-exportTranscript verified via verify-transcript.mjs, room-updated events
-(self + replicated), GL-5 seq-continuation across a bridge-core restart,
-social room + real invite redeem under encryption, the claim-skip proof in
-a social room) **plus** a 7-check "frame loop" layer (§3, layer 2) that
-exercises the real ndjson buffering code path directly (split lines,
-malformed lines, blank lines, multiple frames in one chunk) — something
-bridge-spike.mjs's TCP-socket version doesn't need a separate layer for,
-because `net.Socket`'s own buffering already gets exercised implicitly by
-real localhost traffic; this file's stdio transport is new code, so it gets
-its own explicit proof.
+## 2. Check results, both runtimes
+
+`bare-bridge-spike.mjs` runs THREE layers of proof (its own header explains
+each in full):
+
+1. **Layer 1 — the behavioral suite.** Bridge-spike.mjs's own scenario
+   (anchored PO room, hub+desk, malformed-frame resilience, listRooms/
+   roomState, post + expectation validation + urgency float, claimRoom/
+   releaseClaim, attach→fetchAttachment sha256 round-trip, exportTranscript
+   verified via verify-transcript.mjs where available, room-updated events
+   (self + replicated), GL-5 seq-continuation across a bridge-core restart,
+   social room + real invite redeem under encryption, the claim-skip proof
+   in a social room), driven through `createBridgeCore.dispatch()` via a
+   thin in-process "wire client" that still round-trips every call through
+   real `JSON.stringify`/`parse`.
+2. **Layer 2 — the frame loop.** 7 checks feeding literal ndjson byte
+   strings (a request split across two `onData` chunks, a malformed line,
+   a blank line, two frames in one chunk) through the REAL
+   `attachStdioTransport` buffering code, in-process.
+3. **Layer 3 — the real spawn topology.** `node:child_process.spawn`
+   (Node-only, guarded — see §3 for why this is the one sanctioned
+   exception to "no node: specifier"), parent reading `child.stdout.on
+   ('data', ...)`, matching EXACTLY the shape the campaign lead's
+   `PHASE0_NOTES_D2_FLUSH_RACE.md` used to find the two real bugs a shell
+   pipe hid. Spawns the worker under `node` AND under `npx bare`, sends 3
+   requests including one that touches the reducer
+   (`createSocialRoom`), asserts all 3 responses arrive with matching ids
+   and the process exits cleanly (no hang) — **plus a negative control**
+   that spawns the campaign's own known-broken script
+   (`host/bare-spike/stdio-check.mjs`) and asserts THIS harness correctly
+   flags it as broken, not green (see §4).
 
 | Run | Checks | Failures | Result |
 |---|---:|---:|---|
-| `node host/bare-bridge-spike.mjs` | 38 | 0 | **GREEN** |
-| `npx bare host/bare-bridge-spike.mjs` | 37 | 0 | **GREEN** (1 check downgraded to a logged skip — see §3) |
+| `node host/bare-bridge-spike.mjs` | 45 | 0 | **GREEN** (includes layer 3, both spawn targets + the negative control) |
+| `npx bare host/bare-bridge-spike.mjs` | 37 | 0 | **GREEN** (layer 3 self-skips under Bare — `node:child_process` is Node-only by design; 1 layer-1 check downgraded to a logged skip — see §3 deviation #6) |
 | `node host/bridge-spike.mjs` (frozen Node/TCP line) | 30 | 0 | **GREEN**, unchanged |
 | `npm run bareparity` (Phase 1a suite) | 13 scenarios | 0 | **GREEN** |
 | `npm run bareparity:bare` | 13 scenarios | 0 | **GREEN** |
 | `npm run smoke` | — | 0 | **GREEN** |
 | `node host/reactor-parity-spike.mjs` (Phase 1b suite, another coder's file, read-only here) | 13 scenarios | 0 | **GREEN** |
 
-Both bare-bridge-spike.mjs runs also succeeded from
-`C:\Users\schan\AppData\Local\Temp\claude\...\scratchpad\p1a` (outside the
-repo tree, absolute script path, hostile CWD) — see §5.
+Re-run 3 back-to-back times under Node (45/45 every time — layer 3 is the
+newest, timing-sensitive code, worth the extra stability check) and once
+more under Bare, all green. Both bare-bridge-spike.mjs runs also succeeded
+from `C:\Users\schan\AppData\Local\Temp\claude\...\scratchpad\p1a` (outside
+the repo tree, absolute script path, hostile CWD) — see §5.
 
 ## 3. Deviations from the Node bridge, enumerated
 
@@ -107,65 +138,92 @@ scenario's own restart step (§2's GL-5 check), still green.
    This is NOT a change in this phase's own files; it's an unplanned third
    cross-cutting blocker discovered while wiring `exportTranscript`'s
    verification check. Handled with a guarded dynamic import: under Bare,
-   that one check (of 38) is skipped with a clear stderr note rather than
+   that one check is skipped with a clear stderr note rather than
    crashing the whole spike at module load. `exportTranscript` itself
    (the bridge method) works fine under Bare — only the SEPARATE,
    independent-of-this-phase verification helper does not load.
 7. **`Number`/`String`/`Buffer`-only op literals**, same canon as Phase 1a
    — no behavioral deviation, just consistency with the established
    dual-runtime discipline.
+8. **`node:child_process` in `bare-bridge-spike.mjs` only, scoped and
+   guarded.** The one sanctioned exception to "no node: specifier in your
+   files" — see §4's layer 3. Never appears in `bare-bridge.mjs` (the file
+   that ships); the spike is dev/test tooling, like every other
+   `*-spike.mjs` in `mesh/host`, none of which are packed into the sealed
+   artifact.
 
-## 4. The flush race (P0-D's finding) — what was done, what was observed
+## 4. The stdio hazards — corrected account (this section was rewritten
+mid-phase; see §1's "third round of correction" note for why)
 
-**Design mitigation (in `bare-bridge.mjs`, see its header comment for the
-full reasoning), three concrete choices:**
+**The bugs, root-caused by the campaign lead against the REAL production
+topology** (`child_process.spawn`, parent reading `stdout.on('data')` —
+full detail in `PHASE0_NOTES_D2_FLUSH_RACE.md`, not reproduced here in
+full):
 
-1. `runStdioWorker` never calls `proc.exit()`/`Bare.exit()` — the worker
-   stays referenced on the event loop via its own stdin listener until the
-   caller tears it down, the structural opposite of P0-D's flaky repro
-   shape (compile → synchronous log loop → fall off the end of the script).
-2. The wasm module compiles **lazily**, on the first `apply()` call inside
-   `mesh-node.mjs`'s `state()` — not eagerly at worker boot — pushing the
-   compile-then-write race window past process startup, into a point where
-   the process is provably still running an active event loop.
-3. `attachStdioTransport`'s `pendingPartial()` plus per-response `id`
-   echoing make a dropped/truncated frame **detectable** from the reader
-   side (a request whose id never gets a matching response is a signal),
-   even though protocol v0 has no retry/ack layer to recover one — adding
-   one would be a protocol change, out of this phase's authority (D6).
+- **Bug A**: `await WebAssembly.compile()`/`instantiate()` silently drops
+  stdout (27-53% loss depending on exact pipe shape), exit code 0, no
+  error.
+- **Bug B**: `bare-process`'s `process.stdout.write()` HANGS on a real
+  spawned pipe (measured 30/30) — independent of Bug A, no wasm involved
+  at all.
+- **Why this campaign's own DP4 proof-of-concept
+  (`host/bare-spike/stdio-check.mjs`) passed for a full day while
+  exhibiting Bug B**: it was verified with a shell pipe, which hides both
+  bugs. This is the same "the control you skip is the one hiding the
+  defect" lesson as `PHASE0_GATE_B3_CONDITION_MAP.md`'s finding, recurring
+  at a different layer.
 
-**Empirical investigation (today, this machine, `bare 1.30.3`):**
+**What `bare-bridge.mjs` does about it (three rules, all now verified
+against the real spawn topology by this phase's own layer-3 gate, not just
+asserted):**
 
-- Corrected re-run of P0-D's own flaky script
-  (`host/bare-spike/wasm-compile-check.mjs`), 10 back-to-back runs under
-  `npx bare`: **0/10 truncated** (full 4-line output every time). Note: my
-  FIRST attempt at this check used a wrong grep pattern and misreported
-  10/10 "incomplete" — caught and corrected before writing this section;
-  recorded honestly rather than silently fixed, per the campaign's own
-  transparency norm (see `PHASE0_GATE_B3_CONDITION_MAP.md`'s "the control
-  you skip is the one that was hiding the defect").
-- `--stdio-worker` mode, one request per invocation, piped over a real OS
-  pipe (`echo '{...}' | npx bare host/bare-bridge-spike.mjs --stdio-worker`),
-  **20/20 clean, single-line, valid-JSON responses.**
-- `--stdio-worker` mode, three requests per invocation (including
-  `createSocialRoom`, which touches the reducer via `state()` after
-  appending), **15/15 clean.**
-- **Net: 45 sampled worker runs + 10 corrected re-samples of P0-D's own
-  script, 0 truncations observed today**, against P0-D's originally
-  reported ~25-30% rate on `wasm-compile-check.mjs`/`wasi-imports-list.mjs`
-  specifically.
+- **RULE 1** — the reducer channel this bridge calls into
+  (`mesh-node.mjs` → `apply-bare.mjs`) already used only the synchronous
+  `new WebAssembly.Module()`/`new WebAssembly.Instance()` forms since
+  Phase 1a; confirmed still true (`grep -n "WebAssembly\."` across both
+  files).
+- **RULE 2** — `getRealStdio()`'s `write` uses `console.log`, never
+  `proc.stdout.write()` directly (fixed this phase; the original draft of
+  this file used `proc.stdout.write()`, exactly Bug B's shape, and would
+  have hung on a real spawn — caught before shipping, not after).
+- **RULE 3** — `runStdioWorker` calls an explicit `Bare.exit(0)`/
+  `process.exit(0)` on stdin `'end'` (added this phase; the original draft
+  had NO end handler at all — an omission, not a deliberate "let it drain
+  naturally" choice, but the same failure mode P0-D's own removal
+  experiment hit: 10/10 hangs). This file's own addition beyond the rule
+  as written: `attachStdioTransport.waitIdle()` drains any in-flight
+  `dispatch()` promise BEFORE exiting, so a request that arrives just
+  before the writer closes stdin still gets its response written rather
+  than truncated by an immediate exit. Not verified against a real
+  reproduction of THAT specific race (no existing repro script has a
+  request/response cycle to drain) — flagged in §6.
 
-**What this does NOT establish:** P0-D's finding is not retracted by this —
-a 0/N sample does not prove a ~25% intermittent race is absent (P0-D's own
-script, tested with the SAME corrected method, also showed 0/10 today,
-which is itself notable — either genuine day-to-day environment variance,
-or the race's trigger window is narrower/different than the original
-sample suggested). This phase's own worker was **never observed to
-truncate**, but "never observed in 45 runs" is evidence of absence at a
-specific confidence level, not proof of absence — a client integrating this
-bridge for real (Phase 3+) should still build the request/response `id`
-timeout-and-retry the DP4 sidecar contract will eventually need, treating
-this as an open risk, not a closed one.
+**Layer-3 gate results (the real proof — spawn+pipe, not shell pipe, not
+in-process):**
+
+| Check | Result |
+|---|---|
+| `spawn(node)`: worker answers 3 requests (incl. one touching the reducer) over a real spawned pipe | **PASS**, 3/3 responses, correct ids |
+| `spawn(node)`: worker exits cleanly on stdin end, no hang | **PASS** |
+| `spawn(bare)`: same, spawned via `npx bare` | **PASS**, 3/3 responses, correct ids |
+| `spawn(bare)`: worker exits cleanly on stdin end, no hang | **PASS** |
+| **Negative control**: spawn the campaign's own known-broken `host/bare-spike/stdio-check.mjs` under `npx bare`, same real topology | **CORRECTLY FLAGGED AS BROKEN** — produced only `{"event":"ready"}`, the echo line never arrived, exactly Bug B's signature, independently reproduced by this harness, not just cited from the lead's report |
+
+Re-run 3× under Node (45/45 every time) plus once more under Bare and once
+more each from outside the repo tree (§5) — stable, no flake observed in
+this phase's own sampling.
+
+**One bug found and fixed by this exact gate, worth stating plainly**: the
+first version of the layer-3 leg failed `spawn(node)` with
+`'C:\Program' is not recognized as an internal or external command` —
+`shell:true` (needed for `npx` to resolve on win32) was ALSO being applied
+to the direct `process.execPath` spawn, and cmd.exe re-splits an unquoted
+path containing spaces ("C:\Program Files\nodejs\node.exe"). Fixed by only
+shelling the `npx`-based spawns. Recorded because it is a second instance,
+inside this same report, of exactly the pattern this section is about:
+a test that can only ever pass would have hidden it.
+
+**What this does NOT establish** — see §6.
 
 ## 5. Hostile-geography result (D5)
 
@@ -174,38 +232,35 @@ From `C:\Users\schan\AppData\Local\Temp\claude\...\scratchpad\p1a`
 
 | command | result |
 |---|---|
-| `node <absolute-path>/bare-bridge-spike.mjs` | **PASS**, 38/38 |
+| `node <absolute-path>/bare-bridge-spike.mjs` (full 45-check run, including layer 3) | **PASS**, 45/45 |
 | `npx --prefix <mesh-dir> bare <absolute-path>/bare-bridge-spike.mjs` | **PASS**, 37/37 |
 
 No storage directories or temp files were left behind in the hostile
-directory after either run (spike's own cleanup ran; confirmed by listing
-the directory post-run). Same underlying property as Phase 1a: every path
-in `bare-bridge.mjs`/`bare-bridge-spike.mjs` is either relative-to-CWD by
-explicit design (the spike's own `tmp` storage dirs — intentionally, so a
-real DP4 sidecar's working directory is where its data lands, not a
-hardcoded repo-relative path) or resolved via `import.meta.url` for the
-module's own asset needs (none, in this phase — no wasm/goldens touched
-directly by these two files).
+directory after either run, INCLUDING the `--stdio-worker` storage the
+layer-3 spawn leg creates (confirmed by listing the hostile directory AND
+`mesh/` itself post-run — the worker's storage always lands in `mesh/`, by
+design, since a real DP4 sidecar's data should live with the kit, not
+wherever the parent happened to be launched from; the spike wipes it before
+and after its own run since ITS invocations are disposable test data, not
+a persistent worker's real state). One genuine cleanup gap was caught and
+fixed here: the first version of the layer-3 leg left
+`mesh/.bare-bridge-worker-storage` behind after a run because nothing
+removed it — fixed by wiping it both before (in case a prior run crashed
+mid-test) and after the leg completes.
 
 ## 6. What was NOT verified
 
 - **A genuinely clean machine** (no prior `npm install` anywhere, no warm
   npx cache) — same caveat as Phase 1a; not this phase's gate (Phase 3's
   hostile-machine rehearsal).
-- **Real two-process stdio** (an actual parent process spawning a bare
-  worker over real OS pipes with the PARENT also being one of this
-  phase's own files) — not achievable without a `node:child_process`
-  or Bare-only `bare-subprocess` import inside "my files" (explicitly
-  forbidden). The flush-race investigation (§4) instead drove the worker
-  from the SHELL (this coder's gate-running process, not committed
-  source) via real pipes — genuine OS-level bytes, just not spawned from
-  JS. A real two-JS-process proof is Phase 3/4 territory (the sealed kit
-  actually launches a bare worker as a child of the wails app).
-  This means bare-bridge.mjs's own end-to-end behavior when driven by a
-  REAL wails-side stdio client is inferred from the frame-loop layer
-  (§2, `frameLoopCheck`) plus the shell-piped worker-mode smoke tests
-  (§4), not from a single committed automated test that does both at
-  once.
+- **The exact race `runStdioWorker`'s `waitIdle()` drain exists for** (a
+  request arriving immediately before stdin closes, still in flight when
+  'end' fires) — added defensively, not verified against a reproduction;
+  no existing repro script has a request/response cycle to exercise it.
+- **A truly two-JS-process, wails-launched worker** — this phase's layer 3
+  proves the spawn+pipe topology from a Node-based TEST parent; the actual
+  Wails/Go parent process (Phase 3/4) is a different language runtime
+  entirely and was not simulated here.
 - **`fetchAttachment`'s returned `path` field's correctness for
   non-absolute inputs** (§3 deviation #5) — every path in this phase's own
   spike is already workable as given; a caller passing a bare relative
@@ -215,10 +270,10 @@ directly by these two files).
   dependency's own migration status is outside this phase's file fence;
   whether it needs to move to `#crypto`/`#apply` or gets a different fix is
   a question for whoever owns it next.
-- **Load/concurrency behavior** — no stress test beyond the 45-run
-  flush-race sampling (§4); no measurement of many rooms, many concurrent
-  requests queued on one stdio channel, or large attachment payloads over
-  stdio-bridged `attach`.
+- **Load/concurrency behavior** — no stress test beyond 3 requests per
+  spawn leg and 3 back-to-back full-suite re-runs (§4); no measurement of
+  many rooms, many concurrent requests queued on one stdio channel, or
+  large attachment payloads over stdio-bridged `attach`.
 - **Whether the `--stdio-worker` process, left running indefinitely with
   NO stdin activity at all (not even an EOF), stays alive correctly or
   leaks anything** — only ever tested with a bounded pipe-then-EOF
@@ -228,8 +283,9 @@ directly by these two files).
 
 - `mesh/host/bare-bridge.mjs` — the dispatch core + stdio transport +
   real-stdio worker entry (new).
-- `mesh/host/bare-bridge-spike.mjs` — the 38-check gate, `--stdio-worker`
-  mode, and the frame-loop transport proof (new).
+- `mesh/host/bare-bridge-spike.mjs` — the 45-check (Node) / 37-check (Bare)
+  gate, `--stdio-worker` mode, the frame-loop transport proof, and the
+  real spawn+pipe leg with its negative control (new).
 - `mesh/docs/bare-campaign/PHASE2_BRIDGE_REPORT.md` — this file.
 
 Not touched: `mesh/host/bridge-server.mjs`, `mesh/host/bridge-spike.mjs`,

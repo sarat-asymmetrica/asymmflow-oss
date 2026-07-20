@@ -5,9 +5,18 @@
   "type": "module",
   "description": "Sovereign Mesh track for AsymmFlow — the Go kernel as a deterministic Autobase apply() reducer over Hypercore/Corestore, replicated across Holesail P2P tunnels. See ../FABLE_CAMPAIGN_SOVEREIGN_MESH.md.",
   "imports": {
-    "#apply": { "bare": "./host/apply-bare.mjs", "default": "./host/apply.mjs" },
-    "#fs": { "bare": "bare-fs", "default": "fs" },
-    "#crypto": { "bare": "bare-crypto", "default": "crypto" }
+    "#apply": {
+      "bare": "./host/apply-bare.mjs",
+      "default": "./host/apply.mjs"
+    },
+    "#fs": {
+      "bare": "bare-fs",
+      "default": "fs"
+    },
+    "#crypto": {
+      "bare": "bare-crypto",
+      "default": "crypto"
+    }
   },
   "scripts": {
     "build": "node scripts/build-reducer.mjs",
@@ -47,7 +56,8 @@
     "bareparity": "npm run build && node host/bare-parity-spike.mjs",
     "bareparity:bare": "npx bare host/bare-parity-spike.mjs",
     "harnessselftest": "node host/spawn-pipe-harness.mjs --selftest",
-    "stdioseam": "npm run build && node host/stdio-seam-spike.mjs"
+    "stdioseam": "npm run build && node host/stdio-seam-spike.mjs",
+    "buildbarekit": "npm run build && node kit/build-bare-kit.mjs"
   },
   "dependencies": {
     "autobase": "^7.11.0",
@@ -72,6 +82,7 @@
     "bare-crypto": "^1.15.3",
     "bare-events": "^2.9.1",
     "bare-fs": "^4.7.4",
+    "bare-pack": "^2.2.1",
     "bare-process": "^4.5.1",
     "bare-stream": "^2.13.3"
   }
