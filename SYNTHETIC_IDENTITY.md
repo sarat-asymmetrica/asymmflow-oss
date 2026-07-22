@@ -81,6 +81,27 @@ Never name a real auditor.
 - The `PH-` license/document-number prefix and the `ph_holdings` internal module/db
   identifier are kept conventions (a later rebrand wave, not client data).
 
+## India demo canon
+
+Fixtures for the India GST jurisdiction plane (`overlays/india-demo/`) are
+**entirely fictional** — no real Indian business, PAN, GSTIN, or address.
+PANs and GSTINs are constructed synthetic values that are checksum-valid
+(they pass `pkg/compliance/india.ValidGSTIN`) but correspond to no actual
+registration.
+
+| Company | PAN | GSTIN(s) | Notes |
+|---|---|---|---|
+| Meridian Instruments & Controls Pvt Ltd | `AABCM0472E` | `27AABCM0472E1ZT` (Meridian Mumbai, Maharashtra) · `29AABCM0472E1ZP` (Meridian Bengaluru, Karnataka) | Two-division demo company: same-PAN, cross-state, exercises both intra-state (CGST+SGST) and inter-state (IGST) tax splits |
+| Kaveri Trade Links | `AAECK3814F` | `29AAECK3814F1ZM` (Karnataka) | Composition taxable person (`india.composition: true`) — the Bill-of-Supply demo company |
+
+Demo customer names reserved for India-plane tests/fixtures (invent
+consistently with these, do not introduce real ones):
+
+- **Sahyadri Process Equipment Pvt Ltd** — Maharashtra B2B customer (intra-state demo).
+- **Charminar Engineering Co** — Telangana (state 36) B2B customer, used for inter-state B2B demos.
+- **Konark Exports (SEZ Unit)** — Maharashtra SEZ customer (always inter-state/zero-rated, §0 G2).
+- Unnamed walk-in consumers — B2C demo transactions (no GSTIN).
+
 ## Never commit
 
 - API keys, passwords, tokens, or usable default "master" keys.
