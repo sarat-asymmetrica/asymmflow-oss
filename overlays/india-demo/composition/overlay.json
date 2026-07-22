@@ -14,7 +14,12 @@
   "india": {
     "pan": "AAECK3814F",
     "composition_ceiling_goods_inr": 0,
-    "composition_ceiling_services_inr": 0
+    "composition_ceiling_services_inr": 0,
+    "tax_categories": [
+      {"hsn_prefix": "8481", "rate_pct": 18, "cess_pct": 0, "description": "Valves, taps, cocks and similar appliances"},
+      {"hsn_prefix": "8413", "rate_pct": 18, "cess_pct": 0, "description": "Pumps for liquids"},
+      {"hsn_prefix": "9026", "rate_pct": 18, "cess_pct": 0, "description": "Instruments for measuring flow, level or pressure"}
+    ]
   },
   "divisions": [
     {

@@ -31,6 +31,10 @@ type CreditNoteItemInput struct {
 	Description string  `json:"description"`
 	Quantity    float64 `json:"quantity"`
 	Rate        float64 `json:"rate"`
+	// HSNCode and UQC are additive India Rule-46 fields (India Spec-01 B4(c)),
+	// blank/inert for a GCC credit note.
+	HSNCode string `json:"hsn_code"`
+	UQC     string `json:"uqc"`
 }
 
 // effectiveInvoiceVATPercent returns the VAT rate to apply to an invoice's
@@ -66,8 +70,16 @@ func (a *App) CreateCreditNote(invoiceID, reason string, items []CreditNoteItemI
 	}
 	reason = html.EscapeString(reason)
 
-	// Generate CN number (outside tx — sequence has its own locking)
-	cnNumber, err := a.GenerateCreditNoteNumber()
+	// Generate CN number (outside tx — sequence has its own locking). Peek
+	// the invoice's division (plain read, no lock — the locked flow below
+	// re-validates the invoice for the credit-note business rules) so India
+	// divisions route through the per-GSTIN/FY series (India Spec-01 B4)
+	// instead of the GCC CN- scheme.
+	var divisionPeek struct{ Division string }
+	if err := a.db.Model(&Invoice{}).Select("division").Where("id = ?", invoiceID).First(&divisionPeek).Error; err != nil {
+		return CreditNote{}, fmt.Errorf("invoice not found: %w", err)
+	}
+	cnNumber, err := a.generateCreditNoteNumberForDivision(divisionPeek.Division)
 	if err != nil {
 		return CreditNote{}, fmt.Errorf("failed to generate CN number: %w", err)
 	}
@@ -92,6 +104,8 @@ func (a *App) CreateCreditNote(invoiceID, reason string, items []CreditNoteItemI
 			Quantity:    input.Quantity,
 			Rate:        input.Rate,
 			TotalBHD:    lineTotal,
+			HSNCode:     input.HSNCode,
+			UQC:         input.UQC,
 		})
 	}
 
@@ -338,6 +352,31 @@ func (a *App) GenerateCreditNoteNumber() (string, error) {
 	}, time.Now())
 }
 
+// generateCreditNoteNumberForDivision routes credit-note numbering (India
+// Spec-01 B4): a division carrying an India GST profile gets the per-GSTIN
+// per-FY "CN/{fy}/{seq}" series, validated against Rule 46 before it is
+// returned; every other (GCC) division keeps the unchanged CN-YYYYMMDD-NNNN
+// scheme. No RBAC gate here — CreateCreditNote's own invoices:create guard
+// already covers this call.
+func (a *App) generateCreditNoteNumberForDivision(division string) (string, error) {
+	profile := activeOverlay.Profile(activeOverlay.NormalizeDivisionName(division))
+	if profile.India == nil {
+		return numbering.New(a.db).Next(numbering.Spec{
+			Prefix:   "CN",
+			Template: "CN-{date}-{seq}",
+		}, time.Now())
+	}
+	spec := indiaCreditNoteNumberSpec(profile.India.GSTIN, activeOverlay.FYStartMonthOrDefault())
+	number, err := numbering.New(a.db).Next(spec, time.Now())
+	if err != nil {
+		return "", fmt.Errorf("failed to generate India credit note number: %w", err)
+	}
+	if err := numbering.ValidateGSTSeriesNumber(number); err != nil {
+		return "", fmt.Errorf("India credit note number failed Rule 46 validation: %w", err)
+	}
+	return number, nil
+}
+
 // GenerateCreditNotePDF creates a PDF for a credit note on company letterhead
 func (a *App) GenerateCreditNotePDF(id string) (string, error) {
 	if err := a.requirePermission("invoices:view"); err != nil {
@@ -360,6 +399,14 @@ func (a *App) GenerateCreditNotePDF(id string) (string, error) {
 
 	division := a.resolveCreditNoteDivision(cn)
 	profile := companyDocumentProfile(division)
+
+	// India Spec-01 B4(c): a credit note against an India-mounted division
+	// renders through the India GST layout (GSTIN seller block, referenced
+	// original invoice, HSN/UQC/tax-split table). GCC divisions fall through
+	// unchanged below.
+	if profile.India != nil {
+		return a.generateIndiaCreditNotePDF(cn, customer, profile)
+	}
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetAutoPageBreak(true, 30)
