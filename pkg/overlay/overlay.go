@@ -671,7 +671,7 @@ func (o *CompanyOverlay) SeedEnabled(name string) bool {
 }
 
 // sqlQuote returns s as a single-quoted, escaped SQL string literal
-// (e.g. Acme's → 'Acme”s').
+// (e.g. Acme's → 'Acme''s').
 func sqlQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
 }
@@ -679,7 +679,7 @@ func sqlQuote(s string) string {
 // DivisionNormalizationCase returns a SQL CASE expression that maps the value
 // of columnExpr (e.g. "orders.division") to its canonical division Key, built
 // from the overlay's divisions and their aliases. Each non-default division
-// gets a WHEN that matches LOWER(TRIM(COALESCE(col, ”))) against its
+// gets a WHEN that matches LOWER(TRIM(COALESCE(col, ''))) against its
 // lowercased Key plus declared aliases; everything else falls through to the
 // DefaultDivisionKey (the ELSE branch).
 //
