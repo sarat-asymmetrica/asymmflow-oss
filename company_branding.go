@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/jung-kurt/gofpdf"
+	"ph_holdings_app/pkg/compliance/india"
 	"ph_holdings_app/pkg/overlay"
 )
 
@@ -38,6 +39,25 @@ type CompanyDocumentProfile struct {
 	VATNumber           string
 	BankDetails         []string
 	City                string
+
+	// India carries this division's GST identity when the India jurisdiction
+	// plane is mounted (pkg/overlay/india.go). Nil for every GCC division —
+	// document renderers branch on this to pick GSTIN-labeled India layout
+	// vs the existing TRN-labeled GCC layout (India Spec-01 B4, R-A3-1).
+	India *IndiaDocumentIdentity
+}
+
+// IndiaDocumentIdentity is the India-plane subset of CompanyDocumentProfile.
+// PAN is company/PAN-level (overlay.India); GSTIN/StateCode/Composition are
+// division-level (overlay.DivisionProfile.India). StateName is resolved once
+// here so document renderers never need to import pkg/compliance/india's
+// state registry themselves.
+type IndiaDocumentIdentity struct {
+	PAN         string
+	GSTIN       string
+	StateCode   string
+	StateName   string
+	Composition bool
 }
 
 // normalizeDivisionName maps a raw division string to the canonical Key.
@@ -53,7 +73,7 @@ func normalizeDivisionName(division string) string {
 func companyDocumentProfile(division string) CompanyDocumentProfile {
 	key := activeOverlay.NormalizeDivisionName(division)
 	p := activeOverlay.Profile(key)
-	return CompanyDocumentProfile{
+	profile := CompanyDocumentProfile{
 		Division:            p.Key,
 		LegalName:           p.LegalName,
 		LetterheadFile:      p.LetterheadFile,
@@ -63,6 +83,17 @@ func companyDocumentProfile(division string) CompanyDocumentProfile {
 		BankDetails:         p.BankDetails,
 		City:                p.City,
 	}
+	if p.India != nil {
+		stateName, _ := india.StateName(p.India.StateCode)
+		profile.India = &IndiaDocumentIdentity{
+			PAN:         activeOverlay.IndiaConfig().PAN,
+			GSTIN:       p.India.GSTIN,
+			StateCode:   p.India.StateCode,
+			StateName:   stateName,
+			Composition: p.India.Composition,
+		}
+	}
+	return profile
 }
 
 // currentCompanyIdentity returns the overlay-backed company display name,

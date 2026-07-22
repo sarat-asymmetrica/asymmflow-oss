@@ -1,0 +1,46 @@
+{
+  "_comment": "India composition-scheme demo overlay — SYNTHETIC identity (Kaveri Trade Links, fictional). One division, composition:true — the Bill-of-Supply demo company (see G6: composition dealers issue a Bill of Supply, no tax lines, no ITC). Public-repo law: fictional company only. See SYNTHETIC_IDENTITY.md.",
+  "schema_version": 1,
+  "default_division_key": "Kaveri Trade Links",
+  "company_display_name": "Kaveri Trade Links",
+  "industry": "Instrumentation trading (composition dealer)",
+  "country": "India",
+  "currency": "INR",
+  "jurisdiction": "IN",
+  "currency_decimals": 2,
+  "default_vat_rate": 0.0,
+  "fiscal_year_start_month": 4,
+  "exchange_rates_to_base": {},
+  "india": {
+    "pan": "AAECK3814F",
+    "composition_ceiling_goods_inr": 0,
+    "composition_ceiling_services_inr": 0,
+    "tax_categories": [
+      {"hsn_prefix": "8481", "rate_pct": 18, "cess_pct": 0, "description": "Valves, taps, cocks and similar appliances"},
+      {"hsn_prefix": "8413", "rate_pct": 18, "cess_pct": 0, "description": "Pumps for liquids"},
+      {"hsn_prefix": "9026", "rate_pct": 18, "cess_pct": 0, "description": "Instruments for measuring flow, level or pressure"}
+    ]
+  },
+  "divisions": [
+    {
+      "key": "Kaveri Trade Links",
+      "legal_name": "Kaveri Trade Links",
+      "vat_number": "29AAECK3814F1ZM",
+      "city": "Bengaluru",
+      "address_lines": ["Shop No. 7, Chickpet Main Road", "Chickpet", "Bengaluru 560053, Karnataka"],
+      "bank_details": ["Demo Bank IN, A/c 00DEMO0000000201, IFSC: DEMO0000201"],
+      "letterhead_asset_name": "letterhead",
+      "letterhead_file": "",
+      "aliases": ["kaveri", "kaveri trade links"],
+      "document_display_name": "Kaveri Trade Links",
+      "india": {
+        "gstin": "29AAECK3814F1ZM",
+        "state_code": "29",
+        "composition": true
+      }
+    }
+  ],
+  "business_rules": {},
+  "product_markup_rules": [],
+  "default_product_margin": 0.0
+}

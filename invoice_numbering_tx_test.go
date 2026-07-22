@@ -22,7 +22,7 @@ func TestGenerateInvoiceNumberWithTx_RollbackReleasesNumber(t *testing.T) {
 	sentinel := errors.New("force rollback")
 	var reserved string
 	err := app.db.Transaction(func(tx *gorm.DB) error {
-		n, e := app.generateInvoiceNumberWithTx(tx)
+		n, _, e := app.generateInvoiceNumberWithTx(tx, "")
 		if e != nil {
 			return e
 		}
@@ -46,7 +46,7 @@ func TestGenerateInvoiceNumberWithTx_CommitAdvancesSequence(t *testing.T) {
 
 	var first string
 	require.NoError(t, app.db.Transaction(func(tx *gorm.DB) error {
-		n, e := app.generateInvoiceNumberWithTx(tx)
+		n, _, e := app.generateInvoiceNumberWithTx(tx, "")
 		first = n
 		return e
 	}))

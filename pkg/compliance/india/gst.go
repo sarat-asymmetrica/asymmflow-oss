@@ -3,13 +3,10 @@ package india
 import (
 	"errors"
 	"math"
-	"regexp"
 	"strings"
 
 	"ph_holdings_app/pkg/compliance"
 )
-
-var gstinPattern = regexp.MustCompile(`^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$`)
 
 var hsnRates = map[string]compliance.TaxRate{
 	"8481": {Name: "Valves, taps, cocks", Rate: 0.18, Category: "goods", Description: "Valves, taps, cocks and similar appliances"},
@@ -145,10 +142,6 @@ func RateForHSN(hsn string) float64 {
 		}
 	}
 	return -1
-}
-
-func ValidGSTIN(gstin string) bool {
-	return gstinPattern.MatchString(strings.ToUpper(strings.TrimSpace(gstin)))
 }
 
 func defaultRateForCategory(category string) float64 {

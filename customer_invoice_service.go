@@ -725,13 +725,14 @@ func (a *App) ConvertProformaToInvoice(proformaID string, customerPO string) (In
 			return fmt.Errorf("cannot convert proforma %s: it has no line items", invoice.InvoiceNumber)
 		}
 
-		invoiceNumber, err := a.generateInvoiceNumberWithTx(tx)
+		invoiceNumber, docKind, err := a.generateInvoiceNumberWithTx(tx, invoice.Division)
 		if err != nil {
 			return fmt.Errorf("failed to generate invoice number: %w", err)
 		}
 
 		updates := map[string]any{
 			"invoice_number":  invoiceNumber,
+			"doc_kind":        docKind,
 			"status":          "Sent",
 			"outstanding_bhd": invoice.GrandTotalBHD,
 			"updated_by":      a.getCurrentUserID(),
@@ -746,6 +747,7 @@ func (a *App) ConvertProformaToInvoice(proformaID string, customerPO string) (In
 		}
 
 		invoice.InvoiceNumber = invoiceNumber
+		invoice.DocKind = docKind
 		invoice.Status = "Sent"
 		invoice.OutstandingBHD = invoice.GrandTotalBHD
 		if customerPO != "" {
@@ -1287,11 +1289,12 @@ func (a *App) createInvoiceWithOptionsEx(orderID string, deliveryNoteID string, 
 		// Step 1.5: Reserve the invoice number on THIS transaction so it rolls back
 		// with the invoice on any downstream failure (no sequence gaps). Assigned
 		// before Create and before the HMAC below, which hashes InvoiceNumber.
-		invoiceNumber, numErr := a.generateInvoiceNumberWithTx(tx)
+		invoiceNumber, docKind, numErr := a.generateInvoiceNumberWithTx(tx, invoice.Division)
 		if numErr != nil {
 			return fmt.Errorf("failed to generate invoice number: %w", numErr)
 		}
 		invoice.InvoiceNumber = invoiceNumber
+		invoice.DocKind = docKind
 
 		// Step 2: Create invoice in database (GORM will cascade create items)
 		if err := tx.Create(&invoice).Error; err != nil {
@@ -1790,13 +1793,40 @@ func invoiceNumberSpec() numbering.Spec {
 // transaction (PH parity), so a rollback releases the number instead of leaving a
 // sequence gap. No RBAC gate here — callers are already inside a gated create flow;
 // the public GenerateInvoiceNumber wraps the same spec with the invoices:create guard.
-func (a *App) generateInvoiceNumberWithTx(tx *gorm.DB) (string, error) {
-	invoiceNumber, err := numbering.NextInTx(tx, invoiceNumberSpec(), time.Now())
-	if err != nil {
-		return "", fmt.Errorf("failed to generate invoice number: %w", err)
+//
+// India Spec-01 B4: when division carries an India GST profile, numbering
+// routes through the India per-GSTIN/per-FY series instead of the GCC
+// INV-YYYYMMDD-NNNN scheme, and the returned docKind is forced to
+// "bill_of_supply" for a composition division regardless of the caller's
+// intent (composition dealers issue a Bill of Supply, never a tax invoice —
+// G6, enforced not trusted). GCC divisions (India == nil) take the exact
+// unchanged path and always return a blank docKind.
+func (a *App) generateInvoiceNumberWithTx(tx *gorm.DB, division string) (invoiceNumber string, docKind string, err error) {
+	profile := activeOverlay.Profile(activeOverlay.NormalizeDivisionName(division))
+	if profile.India == nil {
+		invoiceNumber, err = numbering.NextInTx(tx, invoiceNumberSpec(), time.Now())
+		if err != nil {
+			return "", "", fmt.Errorf("failed to generate invoice number: %w", err)
+		}
+		log.Printf("🔢 Generated invoice number: %s (sequence-locked, in-tx)", invoiceNumber)
+		return invoiceNumber, "", nil
 	}
-	log.Printf("🔢 Generated invoice number: %s (sequence-locked, in-tx)", invoiceNumber)
-	return invoiceNumber, nil
+
+	fyStart := activeOverlay.FYStartMonthOrDefault()
+	spec := indiaInvoiceNumberSpec(profile.India.GSTIN, fyStart)
+	if profile.India.Composition {
+		docKind = "bill_of_supply"
+		spec = indiaBillOfSupplyNumberSpec(profile.India.GSTIN, fyStart)
+	}
+	invoiceNumber, err = numbering.NextInTx(tx, spec, time.Now())
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate India invoice number: %w", err)
+	}
+	if err = numbering.ValidateGSTSeriesNumber(invoiceNumber); err != nil {
+		return "", "", fmt.Errorf("India invoice number failed Rule 46 validation: %w", err)
+	}
+	log.Printf("🔢 Generated India invoice number: %s (docKind=%q, sequence-locked, in-tx)", invoiceNumber, docKind)
+	return invoiceNumber, docKind, nil
 }
 
 // =============================================================================

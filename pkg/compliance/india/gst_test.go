@@ -76,7 +76,11 @@ func TestGSTHSNLookup(t *testing.T) {
 }
 
 func TestGSTINValidationPasses(t *testing.T) {
-	if !ValidGSTIN("29ABCDE1234F1Z5") {
+	// Checksum-valid synthetic GSTIN (state 29 Karnataka, PAN ABCDE1234F):
+	// ValidGSTIN now checks format + state code + check digit, not format
+	// alone, so the fixture must carry a real check digit (computed via
+	// MakeGSTIN — see gstin_test.go).
+	if !ValidGSTIN("29ABCDE1234F1ZW") {
 		t.Fatal("expected valid GSTIN")
 	}
 }

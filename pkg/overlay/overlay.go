@@ -76,6 +76,11 @@ type DivisionProfile struct {
 	// variant key (e.g. "ahs") that selects an alternate dashboard data path
 	// for this division. Blank means the standard/default dashboard path.
 	DashboardVariant string `json:"dashboard_variant"`
+
+	// India is this division's GST registration identity (GSTIN, state
+	// code, composition flag). Nil means the division has no India plane —
+	// the default and behavior for every existing GCC division. See india.go.
+	India *IndiaDivisionProfile `json:"india"`
 }
 
 // CompanyOverlay holds the full company/division configuration.
@@ -172,6 +177,17 @@ type CompanyOverlay struct {
 	// value derives a minimal fallback from the default division; see
 	// SignatureFallback.
 	SignatureDefault *SignatureBlockProfile `json:"signature_default"`
+
+	// FiscalYearStartMonth is the 1-12 calendar month the fiscal year opens
+	// in. 0 (absent) means calendar year — existing GCC behavior, untouched
+	// — except when the India plane is mounted, where it defaults to April
+	// (G9). See FYStartMonthOrDefault.
+	FiscalYearStartMonth int `json:"fiscal_year_start_month"`
+
+	// India carries PAN-level India jurisdiction-plane facts. Nil means the
+	// India plane is unmounted — inert for every existing GCC overlay. See
+	// india.go (IndiaCompanyConfig, IndiaMounted, IndiaConfig).
+	India *IndiaCompanyConfig `json:"india"`
 }
 
 // DeploymentConfig holds deployment-layout identity read from the overlay.

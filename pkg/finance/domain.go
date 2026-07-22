@@ -118,6 +118,27 @@ type Invoice struct {
 	PlaceOfSupply      string     `gorm:"size:100;default:'Kingdom of Bahrain'" json:"place_of_supply"`     // VAT place of supply
 	TermsOfDelivery    string     `gorm:"size:200;default:'Direct Bank Transfer'" json:"terms_of_delivery"` // Payment method
 
+	// India GST identity (India Spec-01 B4, R-A3-4). Additive and inert for
+	// every existing GCC invoice (blank/false, no behavior change). BuyerGSTIN
+	// non-blank marks a B2B supply (feeds the G4 HSN-digit mandate + the Rule
+	// 46 buyer-GSTIN line); ShipToGSTIN is the separate bill-to/ship-to split
+	// Rule 46 requires; PlaceOfSupplyStateCode is the 2-digit GST state code
+	// the B3 engine classifies against — never parsed out of the free-text
+	// PlaceOfSupply label above.
+	BuyerGSTIN             string `gorm:"size:15" json:"buyer_gstin"`
+	ShipToGSTIN            string `gorm:"size:15" json:"ship_to_gstin"`
+	PlaceOfSupplyStateCode string `gorm:"size:2" json:"place_of_supply_state_code"`
+	// DocKind distinguishes a Bill of Supply (composition dealers, G6) from
+	// an ordinary tax invoice. "" = ordinary invoice — every existing row,
+	// GCC or India. "bill_of_supply" = composition BoS. A brand-new column,
+	// never a new Status value: Status stays orthogonal (CHECK-constraint law).
+	DocKind string `gorm:"size:20;default:'';check:doc_kind IN ('', 'bill_of_supply')" json:"doc_kind"`
+	// ReverseCharge marks the supply as reverse-charge for the mandatory
+	// Rule 46 statement ("tax payable on reverse charge basis"). Mirrors
+	// india.Supply.ReverseCharge — it only selects rendered text, it never
+	// changes tax computation.
+	ReverseCharge bool `gorm:"default:false" json:"reverse_charge"`
+
 	// VAT & Accounting (Tally Killer feature)
 	VATBHD         float64 `gorm:"column:vatbhd;type:decimal(15,3);not null;default:0;check:vatbhd >= 0" json:"vat_bhd"` // P1 Fix: BHD precision
 	VATPercent     float64 `gorm:"not null;default:0;check:vat_percent >= 0" json:"vat_percent"`                         // VAT rate applied (default 10)
@@ -181,6 +202,13 @@ type DBInvoiceItem struct {
 	TotalCost           float64 `gorm:"not null;default:0;check:total_cost >= 0" json:"total_cost"`   // Total landed cost
 	MarginPercent       float64 `gorm:"not null;default:0" json:"margin_percent"`                     // Margin % applied
 	TotalPrice          float64 `gorm:"not null;default:0;check:total_price >= 0" json:"total_price"` // Line total (qty × unit price)
+
+	// HSNCode and UQC are additive India Rule-46 line fields (India Spec-01
+	// B4, R-A3-4): HSN/SAC code and unit-quantity-code, consumed by the B3
+	// GST engine (pkg/compliance/india) for per-line tax computation and
+	// rendered as their own invoice columns. Blank/inert for every GCC line.
+	HSNCode string `gorm:"size:20" json:"hsn_code"`
+	UQC     string `gorm:"size:10" json:"uqc"`
 }
 
 func (DBInvoiceItem) TableName() string { return "invoice_items" }
@@ -225,6 +253,12 @@ type CreditNoteItem struct {
 	Quantity     float64 `json:"quantity"`
 	Rate         float64 `json:"rate"`
 	TotalBHD     float64 `gorm:"type:decimal(15,3)" json:"total_bhd"`
+
+	// HSNCode and UQC mirror DBInvoiceItem's additive India fields so a
+	// credit note against an India invoice can render the same HSN/UQC/tax
+	// columns as the original (India Spec-01 B4(c)). Blank/inert for GCC.
+	HSNCode string `gorm:"size:20" json:"hsn_code"`
+	UQC     string `gorm:"size:10" json:"uqc"`
 }
 
 func (CreditNoteItem) TableName() string { return "credit_note_items" }

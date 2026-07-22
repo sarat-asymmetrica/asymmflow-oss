@@ -1,0 +1,76 @@
+{
+  "_comment": "India demo overlay — SYNTHETIC identity (Meridian Instruments & Controls Pvt Ltd, fictional). jurisdiction=IN mounts the India GST plane (see pkg/overlay/india.go, pkg/compliance/india). Two divisions in different GST states demonstrate both intra-state (CGST+SGST) and inter-state (IGST) tax splits. fiscal_year_start_month=4 (April-March, G9). PAN and both division GSTINs are synthetic-but-checksum-valid (see pkg/compliance/india/gstin_test.go / plane_test.go). Public-repo law: fictional company, no real Indian business, PAN, GSTIN, or address. See SYNTHETIC_IDENTITY.md.",
+  "schema_version": 1,
+  "default_division_key": "Meridian Mumbai",
+  "company_display_name": "Meridian Instruments & Controls Pvt Ltd",
+  "industry": "Process instrumentation",
+  "country": "India",
+  "currency": "INR",
+  "jurisdiction": "IN",
+  "currency_decimals": 2,
+  "default_vat_rate": 18.0,
+  "fiscal_year_start_month": 4,
+  "exchange_rates_to_base": {
+    "USD": 83.50,
+    "EUR": 90.20,
+    "BHD": 221.60
+  },
+  "india": {
+    "pan": "AABCM0472E",
+    "hsn_tier_threshold_inr": 0,
+    "einvoice_threshold_aato": 0,
+    "composition_ceiling_goods_inr": 0,
+    "composition_ceiling_services_inr": 0,
+    "b2cl_threshold_inr": 0,
+    "gstr1_schema_version": "",
+    "tax_categories": [
+      {"hsn_prefix": "8481", "rate_pct": 18, "cess_pct": 0, "description": "Valves, taps, cocks and similar appliances"},
+      {"hsn_prefix": "8413", "rate_pct": 18, "cess_pct": 0, "description": "Pumps for liquids"},
+      {"hsn_prefix": "9026", "rate_pct": 18, "cess_pct": 0, "description": "Instruments for measuring flow, level or pressure"},
+      {"hsn_prefix": "3004", "rate_pct": 12, "cess_pct": 0, "description": "Medicaments"},
+      {"hsn_prefix": "1006", "rate_pct": 5, "cess_pct": 0, "description": "Rice"},
+      {"hsn_prefix": "4901", "rate_pct": 0, "cess_pct": 0, "description": "Printed books, brochures and similar printed matter"},
+      {"hsn_prefix": "2202", "rate_pct": 28, "cess_pct": 12, "description": "Waters, including mineral and aerated, containing added sugar"},
+      {"hsn_prefix": "9983", "rate_pct": 18, "cess_pct": 0, "description": "Other professional, technical and business services"}
+    ]
+  },
+  "divisions": [
+    {
+      "key": "Meridian Mumbai",
+      "legal_name": "Meridian Instruments & Controls Pvt Ltd",
+      "vat_number": "27AABCM0472E1ZT",
+      "city": "Mumbai",
+      "address_lines": ["Unit 402, Kandivali Industrial Estate", "Kandivali West", "Mumbai 400067, Maharashtra"],
+      "bank_details": ["Demo Bank IN, A/c 00DEMO0000000101, IFSC: DEMO0000101"],
+      "letterhead_asset_name": "letterhead",
+      "letterhead_file": "",
+      "aliases": ["meridian mumbai"],
+      "document_display_name": "Meridian Instruments & Controls Pvt Ltd — Mumbai",
+      "india": {
+        "gstin": "27AABCM0472E1ZT",
+        "state_code": "27",
+        "composition": false
+      }
+    },
+    {
+      "key": "Meridian Bengaluru",
+      "legal_name": "Meridian Instruments & Controls Pvt Ltd",
+      "vat_number": "29AABCM0472E1ZP",
+      "city": "Bengaluru",
+      "address_lines": ["No. 18, 2nd Floor, Whitefield Main Road", "Whitefield", "Bengaluru 560066, Karnataka"],
+      "bank_details": ["Demo Bank IN, A/c 00DEMO0000000102, IFSC: DEMO0000102"],
+      "letterhead_asset_name": "letterhead",
+      "letterhead_file": "",
+      "aliases": ["meridian bengaluru", "meridian bangalore"],
+      "document_display_name": "Meridian Instruments & Controls Pvt Ltd — Bengaluru",
+      "india": {
+        "gstin": "29AABCM0472E1ZP",
+        "state_code": "29",
+        "composition": false
+      }
+    }
+  ],
+  "business_rules": {},
+  "product_markup_rules": [],
+  "default_product_margin": 0.0
+}

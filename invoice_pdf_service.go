@@ -128,6 +128,16 @@ func (a *App) GenerateInvoicePDF(invoiceID string) (string, error) {
 	visibility := parseFieldVisibility(visibilityJSON)
 	log.Printf("📄 Field visibility: %+v", visibility)
 
+	// India Spec-01 B4 (R-A3-1): a division carrying an India GST profile
+	// renders through the India Rule-46 pipeline (tax invoice, or — enforced
+	// regardless of caller intent, G6 — a Bill of Supply for a composition
+	// division) instead of the GCC layout below. GCC divisions
+	// (profile.India == nil) fall through unchanged: byte-identical output,
+	// the hard boundary this wave.
+	if profile.India != nil {
+		return a.generateIndiaInvoicePDF(invoice, profile, customer, bankAccounts)
+	}
+
 	// 5. Create PDF with letterhead
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetAutoPageBreak(true, 30)
