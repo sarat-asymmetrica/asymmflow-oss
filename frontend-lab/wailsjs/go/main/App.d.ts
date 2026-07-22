@@ -1472,13 +1472,7 @@ export function ProcessRFQToOrder(arg1:engines.TenderGeometry,arg2:prediction.Cu
 
 export function ProcessTender(arg1:engines.TenderGeometry):Promise<engines.TenderResult>;
 
-export function ProcessWithFlorence2(arg1:string):Promise<main.OCRResultSimple>;
-
-export function ProcessWithGPU(arg1:string):Promise<main.OCRResultSimple>;
-
 export function ProcessWithGoFitz(arg1:string):Promise<main.OCRResultSimple>;
-
-export function ProcessWithTesseract(arg1:string):Promise<main.OCRResultSimple>;
 
 export function ProgressOrderOnDelivery(arg1:string):Promise<void>;
 

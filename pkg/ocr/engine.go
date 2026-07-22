@@ -20,7 +20,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"ph_holdings_app/pkg/ocr/orchestrator"
+	"ph_holdings_app/pkg/ocr/mistralocr"
+	"ph_holdings_app/pkg/ocr/preprocess"
 )
 
 // ========================================================================
@@ -35,8 +36,12 @@ const (
 
 	// Thresholds
 	MIN_CONFIDENCE      = 0.70  // Minimum acceptable confidence
-	AIMLAPI_THRESHOLD   = 0.85  // Below this, escalate to AIMLAPI
 	CONSENSUS_THRESHOLD = 0.667 // 2/3 voting requirement
+
+	// DefaultCloudEscalationThreshold: below this local confidence, escalate to the
+	// cloud OCR tier (Mistral OCR 4). Config-not-constant — EngineConfig.ConfidenceThreshold
+	// overrides this; the constant only supplies the sane default.
+	DefaultCloudEscalationThreshold = 0.85
 
 	// Default concurrency
 	DEFAULT_WORKERS = 8
@@ -60,9 +65,9 @@ type ACEEngine struct {
 	trinity       *TrinityOptimizer
 	babel         *BabelMapper
 
-	// AIMLAPI client
-	aimlAPIKey string
-	aimlClient *AIMLAPIClient
+	// Cloud OCR escalation client (Mistral OCR 4). Nil when no key is configured —
+	// offline-first: the local tesseract+pandoc pipeline above never blocks on this.
+	mistralClient *mistralocr.Client
 
 	// Observability
 	metrics MetricsCollector
@@ -87,10 +92,14 @@ type EngineConfig struct {
 	EnablePreprocessing   bool
 	EnableVedicValidation bool
 
-	// AIMLAPI settings
-	AIMLAPIKey        string
-	AIMLAPIEndpoint   string
-	FallbackToAIMLAPI bool
+	// Cloud OCR escalation settings (Mistral OCR 4, pkg/ocr/mistralocr). The API key is
+	// caller-injected — this engine never reads env/DB itself; route through the app's
+	// standard Mistral key resolver.
+	MistralAPIKey       string
+	MistralBaseURL      string  // optional override; mistralocr applies its own default
+	MistralModel        string  // optional override; mistralocr applies its own default (mistral-ocr-4-0)
+	ConfidenceThreshold float64 // below this, escalate to Mistral OCR; default DefaultCloudEscalationThreshold
+	FallbackToMistral   bool
 
 	// Tesseract settings
 	TesseractPath     string
@@ -118,7 +127,7 @@ func NewACEEngine(config *EngineConfig) (*ACEEngine, error) {
 			DefaultLanguage:       LangEnglish,
 			EnablePreprocessing:   true,
 			EnableVedicValidation: true,
-			FallbackToAIMLAPI:     true,
+			FallbackToMistral:     true,
 		}
 	}
 
@@ -129,6 +138,9 @@ func NewACEEngine(config *EngineConfig) (*ACEEngine, error) {
 	if config.MaxWorkers < 1 {
 		config.MaxWorkers = DEFAULT_WORKERS
 	}
+	if config.ConfidenceThreshold <= 0 {
+		config.ConfidenceThreshold = DefaultCloudEscalationThreshold
+	}
 
 	engine := &ACEEngine{
 		config: config,
@@ -138,16 +150,21 @@ func NewACEEngine(config *EngineConfig) (*ACEEngine, error) {
 			MaxMemoryMB:   config.GPUMaxMemoryMB,
 			FallbackToCPU: true,
 		},
-		aimlAPIKey: config.AIMLAPIKey,
-		trinity:    NewTrinityOptimizer(),
-		babel:      NewBabelMapper(),
-		logger:     &defaultLogger{},
-		metrics:    &defaultMetrics{},
+		trinity: NewTrinityOptimizer(),
+		babel:   NewBabelMapper(),
+		logger:  &defaultLogger{},
+		metrics: &defaultMetrics{},
 	}
 
-	// Initialize AIMLAPI client if key provided
-	if config.AIMLAPIKey != "" {
-		engine.aimlClient = NewAIMLAPIClient(config.AIMLAPIKey, config.AIMLAPIEndpoint)
+	// Initialize the cloud OCR escalation client only if a key was provided —
+	// offline-first: without a key, mistralClient stays nil and escalation is skipped.
+	if config.MistralAPIKey != "" {
+		engine.mistralClient = mistralocr.NewClient(mistralocr.Config{
+			APIKey:              config.MistralAPIKey,
+			BaseURL:             config.MistralBaseURL,
+			Model:               config.MistralModel,
+			ConfidenceThreshold: config.ConfidenceThreshold,
+		})
 	}
 
 	engine.initialized = true
@@ -570,16 +587,16 @@ func (e *ACEEngine) preprocess(ctx context.Context, reader io.Reader, req *Proce
 		return nil, err
 	}
 
-	// GPU PREPROCESSING - REAL IMPLEMENTATION!
-	// Uses quaternion-based denoising and contrast enhancement
+	// Image preprocessing (pkg/ocr/preprocess): quaternion-based denoising and
+	// contrast enhancement. Pure-Go CPU implementation despite the flag name —
+	// EnableGPU selects this path, it does not dispatch to a GPU.
 	if e.config.EnableGPU && e.config.EnablePreprocessing {
-		// Import orchestrator GPU preprocessor
-		gpConfig := orchestrator.DefaultGPUPreprocessConfig()
+		gpConfig := preprocess.DefaultGPUPreprocessConfig()
 		gpConfig.UseGPU = true
 		gpConfig.DenoiseStrength = 0.5
 		gpConfig.ContrastFactor = 1.2
 
-		gpuPreprocessor, err := orchestrator.NewGPUPreprocessor(gpConfig)
+		gpuPreprocessor, err := preprocess.NewGPUPreprocessor(gpConfig)
 		if err != nil {
 			// Fall back to CPU if GPU init fails
 			return bytes.NewReader(data), nil
@@ -653,30 +670,76 @@ func (e *ACEEngine) extractWithTierSelection(ctx context.Context, reader io.Read
 	response.Confidence = confidence
 	response.Fields = e.extractFields(text, req.DocumentType)
 
-	// Escalate to AIMLAPI if confidence too low
-	if confidence < AIMLAPI_THRESHOLD && e.config.FallbackToAIMLAPI && e.aimlClient != nil {
-		e.logger.Info("Confidence below threshold, escalating to AIMLAPI", map[string]any{
+	// Escalate to the cloud OCR tier (Mistral OCR 4) if local confidence is too low.
+	// Offline-first: a missing key or a failed cloud call always keeps the local result —
+	// this never blocks or errors the pipeline.
+	if confidence < e.config.ConfidenceThreshold && e.config.FallbackToMistral && e.mistralClient != nil {
+		e.logger.Info("Confidence below threshold, escalating to Mistral OCR", map[string]any{
 			"local_confidence": confidence,
-			"threshold":        AIMLAPI_THRESHOLD,
+			"threshold":        e.config.ConfidenceThreshold,
 		})
 
-		aimlResponse, err := e.aimlClient.Process(ctx, data, req)
-		if err != nil {
-			e.logger.Error("AIMLAPI processing failed", map[string]any{
-				"error": err.Error(),
+		mimeType := "application/pdf"
+		isImage := format == FormatImage
+		if isImage {
+			mimeType = "image/png"
+		}
+
+		mResult, mErr := e.mistralClient.Process(ctx, mistralocr.DocumentInput{
+			Data:     data,
+			MIMEType: mimeType,
+			IsImage:  isImage,
+		}, mistralocr.ProcessOptions{IncludeBlocks: true})
+		if mErr != nil {
+			e.logger.Error("Mistral OCR escalation failed", map[string]any{
+				"error": mErr.Error(),
 			})
 			// Keep local results
-		} else if aimlResponse.Confidence > confidence {
-			// Use AIMLAPI results if better
-			response.Text = aimlResponse.Text
-			response.Confidence = aimlResponse.Confidence
-			response.Fields = aimlResponse.Fields
-			response.Tier = TierAIMLAPI
-			response.EstimatedCostUSD = 0.001 // AIMLAPI cost
+		} else if mResult != nil && strings.TrimSpace(mResult.Text) != "" {
+			mConfidence := averageBlockConfidence(mResult.Blocks)
+			if mConfidence == 0 {
+				// Mistral OCR 4 is the dedicated cloud tier; if it returned text but no
+				// block-level confidence signal, treat it as clearing the escalation bar
+				// rather than silently discarding better text for lack of a number.
+				mConfidence = e.config.ConfidenceThreshold
+			}
+			if mConfidence > confidence {
+				response.Text = mResult.Text
+				response.Confidence = mConfidence
+				response.Fields = e.extractFields(mResult.Text, req.DocumentType)
+				response.Tier = TierCloudOCR
+				response.EstimatedCostUSD = estimateMistralOCRCostUSD(1) // informational only; $4/1k pages
+			}
 		}
 	}
 
 	return response, nil
+}
+
+// averageBlockConfidence returns the mean of per-block confidence scores, or 0 if the
+// API returned no blocks or no confidence signal on any of them.
+func averageBlockConfidence(blocks []mistralocr.Block) float64 {
+	if len(blocks) == 0 {
+		return 0
+	}
+	var sum float64
+	var counted int
+	for _, b := range blocks {
+		if b.Confidence > 0 {
+			sum += b.Confidence
+			counted++
+		}
+	}
+	if counted == 0 {
+		return 0
+	}
+	return sum / float64(counted)
+}
+
+// estimateMistralOCRCostUSD is informational only (not wired into billing): $4 per 1,000
+// pages, per the confirmed Mistral OCR 4 pricing (see FABLE_WAVE13_REPORT.md A0 section).
+func estimateMistralOCRCostUSD(pages int) float64 {
+	return float64(pages) * 0.004
 }
 
 func (e *ACEEngine) extractWithTesseract(ctx context.Context, data []byte, lang Language) (string, float64, error) {

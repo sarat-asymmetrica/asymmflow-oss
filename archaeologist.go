@@ -39,7 +39,7 @@ type ArchaeologistService struct {
 	scansMu sync.RWMutex
 
 	// Configuration
-	aimlAPIKey string
+	mistralAPIKey string
 }
 
 // ArchaeologyScan represents an active archaeology scan
@@ -194,7 +194,7 @@ type ArchaeologyFileCategory struct {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // NewArchaeologistService creates a new archaeology service
-func NewArchaeologistService(aimlAPIKey string) (*ArchaeologistService, error) {
+func NewArchaeologistService(mistralAPIKey string) (*ArchaeologistService, error) {
 	// Create ACE OCR engine with GPU acceleration
 	ocrConfig := &ocr.EngineConfig{
 		EnableGPU:             true,
@@ -203,8 +203,8 @@ func NewArchaeologistService(aimlAPIKey string) (*ArchaeologistService, error) {
 		DefaultLanguage:       ocr.LangEnglish,
 		EnablePreprocessing:   true,
 		EnableVedicValidation: true,
-		FallbackToAIMLAPI:     true,
-		AIMLAPIKey:            aimlAPIKey,
+		FallbackToMistral:     true,
+		MistralAPIKey:         mistralAPIKey,
 	}
 
 	engine, err := ocr.NewACEEngine(ocrConfig)
@@ -213,9 +213,9 @@ func NewArchaeologistService(aimlAPIKey string) (*ArchaeologistService, error) {
 	}
 
 	return &ArchaeologistService{
-		ocrEngine:  engine,
-		scans:      make(map[string]*ArchaeologyScan),
-		aimlAPIKey: aimlAPIKey,
+		ocrEngine:     engine,
+		scans:         make(map[string]*ArchaeologyScan),
+		mistralAPIKey: mistralAPIKey,
 	}, nil
 }
 
@@ -250,10 +250,11 @@ func (a *App) StartArchaeologyScan(sourcePath string, isZIP bool, outputDir stri
 		return "", fmt.Errorf("source path does not exist: %w", err)
 	}
 
-	// Ensure archaeologist service exists
+	// Ensure archaeologist service exists. Key comes from the app's standard Mistral
+	// key resolver (getMistralAPIKey) — never a bespoke env lookup.
 	if a.archaeologist == nil {
 		var err error
-		a.archaeologist, err = NewArchaeologistService(os.Getenv("AIMLAPI_KEY"))
+		a.archaeologist, err = NewArchaeologistService(getMistralAPIKey())
 		if err != nil {
 			return "", fmt.Errorf("failed to initialize archaeologist: %w", err)
 		}
@@ -876,8 +877,8 @@ func tierToString(tier ocr.ProcessingTier) string {
 	switch tier {
 	case ocr.TierLocal:
 		return "local"
-	case ocr.TierAIMLAPI:
-		return "aimlapi"
+	case ocr.TierCloudOCR:
+		return "cloud_ocr"
 	case ocr.TierConsensus:
 		return "consensus"
 	default:

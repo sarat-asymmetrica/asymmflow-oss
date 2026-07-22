@@ -6,7 +6,7 @@
 // WORKFLOW:
 //   1. Welcome to Asymmetrica (animated splash)
 //   2. Folder Configuration (RFQ, Offers, Invoices, Rhine XML)
-//   3. API Key Setup (AIMLAPI for AI pipelines)
+//   3. API Key Setup (Mistral for AI pipelines)
 //   4. GPU Detection (Intel Level Zero, NVIDIA CUDA)
 //   5. Initial Scan (conflict detection, report generation)
 //   6. Ready to Launch!
@@ -72,7 +72,7 @@ type FolderConfig struct {
 
 // APIKeyConfig holds external API keys
 type APIKeyConfig struct {
-	AIMLAPI       string `json:"aimlapi_key"`    // AIMLAPI for 200+ models
+	Mistral       string `json:"mistral_key"`    // Mistral direct (chat + OCR) — sole AI provider as of Wave 13
 	OpenAI        string `json:"openai_key"`     // Optional: Direct OpenAI
 	Anthropic     string `json:"anthropic_key"`  // Optional: Direct Anthropic
 	AzureEndpoint string `json:"azure_endpoint"` // Optional: Azure OpenAI
@@ -242,8 +242,8 @@ func (w *SetupWizard) SetAPIKeys(keys APIKeyConfig) error {
 	w.config.APIKeys = keys
 
 	// Also set as environment variables for subprocess access
-	if keys.AIMLAPI != "" {
-		os.Setenv("ASYMM_AIML_API_KEY", keys.AIMLAPI)
+	if keys.Mistral != "" {
+		os.Setenv("MISTRAL_API_KEY", keys.Mistral)
 	}
 	if keys.OpenAI != "" {
 		os.Setenv("OPENAI_API_KEY", keys.OpenAI)
@@ -255,8 +255,8 @@ func (w *SetupWizard) SetAPIKeys(keys APIKeyConfig) error {
 	return w.SaveConfig()
 }
 
-// ValidateAIMLAPIKey tests if the AIMLAPI key is valid
-func (w *SetupWizard) ValidateAIMLAPIKey(key string) (bool, error) {
+// ValidateMistralAPIKey tests if the Mistral API key is valid.
+func (w *SetupWizard) ValidateMistralAPIKey(key string) (bool, error) {
 	// Validate key format first
 	if key == "" {
 		return false, fmt.Errorf("API key is empty")
@@ -265,9 +265,9 @@ func (w *SetupWizard) ValidateAIMLAPIKey(key string) (bool, error) {
 		return false, fmt.Errorf("API key appears too short")
 	}
 
-	// Test the API key with a simple request to AIMLAPI
+	// Test the API key with a simple request to Mistral
 	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("GET", "https://api.aimlapi.com/v1/models", nil)
+	req, err := http.NewRequest("GET", "https://api.mistral.ai/v1/models", nil)
 	if err != nil {
 		return false, fmt.Errorf("failed to create request: %w", err)
 	}

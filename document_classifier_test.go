@@ -376,7 +376,7 @@ func TestDetectDocumentTypeFromText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := detectDocumentTypeFromText(tt.text); got != tt.expected {
+			if got := detectDocumentTypeFromTextLegacy(tt.text); got != tt.expected {
 				t.Fatalf("expected %s, got %s", tt.expected, got)
 			}
 		})

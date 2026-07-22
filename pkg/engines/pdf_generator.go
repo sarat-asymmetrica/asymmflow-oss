@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/signintech/gopdf"
+	"ph_holdings_app/pkg/fonts"
 	"ph_holdings_app/pkg/overlay"
 )
 
@@ -334,23 +335,51 @@ func (g *PDFGenerator) loadLanguageFonts(langCode string) error {
 		},
 	}
 
-	// Get font paths for this language
-	paths, exists := fontPaths[langCode]
-	if !exists {
-		// Fallback to English fonts
-		paths = fontPaths["en"]
+	// Embedded fonts (pkg/fonts) are the PRIMARY source for the two scripts we
+	// ship in the binary — Latin/Cyrillic (Noto Sans) and Arabic (Noto Naskh
+	// Arabic) — so those languages render identically on every machine with
+	// no dependency on what's installed on the host. Host-font probing below
+	// remains the source for every other script (CJK, Thai, Devanagari,
+	// Korean, Hebrew) we don't embed, and the fallback if embedding fails.
+	embeddedFontFor := func(code string) []byte {
+		switch code {
+		case "ar":
+			return fonts.NotoNaskhArabic()
+		case "en", "ru":
+			return fonts.NotoSans()
+		default:
+			return nil
+		}
 	}
 
-	// Try to load font
 	fontLoaded := false
-	for _, fontPath := range paths {
-		if fileExists(fontPath) {
-			err := g.pdf.AddTTFFont(pack.FontFamily, fontPath)
-			if err == nil {
-				g.pdf.SetFont(pack.FontFamily, "", 10)
-				fontLoaded = true
-				fmt.Printf("✓ Loaded font for %s: %s\n", pack.Name, fontPath)
-				break
+	if data := embeddedFontFor(langCode); data != nil {
+		if err := g.pdf.AddTTFFontData(pack.FontFamily, data); err == nil {
+			g.pdf.SetFont(pack.FontFamily, "", 10)
+			fontLoaded = true
+			fmt.Printf("✓ Loaded embedded font for %s: pkg/fonts (%d bytes)\n", pack.Name, len(data))
+		} else {
+			fmt.Printf("⚠ Embedded font failed for %s, falling back to host probe: %v\n", pack.Name, err)
+		}
+	}
+
+	if !fontLoaded {
+		// Get font paths for this language
+		paths, exists := fontPaths[langCode]
+		if !exists {
+			// Fallback to English fonts
+			paths = fontPaths["en"]
+		}
+
+		for _, fontPath := range paths {
+			if fileExists(fontPath) {
+				err := g.pdf.AddTTFFont(pack.FontFamily, fontPath)
+				if err == nil {
+					g.pdf.SetFont(pack.FontFamily, "", 10)
+					fontLoaded = true
+					fmt.Printf("✓ Loaded font for %s: %s\n", pack.Name, fontPath)
+					break
+				}
 			}
 		}
 	}

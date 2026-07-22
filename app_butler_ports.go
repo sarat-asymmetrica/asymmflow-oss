@@ -135,12 +135,7 @@ func (p appButlerUserContextPort) HasPermission(action string) bool {
 type appButlerLLMPort struct{}
 
 func (appButlerLLMPort) ChatCompletion(systemPrompt, userMessage string, maxTokens int) (string, error) {
-	model := aimlModelID
-	if strings.TrimSpace(getAIMLAPIKey()) != "" {
-		response, _, err := callAIMLWithFallback(getAIMLAPIKey(), systemPrompt, userMessage)
-		return response, err
-	}
-	return callMistral(model, systemPrompt, userMessage)
+	return callMistral(mistralModelLarge, systemPrompt, userMessage)
 }
 
 func (appButlerLLMPort) ChatCompletionWithHistory(messages []butlerdomain.ChatMessage, maxTokens int) (string, error) {
@@ -150,10 +145,6 @@ func (appButlerLLMPort) ChatCompletionWithHistory(messages []butlerdomain.ChatMe
 			"role":    msg.Role,
 			"content": msg.Content,
 		})
-	}
-	response, _, err := callAIMLWithMessages(getAIMLAPIKey(), payload)
-	if err == nil {
-		return response, nil
 	}
 	return callMistralWithMessages(mistralModelLarge, payload)
 }

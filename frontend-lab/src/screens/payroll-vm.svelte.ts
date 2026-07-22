@@ -20,6 +20,7 @@ import {
   fetchPayrollRun,
   fetchPayrollRuns,
   generatePayrollRun,
+  generatePayslipPdf,
   markPayrollRunPaid,
   payrollDivisionOptions,
   postPayrollRun,
@@ -202,6 +203,12 @@ export class PayrollViewModel {
   paidAt = $state(todayIso())
   bankAccountId = $state('')
 
+  // ---- Payslip PDF (per-employee export, read-only — no state transition) ----
+  payslipEmployeeId = $state('')
+  payslipBusy = $state(false)
+  payslipError = $state<string | null>(null)
+  payslipPath = $state<string | null>(null)
+
   divisions = $derived(payrollDivisionOptions())
 
   scopedProfiles = $derived(this.profiles.filter((p) => matchesDivision(p.division, this.divisionFilter)))
@@ -325,6 +332,9 @@ export class PayrollViewModel {
   async selectRun(runId: string): Promise<void> {
     this.selectedRunId = runId
     this.runDetailError = null
+    this.payslipEmployeeId = ''
+    this.payslipError = null
+    this.payslipPath = null
     if (!this.runs.some((r) => r.id === runId)) {
       this.selectedRun = null
       this.runDetailError = `Payroll run ${runId} could not be found (dangling reference).`
@@ -457,6 +467,24 @@ export class PayrollViewModel {
       this.runActionError = e instanceof Error ? e.message : String(e)
     } finally {
       this.runActionBusy = false
+    }
+  }
+
+  /** Renders and saves a single employee's payslip PDF from the selected
+   * run's already-committed data — a read-only export, not a run-lifecycle
+   * mutation, so it has its own busy/error/result state rather than reusing
+   * runActionBusy/runActionError. */
+  async generatePayslip(employeeId: string): Promise<void> {
+    if (!this.selectedRun || !employeeId) return
+    this.payslipBusy = true
+    this.payslipError = null
+    this.payslipPath = null
+    try {
+      this.payslipPath = await generatePayslipPdf(employeeId, this.selectedRun.payrollPeriodId)
+    } catch (e) {
+      this.payslipError = e instanceof Error ? e.message : String(e)
+    } finally {
+      this.payslipBusy = false
     }
   }
 }

@@ -474,6 +474,32 @@
                         {/if}
                       </Card>
 
+                      {#if run.items.length > 0}
+                        <Stack gap="sm">
+                          <span class="pr-section-label">Payslip PDF</span>
+                          <Row gap="sm" wrap>
+                            <select class="k-input" bind:value={vm.payslipEmployeeId}>
+                              <option value="">Select employee</option>
+                              {#each run.items as item (item.id)}
+                                <option value={item.employeeId}>{runItemDisplayName(item)}</option>
+                              {/each}
+                            </select>
+                            <Button
+                              disabled={!vm.payslipEmployeeId || vm.payslipBusy}
+                              onclick={() => vm.generatePayslip(vm.payslipEmployeeId)}
+                            >
+                              {vm.payslipBusy ? 'Generating…' : 'Generate Payslip PDF'}
+                            </Button>
+                          </Row>
+                          {#if vm.payslipPath}
+                            <CalloutWidget items={[{ label: 'Payslip saved', text: vm.payslipPath, tone: 'success' }]} />
+                          {/if}
+                          {#if vm.payslipError}
+                            <CalloutWidget items={[{ label: 'Payslip failed', text: vm.payslipError, tone: 'danger' }]} />
+                          {/if}
+                        </Stack>
+                      {/if}
+
                       <Stack gap="sm">
                         <span class="pr-section-label">Approval Reason</span>
                         <input class="k-input" bind:value={vm.approveReason} placeholder="Why is this run being approved?" />

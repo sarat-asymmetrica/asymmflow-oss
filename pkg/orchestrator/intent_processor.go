@@ -92,12 +92,13 @@ type IntentProcessor struct {
 	httpClient   *http.Client
 }
 
-// NewIntentProcessor creates a new intent processor
+// NewIntentProcessor creates a new intent processor. aiAPIKey should come from the app's
+// standard Mistral key resolver (getMistralAPIKey) — this package never reads env/DB itself.
 func NewIntentProcessor(templatesDir, outputDir, aiAPIKey string) *IntentProcessor {
 	return &IntentProcessor{
 		templatesDir: templatesDir,
 		outputDir:    outputDir,
-		aiEndpoint:   "https://api.aimlapi.com/v1/chat/completions",
+		aiEndpoint:   "https://api.mistral.ai/v1/chat/completions",
 		aiAPIKey:     aiAPIKey,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -226,7 +227,7 @@ func (p *IntentProcessor) detectIntent(ctx context.Context, input string) (*Inte
 	return intent, nil
 }
 
-// detectIntentWithAI uses AIMLAPI for intent classification
+// detectIntentWithAI uses Mistral direct for intent classification
 func (p *IntentProcessor) detectIntentWithAI(ctx context.Context, input string) (*Intent, error) {
 	intent := &Intent{
 		RawInput:  input,
@@ -261,7 +262,7 @@ Extract as many relevant entities as possible from the input.`
 
 	// Prepare API request
 	requestBody := map[string]any{
-		"model": "gpt-4o-mini",
+		"model": "mistral-small-latest",
 		"messages": []map[string]string{
 			{"role": "system", "content": systemPrompt},
 			{"role": "user", "content": userPrompt},

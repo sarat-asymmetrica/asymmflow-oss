@@ -896,6 +896,10 @@ func (s *FinanceService) GeneratePayrollRun(payrollPeriodID string) (PayrollRun,
 	return s.app.GeneratePayrollRun(payrollPeriodID)
 }
 
+func (s *FinanceService) GeneratePayslipPDF(employeeID, payrollPeriodID string) (string, error) {
+	return s.app.GeneratePayslipPDF(employeeID, payrollPeriodID)
+}
+
 func (s *FinanceService) GetPayrollRun(runID string) (PayrollRun, error) {
 	return s.app.GetPayrollRun(runID)
 }

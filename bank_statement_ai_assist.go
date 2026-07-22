@@ -13,13 +13,18 @@ import (
 )
 
 const (
-	bankStatementAIMLFlagEnv         = "ENABLE_AIML_BANK_STATEMENT_ASSIST"
-	bankStatementAIMLTimeoutEnv      = "BANK_STATEMENT_AI_TIMEOUT_MS"
-	bankStatementAIMLMaxTextCharsEnv = "BANK_STATEMENT_AI_MAX_TEXT_CHARS"
-	defaultBankStatementAITimeoutMS  = 3500
-	defaultBankStatementAITextLimit  = 24000
-	bankStatementAIMLMaxTokens       = 2200
-	bankStatementValidationTolerance = 0.051
+	// Config-not-constant: flag/timeout/text-limit are env-overridable, sane defaults below.
+	// Note: this path receives already-OCR'd text (never raw PDF bytes — see callers in
+	// bank_statement_parser.go / app_setup_documents_surface.go), so it asks Mistral chat
+	// completions to restructure text into JSON rather than using pkg/ocr/mistralocr (which
+	// is a document-native OCR client expecting raw bytes/URL, not extracted text).
+	bankStatementMistralFlagEnv         = "ENABLE_MISTRAL_BANK_STATEMENT_ASSIST"
+	bankStatementMistralTimeoutEnv      = "BANK_STATEMENT_AI_TIMEOUT_MS"
+	bankStatementMistralMaxTextCharsEnv = "BANK_STATEMENT_AI_MAX_TEXT_CHARS"
+	defaultBankStatementAITimeoutMS     = 3500
+	defaultBankStatementAITextLimit     = 24000
+	bankStatementMistralMaxTokens       = 2200
+	bankStatementValidationTolerance    = 0.051
 )
 
 type bankStatementParseOutcome struct {
@@ -39,20 +44,20 @@ type bankStatementValidation struct {
 	ZeroDateCount        int
 }
 
-type bankStatementAIMLResponse struct {
-	AccountNumber  string                  `json:"account_number"`
-	IBAN           string                  `json:"iban"`
-	Currency       string                  `json:"currency"`
-	PeriodStart    string                  `json:"period_start"`
-	PeriodEnd      string                  `json:"period_end"`
-	OpeningBalance float64                 `json:"opening_balance"`
-	ClosingBalance float64                 `json:"closing_balance"`
-	TotalDebits    float64                 `json:"total_debits"`
-	TotalCredits   float64                 `json:"total_credits"`
-	Lines          []bankStatementAIMLLine `json:"lines"`
+type bankStatementMistralResponse struct {
+	AccountNumber  string                     `json:"account_number"`
+	IBAN           string                     `json:"iban"`
+	Currency       string                     `json:"currency"`
+	PeriodStart    string                     `json:"period_start"`
+	PeriodEnd      string                     `json:"period_end"`
+	OpeningBalance float64                    `json:"opening_balance"`
+	ClosingBalance float64                    `json:"closing_balance"`
+	TotalDebits    float64                    `json:"total_debits"`
+	TotalCredits   float64                    `json:"total_credits"`
+	Lines          []bankStatementMistralLine `json:"lines"`
 }
 
-type bankStatementAIMLLine struct {
+type bankStatementMistralLine struct {
 	LineNumber  int     `json:"line_number"`
 	Date        string  `json:"date"`
 	ValueDate   string  `json:"value_date"`
@@ -67,7 +72,7 @@ func (a *App) parseImportedPDFBankStatement(extractedText string) (*bankStatemen
 	localParsed, source, localErr := parseBankStatementLocally(extractedText)
 	if localErr == nil && localParsed != nil {
 		validation := validateParsedStatement(localParsed)
-		if !validation.Blocking && !shouldEscalateBankStatementToAIML(source, validation, len(localParsed.Lines)) {
+		if !validation.Blocking && !shouldEscalateBankStatementToMistral(source, validation, len(localParsed.Lines)) {
 			return &bankStatementParseOutcome{
 				Statement:      localParsed,
 				ImportMethod:   source,
@@ -76,7 +81,7 @@ func (a *App) parseImportedPDFBankStatement(extractedText string) (*bankStatemen
 			}, nil
 		}
 
-		if !isBankStatementAIMLAssistEnabled() {
+		if !isBankStatementMistralAssistEnabled() {
 			if validation.Blocking {
 				return nil, fmt.Errorf("local parser produced invalid statement: %s", strings.Join(validation.BlockingIssues, "; "))
 			}
@@ -88,21 +93,21 @@ func (a *App) parseImportedPDFBankStatement(extractedText string) (*bankStatemen
 			}, nil
 		}
 
-		aimlParsed, model, aiErr := parseBankStatementWithAIML(extractedText)
-		if aiErr == nil && aimlParsed != nil {
-			aiValidation := validateParsedStatement(aimlParsed)
-			if !aiValidation.Blocking {
-				log.Printf("✅ Bank statement AI assist recovered structured statement using %s", model)
+		mistralParsed, model, aiErr := parseBankStatementWithMistral(extractedText)
+		if aiErr == nil && mistralParsed != nil {
+			mistralValidation := validateParsedStatement(mistralParsed)
+			if !mistralValidation.Blocking {
+				log.Printf("✅ Bank statement Mistral assist recovered structured statement using %s", model)
 				return &bankStatementParseOutcome{
-					Statement:      aimlParsed,
-					ImportMethod:   fmt.Sprintf("PDF_OCR_AIML:%s", model),
+					Statement:      mistralParsed,
+					ImportMethod:   fmt.Sprintf("PDF_OCR_MISTRAL:%s", model),
 					OCRConfidence:  0.93,
-					ValidationNote: aiValidation.Warnings,
+					ValidationNote: mistralValidation.Warnings,
 				}, nil
 			}
-			log.Printf("⚠️ Bank statement AI assist returned invalid statement: %s", strings.Join(aiValidation.BlockingIssues, "; "))
+			log.Printf("⚠️ Bank statement Mistral assist returned invalid statement: %s", strings.Join(mistralValidation.BlockingIssues, "; "))
 		} else if aiErr != nil {
-			log.Printf("⚠️ Bank statement AI assist unavailable, keeping local parse path: %v", aiErr)
+			log.Printf("⚠️ Bank statement Mistral assist unavailable, keeping local parse path: %v", aiErr)
 		}
 
 		if validation.Blocking {
@@ -116,28 +121,28 @@ func (a *App) parseImportedPDFBankStatement(extractedText string) (*bankStatemen
 		}, nil
 	}
 
-	if !isBankStatementAIMLAssistEnabled() {
+	if !isBankStatementMistralAssistEnabled() {
 		return nil, localErr
 	}
 
-	aimlParsed, model, aiErr := parseBankStatementWithAIML(extractedText)
+	mistralParsed, model, aiErr := parseBankStatementWithMistral(extractedText)
 	if aiErr != nil {
 		if localErr != nil {
-			return nil, fmt.Errorf("%w; AI assist also failed: %v", localErr, aiErr)
+			return nil, fmt.Errorf("%w; Mistral assist also failed: %v", localErr, aiErr)
 		}
 		return nil, aiErr
 	}
 
-	aiValidation := validateParsedStatement(aimlParsed)
-	if aiValidation.Blocking {
-		return nil, fmt.Errorf("AI-assisted parser produced invalid statement: %s", strings.Join(aiValidation.BlockingIssues, "; "))
+	mistralValidation := validateParsedStatement(mistralParsed)
+	if mistralValidation.Blocking {
+		return nil, fmt.Errorf("AI-assisted parser produced invalid statement: %s", strings.Join(mistralValidation.BlockingIssues, "; "))
 	}
 
 	return &bankStatementParseOutcome{
-		Statement:      aimlParsed,
-		ImportMethod:   fmt.Sprintf("PDF_OCR_AIML:%s", model),
+		Statement:      mistralParsed,
+		ImportMethod:   fmt.Sprintf("PDF_OCR_MISTRAL:%s", model),
 		OCRConfidence:  0.92,
-		ValidationNote: aiValidation.Warnings,
+		ValidationNote: mistralValidation.Warnings,
 	}, nil
 }
 
@@ -293,7 +298,7 @@ func validateParsedStatement(parsed *parsedStatement) bankStatementValidation {
 	return validation
 }
 
-func shouldEscalateBankStatementToAIML(source string, validation bankStatementValidation, lineCount int) bool {
+func shouldEscalateBankStatementToMistral(source string, validation bankStatementValidation, lineCount int) bool {
 	if !strings.Contains(strings.ToUpper(source), "GENERIC") {
 		return false
 	}
@@ -306,21 +311,21 @@ func shouldEscalateBankStatementToAIML(source string, validation bankStatementVa
 	return validation.AmbiguousAmountCount > maxInt(1, lineCount/6)
 }
 
-func isBankStatementAIMLAssistEnabled() bool {
-	return getEnvBool(bankStatementAIMLFlagEnv, false)
+func isBankStatementMistralAssistEnabled() bool {
+	return getEnvBool(bankStatementMistralFlagEnv, false)
 }
 
-func parseBankStatementWithAIML(text string) (*parsedStatement, string, error) {
-	apiKey := strings.TrimSpace(getAIMLAPIKey())
+func parseBankStatementWithMistral(text string) (*parsedStatement, string, error) {
+	apiKey := strings.TrimSpace(getMistralAPIKey())
 	if apiKey == "" {
-		return nil, "", fmt.Errorf("AIML API key is not configured")
+		return nil, "", fmt.Errorf("Mistral API key is not configured")
 	}
 
 	cleanedText := strings.TrimSpace(text)
 	if cleanedText == "" {
 		return nil, "", fmt.Errorf("statement text is empty")
 	}
-	maxChars := getEnvInt(bankStatementAIMLMaxTextCharsEnv, defaultBankStatementAITextLimit)
+	maxChars := getEnvInt(bankStatementMistralMaxTextCharsEnv, defaultBankStatementAITextLimit)
 	if maxChars > 0 && len(cleanedText) > maxChars {
 		cleanedText = cleanedText[:maxChars]
 	}
@@ -359,7 +364,7 @@ Do not invent rows that are not present in the text.`
 OCR text:
 %s`, cleanedText)
 
-	response, model, err := callAIMLForBankStatement(apiKey, systemPrompt, userPrompt)
+	response, model, err := callMistralForBankStatement(apiKey, systemPrompt, userPrompt)
 	if err != nil {
 		return nil, "", err
 	}
@@ -369,19 +374,22 @@ OCR text:
 		return nil, model, fmt.Errorf("AI response did not contain JSON")
 	}
 
-	var payload bankStatementAIMLResponse
+	var payload bankStatementMistralResponse
 	if err := json.Unmarshal([]byte(jsonPayload), &payload); err != nil {
 		return nil, model, fmt.Errorf("failed to parse AI JSON response: %w", err)
 	}
 
-	parsed, err := normalizeAIMLBankStatement(payload)
+	parsed, err := normalizeMistralBankStatement(payload)
 	if err != nil {
 		return nil, model, err
 	}
 	return parsed, model, nil
 }
 
-func callAIMLForBankStatement(apiKey, systemPrompt, userPrompt string) (string, string, error) {
+// callMistralForBankStatement calls Mistral chat completions with a short, configurable
+// timeout (this path is a best-effort escalation from local parsing, not the primary
+// Butler chat path — see MistralAPITimeout in butler_ai.go for that one).
+func callMistralForBankStatement(apiKey, systemPrompt, userPrompt string) (string, string, error) {
 	type message struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
@@ -393,81 +401,66 @@ func callAIMLForBankStatement(apiKey, systemPrompt, userPrompt string) (string, 
 		Temperature float64   `json:"temperature"`
 	}
 
-	timeout := time.Duration(getEnvInt(bankStatementAIMLTimeoutEnv, defaultBankStatementAITimeoutMS)) * time.Millisecond
+	timeout := time.Duration(getEnvInt(bankStatementMistralTimeoutEnv, defaultBankStatementAITimeoutMS)) * time.Millisecond
 	if timeout <= 0 {
 		timeout = defaultBankStatementAITimeoutMS * time.Millisecond
 	}
 
-	models := dedupeStringSlice(append([]string{getAIMLModelID()}, fallbackAIMLModels...))
-	var lastErr error
-	for _, model := range models {
-		body, err := json.Marshal(request{
-			Model: model,
-			Messages: []message{
-				{Role: "system", Content: systemPrompt},
-				{Role: "user", Content: userPrompt},
-			},
-			MaxTokens:   bankStatementAIMLMaxTokens,
-			Temperature: 0.1,
-		})
-		if err != nil {
-			return "", "", fmt.Errorf("marshal error: %w", err)
-		}
-
-		req, err := http.NewRequest("POST", aimlAPIURL, bytes.NewBuffer(body))
-		if err != nil {
-			return "", "", fmt.Errorf("request creation error: %w", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-
-		client := &http.Client{Timeout: timeout}
-		resp, err := client.Do(req)
-		if err != nil {
-			lastErr = err
-			log.Printf("⚠️ Bank statement AIML attempt failed (%s): %v", model, err)
-			continue
-		}
-
-		respBody, readErr := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if readErr != nil {
-			lastErr = readErr
-			log.Printf("⚠️ Bank statement AIML response read failed (%s): %v", model, readErr)
-			continue
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			lastErr = fmt.Errorf("AIML API error (status %d): %s", resp.StatusCode, string(respBody))
-			log.Printf("⚠️ Bank statement AIML attempt failed (%s): %v", model, lastErr)
-			continue
-		}
-
-		var parsed struct {
-			Choices []struct {
-				Message struct {
-					Content string `json:"content"`
-				} `json:"message"`
-			} `json:"choices"`
-		}
-		if err := json.Unmarshal(respBody, &parsed); err != nil {
-			lastErr = err
-			log.Printf("⚠️ Bank statement AIML JSON decode failed (%s): %v", model, err)
-			continue
-		}
-		if len(parsed.Choices) == 0 {
-			lastErr = fmt.Errorf("no response choices from AIML API")
-			log.Printf("⚠️ Bank statement AIML returned no choices (%s)", model)
-			continue
-		}
-
-		return parsed.Choices[0].Message.Content, model, nil
+	model := mistralModelLarge
+	body, err := json.Marshal(request{
+		Model: model,
+		Messages: []message{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: userPrompt},
+		},
+		MaxTokens:   bankStatementMistralMaxTokens,
+		Temperature: 0.1,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("marshal error: %w", err)
 	}
 
-	return "", "", lastErr
+	req, err := http.NewRequest("POST", mistralAPIURL, bytes.NewBuffer(body))
+	if err != nil {
+		return "", "", fmt.Errorf("request creation error: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", "", fmt.Errorf("HTTP request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return "", "", fmt.Errorf("read response error: %w", readErr)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("Mistral API error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	var parsed struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return "", "", fmt.Errorf("JSON decode failed: %w", err)
+	}
+	if len(parsed.Choices) == 0 {
+		return "", "", fmt.Errorf("no response choices from Mistral API")
+	}
+
+	return parsed.Choices[0].Message.Content, model, nil
 }
 
-func normalizeAIMLBankStatement(payload bankStatementAIMLResponse) (*parsedStatement, error) {
+func normalizeMistralBankStatement(payload bankStatementMistralResponse) (*parsedStatement, error) {
 	if len(payload.Lines) == 0 {
 		return nil, fmt.Errorf("AI response had no transaction lines")
 	}

@@ -196,9 +196,35 @@ If a future secret/config cleanup causes regressions:
 
 - The current app relies on runtime env files, not hardcoded config, for Supabase.
 - Packaged and machine-level envs currently disagree on cloud-sync state.
-- Mistral currently has a hardcoded fallback in source.
-- AIML naming is inconsistent across subsystems:
-  - `ASYMM_AIML_API_KEY`
-  - `AIML_API_KEY`
-  - `AIMLAPI_KEY`
+- ~~Mistral currently has a hardcoded fallback in source.~~ **Superseded (Wave 13, 2026-07-22):**
+  `getMistralAPIKey()` (`butler_ai.go`) no longer has a hardcoded fallback — it returns `""`
+  when no key is found in the encrypted settings DB, `settings.json`, or `MISTRAL_API_KEY`,
+  and Butler/OCR simply stay disabled until a key is supplied. This baseline's §1.4/§3.2
+  hardcoded-fallback description is historical, not current behavior.
+- ~~AIML naming is inconsistent across subsystems~~ **Retired (Wave 13, 2026-07-22):** the
+  AIMLAPI/Grok provider (`ASYMM_AIML_API_KEY`, `AIML_API_KEY`, `AIMLAPI_KEY`, and the
+  `apiKeys.aimlapi_key` / `apiKeys.aiml_model` settings) has been deleted from live code
+  entirely. Butler chat and OCR cloud-escalation are Mistral-direct only, both routed through
+  the single `getMistralAPIKey()` resolver referenced above — the naming-mismatch bug this
+  baseline documented (`AIML_API_KEY` vs `AIMLAPI_KEY`) can no longer occur because there is
+  only one provider and one key. Chat model IDs (`mistral-large-latest` / `mistral-small-latest`)
+  are now env-overridable (`MISTRAL_MODEL_LARGE` / `MISTRAL_MODEL_SMALL`) rather than a
+  settings-DB provider, since there is nothing left to prefer between.
 - A future cleanup must preserve behavior before removing any fallback or moving any env source.
+
+## 7. Wave 13 Addendum (2026-07-22) — Provider Consolidation
+
+This baseline predates the Wave 13 "Perception & Print" mission. The AI-key-precedence
+picture in §1.4 above is now:
+
+- **Mistral (chat + OCR, the only provider):** encrypted settings DB `apiKeys.mistral_key` →
+  `settings.json` `apiKeys.mistral_key` → env `MISTRAL_API_KEY` → disabled (no hardcoded
+  fallback). Unchanged resolver, now the only one in the app.
+- **AIMLAPI / Grok:** removed. `getAIMLAPIKey`, `getAIMLModelID`, `callAIML*`,
+  `SetAIMLKeyProvider`, `SetAIMLModelProvider`, `pkg/ocr/aimlapi.go`, and the
+  `apiKeys.aimlapi_key` / `apiKeys.aiml_model` settings keys no longer exist in live code.
+  `pkg/ocr/orchestrator`'s AIMLAPI OCR client is a separate, already-dead research path
+  (Mission P3's scope, not this baseline's §1.4 concern) and is unaffected by this addendum.
+- OCR cloud escalation (formerly AIMLAPI `gpt-4o-mini` vision-chat) now goes through the new
+  `pkg/ocr/mistralocr` client against Mistral's dedicated `/v1/ocr` endpoint — no page-render-
+  to-PNG loop, native PDF/image submission.

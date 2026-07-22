@@ -1042,14 +1042,8 @@ func buildDeploymentEnvText(src, stamp string) ([]byte, error) {
 			existingKeys[key] = true
 		}
 	}
-	appendEnvIfPresent("ASYMM_AIML_API_KEY")
-	appendEnvIfPresent("AIML_API_KEY")
-	appendEnvIfPresent("ASYMM_AIML_MODEL")
-	appendEnvIfPresent("AIML_MODEL")
-	if !existingKeys["ASYMM_AIML_MODEL"] && !existingKeys["AIML_MODEL"] {
-		text += fmt.Sprintf("AIML_MODEL=%s\n", getAIMLModelID())
-		existingKeys["AIML_MODEL"] = true
-	}
+	// AIMLAPI/Grok removed in Wave 13 — Mistral direct is the only AI provider now;
+	// no AIML_* env vars are written into the deployment package.
 	appendEnvIfPresent("MISTRAL_API_KEY")
 	if strings.TrimSpace(stamp) != "" {
 		text += fmt.Sprintf("ASYMMFLOW_DB_RESEED_STAMP=%s\n", strings.TrimSpace(stamp))

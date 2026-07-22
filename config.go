@@ -98,7 +98,7 @@ type AzureConfig struct {
 
 // AIConfig defines AI provider settings
 type AIConfig struct {
-	Provider string // "aimlapi", "openai", "anthropic"
+	Provider string // "mistral", "openai", "anthropic" — AIMLAPI/Grok removed in Wave 13
 	APIKey   string
 	Model    string // Model name/ID
 }

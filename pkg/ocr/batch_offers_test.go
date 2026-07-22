@@ -38,7 +38,7 @@ func TestBatchOffersProcessing(t *testing.T) {
 		DefaultLanguage:       LangEnglish,
 		EnablePreprocessing:   false,
 		EnableVedicValidation: false,
-		FallbackToAIMLAPI:     false,
+		FallbackToMistral:     false,
 		LogLevel:              "info",
 	}
 
@@ -212,7 +212,7 @@ func BenchmarkBatchOffersProcessing(b *testing.B) {
 		DefaultLanguage:       LangEnglish,
 		EnablePreprocessing:   false,
 		EnableVedicValidation: false,
-		FallbackToAIMLAPI:     false,
+		FallbackToMistral:     false,
 		LogLevel:              "error",
 	}
 

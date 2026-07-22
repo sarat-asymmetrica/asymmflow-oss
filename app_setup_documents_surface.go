@@ -119,8 +119,6 @@ func (a *App) GetSettings() (map[string]any, error) {
 			"reports_path":   getSettingOrDefault(userSettings, "folders.reports_path", ""),
 		},
 		"apiKeys": map[string]any{
-			"aimlapi_key":    maskSecret(getSettingOrDefault(userSettings, "apiKeys.aimlapi_key", "").(string)),
-			"aiml_model":     getSettingOrDefault(userSettings, "apiKeys.aiml_model", getAIMLModelID()).(string),
 			"openai_key":     maskSecret(getSettingOrDefault(userSettings, "apiKeys.openai_key", "").(string)),
 			"anthropic_key":  maskSecret(getSettingOrDefault(userSettings, "apiKeys.anthropic_key", "").(string)),
 			"mistral_key":    maskSecret(getSettingOrDefault(userSettings, "apiKeys.mistral_key", "").(string)),
@@ -209,33 +207,18 @@ func (a *App) UpdateSettings(settings map[string]any) error {
 		}
 	}
 
-	// Update in-memory API keys (used by AI integrations)
+	// Update in-memory API keys (used by AI integrations). AIMLAPI/Grok was removed in
+	// Wave 13 — Mistral direct (via getMistralAPIKey) is the only AI/OCR provider now.
 	if apiKeys, ok := settings["apiKeys"].(map[string]any); ok {
-		// Only update if not masked
-		if key, ok := apiKeys["aimlapi_key"].(string); ok && key != "" && !strings.Contains(key, "*") {
-			a.config.AI.APIKey = key
-		}
 		if key, ok := apiKeys["openai_key"].(string); ok && key != "" && !strings.Contains(key, "*") {
 			// Store OpenAI key if needed for future use
 		}
 		if key, ok := apiKeys["anthropic_key"].(string); ok && key != "" && !strings.Contains(key, "*") {
 			// Store Anthropic key if needed for future use
 		}
-		// Mistral API key - used by Butler AI
+		// Mistral API key - used by Butler AI and OCR
 		if key, ok := apiKeys["mistral_key"].(string); ok && key != "" && !strings.Contains(key, "*") {
 			log.Println("AI configuration updated")
-		}
-		if model, ok := apiKeys["aiml_model"].(string); ok {
-			model = strings.TrimSpace(model)
-			if model != "" {
-				os.Setenv("AIML_MODEL", model)
-				if a.settingsService != nil {
-					if err := a.settingsService.SetSetting("apiKeys.aiml_model", model, "apiKeys", false); err != nil {
-						log.Printf("⚠ Failed to persist AIML model preference: %v", err)
-					}
-				}
-				log.Println("AI model preference updated")
-			}
 		}
 	}
 
@@ -562,7 +545,7 @@ func (a *App) SeedBankDemoData() error {
 	return nil
 }
 
-// TestAIConnection tests connection to AI provider (AIMLAPI/OpenAI)
+// TestAIConnection tests connection to AI provider (Mistral/OpenAI/Anthropic)
 func (a *App) TestAIConnection(provider string, apiKey string) error {
 	if err := a.requirePermission("settings:update"); err != nil {
 		return err
@@ -646,27 +629,8 @@ func (a *App) SetAPIKeys(apiKeys map[string]string) error {
 			}
 		}
 	}
-	persistPlainKey := func(settingKey, value string) {
-		if a.settingsService != nil {
-			if err := a.settingsService.SetSetting(settingKey, value, "apiKeys", false); err != nil {
-				log.Printf("⚠ Failed to persist %s: %v", settingKey, err)
-			}
-		}
-	}
-
-	// Update AIMLAPI key (also used as primary Butler/Grok backend)
-	if key, ok := apiKeys["aimlapi_key"]; ok && key != "" && key != "****" {
-		a.config.AI.APIKey = key
-		os.Setenv("AIML_API_KEY", key)
-		persistKey("apiKeys.aimlapi_key", key)
-		log.Println("AI configuration updated")
-	}
-	if model, ok := apiKeys["aiml_model"]; ok && strings.TrimSpace(model) != "" {
-		model = strings.TrimSpace(model)
-		os.Setenv("AIML_MODEL", model)
-		persistPlainKey("apiKeys.aiml_model", model)
-		log.Println("AI model preference updated")
-	}
+	// AIMLAPI/Grok (aimlapi_key, aiml_model) removed in Wave 13 — Mistral direct is the only
+	// AI/OCR provider now; see getMistralAPIKey and the mistral_key setting below.
 
 	// Update Mistral key
 	if key, ok := apiKeys["mistral_key"]; ok && key != "" && key != "****" {
@@ -4186,7 +4150,10 @@ func (a *App) ProcessOffersBatch(offersFolder string) (*BatchOfferResult, error)
 // OCR ENGINE HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// getOCREngine initializes and returns the OCR engine
+// getOCREngine initializes and returns the OCR engine. Cloud escalation (low-confidence local
+// tesseract -> Mistral OCR 4) is opt-in: it only activates if the app's standard Mistral key
+// resolver has a key configured (offline-first — no key means EnableGPU/tesseract-only, same as
+// SimpleOCRService's local fallback engine).
 func (a *App) getOCREngine() (ocr.Engine, error) {
 	config := &ocr.EngineConfig{
 		EnableGPU:             true,
@@ -4195,8 +4162,8 @@ func (a *App) getOCREngine() (ocr.Engine, error) {
 		DefaultLanguage:       ocr.LangEnglish,
 		EnablePreprocessing:   true,
 		EnableVedicValidation: true,
-		FallbackToAIMLAPI:     true,
-		AIMLAPIKey:            os.Getenv("AIMLAPI_KEY"),
+		FallbackToMistral:     true,
+		MistralAPIKey:         getMistralAPIKey(),
 		TesseractPath:         a.config.Tools.TesseractPath,
 		PandocPath:            a.config.Tools.PandocPath,
 		LogLevel:              "info",
@@ -4420,65 +4387,14 @@ func (a *App) ProcessWithGoFitz(filePath string) *OCRResult {
 	return result
 }
 
-// ProcessWithFlorence2 forces Florence-2 processor (via Fly.io)
-func (a *App) ProcessWithFlorence2(filePath string) *OCRResult {
-	if err := a.requirePermission("documents:create"); err != nil {
-		return &OCRResult{Error: err.Error()}
-	}
-	if a.ocrService == nil {
-		return &OCRResult{
-			Text:       "",
-			Confidence: 0,
-			Error:      "OCR service not initialized",
-		}
-	}
-
-	result, err := a.ocrService.ProcessWithFlorence2(filePath)
-	if err != nil {
-		return &OCRResult{Error: err.Error()}
-	}
-	return result
-}
-
-// ProcessWithTesseract forces Tesseract processor (via Fly.io)
-func (a *App) ProcessWithTesseract(filePath string) *OCRResult {
-	if err := a.requirePermission("documents:create"); err != nil {
-		return &OCRResult{Error: err.Error()}
-	}
-	if a.ocrService == nil {
-		return &OCRResult{
-			Text:       "",
-			Confidence: 0,
-			Error:      "OCR service not initialized",
-		}
-	}
-
-	result, err := a.ocrService.ProcessWithTesseract(filePath)
-	if err != nil {
-		return &OCRResult{Error: err.Error()}
-	}
-	return result
-}
-
-// ProcessWithGPU forces GPU preprocessing (via Fly.io)
-func (a *App) ProcessWithGPU(filePath string) *OCRResult {
-	if err := a.requirePermission("documents:create"); err != nil {
-		return &OCRResult{Error: err.Error()}
-	}
-	if a.ocrService == nil {
-		return &OCRResult{
-			Text:       "",
-			Confidence: 0,
-			Error:      "OCR service not initialized",
-		}
-	}
-
-	result, err := a.ocrService.ProcessWithGPU(filePath)
-	if err != nil {
-		return &OCRResult{Error: err.Error()}
-	}
-	return result
-}
+// ProcessWithFlorence2, ProcessWithTesseract, and ProcessWithGPU were removed in Wave 13
+// (Perception & Print): all three silently redirected to the now-retired Fly.io runtime
+// regardless of which "processor" the caller asked for — Florence-2 never ran locally, and
+// "GPU preprocessing" was Fly.io's GPU, not this machine's. No frontend surface called them
+// (frontend-lab has no UI wired to any OCR binding yet). Manual tier selection now has one
+// honest option: ProcessWithGoFitz (still available, unchanged) for forcing the free local
+// vector-PDF path. Everything else goes through ProcessDocumentWithOCR's real dispatch
+// (go-fitz -> Mistral OCR 4 -> offline tesseract fallback).
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ETL SERVICE - Batch OCR and Data Seeding (Wave 3 Agent 1)

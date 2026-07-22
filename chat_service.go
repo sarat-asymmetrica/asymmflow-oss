@@ -1184,24 +1184,10 @@ func (a *App) runButlerBriefingFlow(conversationID, triggerMessage, conversation
 		})
 	}
 
-	var aiResponse string
-	var modelErr error
-	var aiErr error
 	fallbackReason := ""
-	requestedModel := getAIMLModelID()
-	usedModel := ""
-	if aimlKey := getAIMLAPIKey(); aimlKey != "" {
-		aiResponse, usedModel, aiErr = callAIMLWithFallback(aimlKey, systemPrompt, triggerMessage)
-		usedBackend = "AIML/Grok"
-		if aiErr != nil {
-			log.Printf("⚠️ AIML API error in daily briefing, falling back to Mistral: %v", aiErr)
-			fallbackReason = aiErr.Error()
-			aiResponse, modelErr = callMistralWithMessages(model, mistralMessages)
-			usedBackend = "Mistral (fallback)"
-		}
-	} else {
-		aiResponse, modelErr = callMistralWithMessages(model, mistralMessages)
-	}
+	requestedModel := model
+	usedModel := model
+	aiResponse, modelErr := callMistralWithMessages(model, mistralMessages)
 	if modelErr != nil {
 		log.Printf("❌ Mistral API error in daily briefing: %v", modelErr)
 		errReason := modelErr.Error()
@@ -1732,26 +1718,10 @@ func (a *App) ChatWithButlerPersistent(conversationID, message string) (ChatResp
 	}
 
 	// 10. Call Mistral API with full context
-	var aiResponse string
-	var modelErr error
-	var aiErr error
 	fallbackReason := ""
-	requestedModel := getAIMLModelID()
-	usedModel := ""
-	if aimlKey := getAIMLAPIKey(); aimlKey != "" {
-		aiResponse, usedModel, aiErr = callAIMLWithMessages(aimlKey, mistralMessages)
-		usedBackend = "AIML/Grok"
-		if aiErr != nil {
-			log.Printf("⚠️ AIML API error in persistent chat, falling back to Mistral: %v", aiErr)
-			aiResponse, modelErr = callMistralWithMessages(model, mistralMessages)
-			usedBackend = "Mistral (fallback)"
-		}
-	} else {
-		aiResponse, modelErr = callMistralWithMessages(model, mistralMessages)
-	}
-	if aiErr != nil {
-		fallbackReason = aiErr.Error()
-	}
+	requestedModel := model
+	usedModel := model
+	aiResponse, modelErr := callMistralWithMessages(model, mistralMessages)
 	if modelErr != nil {
 		log.Printf("❌ Mistral API error: %v", modelErr)
 

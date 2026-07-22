@@ -310,6 +310,10 @@ export function GeneratePayrollRun(arg1) {
   return window['go']['main']['FinanceService']['GeneratePayrollRun'](arg1);
 }
 
+export function GeneratePayslipPDF(arg1, arg2) {
+  return window['go']['main']['FinanceService']['GeneratePayslipPDF'](arg1, arg2);
+}
+
 export function GenerateProfitAndLoss(arg1) {
   return window['go']['main']['FinanceService']['GenerateProfitAndLoss'](arg1);
 }
