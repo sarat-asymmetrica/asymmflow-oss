@@ -203,20 +203,12 @@ func (s *DocumentsService) ProcessOffersBatch(offersFolder string) (*BatchOfferR
 	return s.app.ProcessOffersBatch(offersFolder)
 }
 
-func (s *DocumentsService) ProcessWithFlorence2(filePath string) *OCRResult {
-	return s.app.ProcessWithFlorence2(filePath)
-}
-
-func (s *DocumentsService) ProcessWithGPU(filePath string) *OCRResult {
-	return s.app.ProcessWithGPU(filePath)
-}
+// ProcessWithFlorence2, ProcessWithGPU, and ProcessWithTesseract were removed in Wave 13
+// (Perception & Print) along with the App methods they wrapped — see the comment at
+// app_setup_documents_surface.go where those bindings used to live.
 
 func (s *DocumentsService) ProcessWithGoFitz(filePath string) *OCRResult {
 	return s.app.ProcessWithGoFitz(filePath)
-}
-
-func (s *DocumentsService) ProcessWithTesseract(filePath string) *OCRResult {
-	return s.app.ProcessWithTesseract(filePath)
 }
 
 func (s *DocumentsService) QuickCaptureDocument(filePath string) (map[string]any, error) {

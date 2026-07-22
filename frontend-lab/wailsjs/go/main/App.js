@@ -2898,20 +2898,8 @@ export function ProcessTender(arg1) {
   return window['go']['main']['App']['ProcessTender'](arg1);
 }
 
-export function ProcessWithFlorence2(arg1) {
-  return window['go']['main']['App']['ProcessWithFlorence2'](arg1);
-}
-
-export function ProcessWithGPU(arg1) {
-  return window['go']['main']['App']['ProcessWithGPU'](arg1);
-}
-
 export function ProcessWithGoFitz(arg1) {
   return window['go']['main']['App']['ProcessWithGoFitz'](arg1);
-}
-
-export function ProcessWithTesseract(arg1) {
-  return window['go']['main']['App']['ProcessWithTesseract'](arg1);
 }
 
 export function ProgressOrderOnDelivery(arg1) {

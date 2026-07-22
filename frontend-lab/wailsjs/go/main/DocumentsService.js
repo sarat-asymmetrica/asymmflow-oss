@@ -318,20 +318,8 @@ export function ProcessOffersBatch(arg1) {
   return window['go']['main']['DocumentsService']['ProcessOffersBatch'](arg1);
 }
 
-export function ProcessWithFlorence2(arg1) {
-  return window['go']['main']['DocumentsService']['ProcessWithFlorence2'](arg1);
-}
-
-export function ProcessWithGPU(arg1) {
-  return window['go']['main']['DocumentsService']['ProcessWithGPU'](arg1);
-}
-
 export function ProcessWithGoFitz(arg1) {
   return window['go']['main']['DocumentsService']['ProcessWithGoFitz'](arg1);
-}
-
-export function ProcessWithTesseract(arg1) {
-  return window['go']['main']['DocumentsService']['ProcessWithTesseract'](arg1);
 }
 
 export function QuickCaptureDocument(arg1) {

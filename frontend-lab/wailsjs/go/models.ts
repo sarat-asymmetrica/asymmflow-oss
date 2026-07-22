@@ -13173,12 +13173,15 @@ export namespace main {
 	    dna_cache_hit: boolean;
 	    table_detected: boolean;
 	    gpu_used: boolean;
+	    needs_review: boolean;
+	    field_confidence?: Record<string, number>;
+	    fields_needing_review?: string[];
 	    error?: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new OCRResultSimple(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.success = source["success"];
@@ -13195,6 +13198,9 @@ export namespace main {
 	        this.dna_cache_hit = source["dna_cache_hit"];
 	        this.table_detected = source["table_detected"];
 	        this.gpu_used = source["gpu_used"];
+	        this.needs_review = source["needs_review"];
+	        this.field_confidence = source["field_confidence"];
+	        this.fields_needing_review = source["fields_needing_review"];
 	        this.error = source["error"];
 	    }
 	}

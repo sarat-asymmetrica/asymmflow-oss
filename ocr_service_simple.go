@@ -2,10 +2,9 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/base64"
+	"context"
 	"encoding/binary"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -22,37 +21,89 @@ import (
 	"github.com/nguyenthenguyen/docx"
 	"github.com/richardlehane/mscfb"
 	"github.com/xuri/excelize/v2"
+	aceocr "ph_holdings_app/pkg/ocr"
 	documentsocr "ph_holdings_app/pkg/documents/ocr"
+	"ph_holdings_app/pkg/ocr/mistralocr"
 )
 
 // MaxFileSize is the maximum allowed file size for OCR (50MB)
 const MaxFileSize = 50 * 1024 * 1024 // 50 MB
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SIMPLIFIED OCR SERVICE - Direct Fly.io Runtime Integration
+// SIMPLIFIED OCR SERVICE - Mistral OCR 4 + offline-first local fallback
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// ARCHITECTURE:
-//   Document → Is Vector PDF? → YES → PyMuPDF locally (go-fitz)
-//                             → NO  → Shell to ocr_engine.ps1 → Fly.io Runtime
+// ARCHITECTURE (Wave 13 "Perception & Print" — Fly.io retired):
+//   PDF   → vector text via go-fitz (free, offline)
+//         → scant?  → Mistral OCR 4 (native PDF, schema-shaped extraction)
+//                   → offline fallback: tesseract via the local ACEEngine pipeline
+//   Image → Mistral OCR 4 → offline fallback: tesseract via the local ACEEngine pipeline
+//   Office formats (xlsx/xls/docx/rtf/msg/eml) → parsed locally, no OCR involved
 //
-// FEATURES:
-//   - Minimal complexity (~130 LOC vs 686 LOC original)
-//   - Zero dependencies on complex pipeline/orchestrator
-//   - Direct PowerShell → Fly.io integration
-//   - Fast vector PDF extraction with go-fitz
-//   - Production-ready error handling
+// Offline-first is a hard boundary: with no Mistral key and no network, every
+// document still gets a result (go-fitz text, or tesseract, or — worst case —
+// the local file cleanly reported as unreadable) and the caller never blocks.
 //
 // Built with MATHEMATICAL RIGOR × PRODUCTION ROBUSTNESS × SIMPLICITY
-// Wave 2, Agent 3 - January 20, 2026
+// Wave 2, Agent 3 - January 20, 2026 / Wave 13, Agent P3 - July 22, 2026
 // ═══════════════════════════════════════════════════════════════════════════
 
-// SimpleOCRService handles OCR via Fly.io Runtime
+// SimpleOCRService dispatches OCR across the Mistral OCR 4 cloud engine and the
+// local (offline) go-fitz + tesseract pipeline. No Fly.io / AIMLAPI dependency.
 type SimpleOCRService struct {
-	flyEndpoint string
 	httpClient  *http.Client
 	maxPages    int
 	dpi         int
+	localEngine *aceocr.ACEEngine // offline tesseract+pandoc fallback, no cloud escalation
+}
+
+// mistralOCREnv reads Mistral OCR client configuration from the environment, applying the
+// same sane defaults as pkg/ocr/mistralocr — config-not-constant: every model ID, endpoint,
+// threshold, and page cap here is overridable without a code change.
+type mistralOCREnv struct {
+	Model               string
+	BaseURL             string
+	PageCap             int
+	Timeout             time.Duration
+	ConfidenceThreshold float64
+	ScantTextThreshold  int // chars; below this, go-fitz output is treated as "scanned" (PDF path only)
+}
+
+func loadMistralOCREnv() mistralOCREnv {
+	cfg := mistralOCREnv{
+		Model:               getEnvOrDefault("MISTRAL_OCR_MODEL", mistralocr.DefaultModel),
+		BaseURL:             getEnvOrDefault("MISTRAL_OCR_BASE_URL", mistralocr.DefaultBaseURL),
+		PageCap:             getEnvIntOrDefault("MISTRAL_OCR_PAGE_CAP", mistralocr.DefaultPageCap),
+		Timeout:             time.Duration(getEnvIntOrDefault("MISTRAL_OCR_TIMEOUT_SECONDS", int(mistralocr.DefaultTimeout/time.Second))) * time.Second,
+		ConfidenceThreshold: getEnvFloatOrDefault("MISTRAL_OCR_CONFIDENCE_THRESHOLD", mistralocr.DefaultConfidenceThreshold),
+		ScantTextThreshold:  getEnvIntOrDefault("OCR_SCANT_TEXT_THRESHOLD", 50),
+	}
+	return cfg
+}
+
+func getEnvOrDefault(key, def string) string {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		return v
+	}
+	return def
+}
+
+func getEnvIntOrDefault(key string, def int) int {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			return n
+		}
+	}
+	return def
+}
+
+func getEnvFloatOrDefault(key string, def float64) float64 {
+	if v := strings.TrimSpace(os.Getenv(key)); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil {
+			return f
+		}
+	}
+	return def
 }
 
 // OCRResultSimple represents OCR extraction result (compatible with existing OCRResult)
@@ -65,38 +116,53 @@ type OCRResultSimple struct {
 	ExtractedFields  map[string]any `json:"extracted_fields"` // Alias for legacy compatibility
 	ProcessingTime   int64          `json:"processing_time_ms"`
 	ProcessingTimeMS int64          `json:"processing_time_ms_legacy"` // Alias for legacy compatibility
-	Engine           string         `json:"engine"`                    // "pymupdf" or "fly-runtime"
+	Engine           string         `json:"engine"`                    // "pymupdf", "mistral-ocr-4", "tesseract-local", ...
 	TierUsed         string         `json:"tier_used"`                 // Legacy compatibility
 	Cost             float64        `json:"cost"`                      // Processing cost (0 for local)
 	DNACacheHit      bool           `json:"dna_cache_hit"`             // Legacy compatibility
 	TableDetected    bool           `json:"table_detected"`            // Legacy compatibility
 	GPUUsed          bool           `json:"gpu_used"`                  // Legacy compatibility
-	Error            string         `json:"error,omitempty"`
+
+	// NeedsReview / FieldConfidence surface the Mistral OCR 4 Document AI confidence signal
+	// (page-level heuristic — see pkg/ocr/mistralocr) through to the document review UI.
+	// Never populated as word-exact; NeedsReview is honest "refuse to guess" per field.
+	NeedsReview     bool               `json:"needs_review"`
+	FieldConfidence map[string]float64 `json:"field_confidence,omitempty"`
+	FieldsForReview []string           `json:"fields_needing_review,omitempty"`
+
+	Error string `json:"error,omitempty"`
 }
 
 // OCRResult is an alias for OCRResultSimple (API compatibility with legacy code)
 type OCRResult = OCRResultSimple
 
-// NewSimpleOCRService creates a simplified OCR service
+// NewSimpleOCRService creates a simplified OCR service. The local (offline) engine is
+// constructed with no Mistral key and GPU preprocessing disabled, so it never attempts a
+// network call and stays a pure tesseract+pandoc pipeline — see ocrWithLocalEngine.
 func NewSimpleOCRService() (*SimpleOCRService, error) {
 	log.Println("🌸 Initializing Simple OCR Service...")
 
-	// Get Fly.io endpoint from environment (default to production)
-	flyEndpoint := os.Getenv("FLY_OCR_URL")
-	if flyEndpoint == "" {
-		flyEndpoint = "https://asymmetrica-runtime.fly.dev"
+	localEngine, err := aceocr.NewACEEngine(&aceocr.EngineConfig{
+		EnableGPU:             false,
+		EnablePreprocessing:   false,
+		EnableVedicValidation: false,
+		FallbackToMistral:     false, // no MistralAPIKey set below either — belt and suspenders
+		DefaultLanguage:       aceocr.LangEnglish,
+		MaxWorkers:            4,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize local OCR fallback engine: %w", err)
 	}
 
 	service := &SimpleOCRService{
-		flyEndpoint: flyEndpoint,
 		httpClient:  &http.Client{Timeout: 60 * time.Second},
 		maxPages:    10,
 		dpi:         150,
+		localEngine: localEngine,
 	}
 
 	log.Printf("✓ Simple OCR Service initialized")
-	log.Printf("  Fly.io Endpoint: %s", flyEndpoint)
-	log.Println("  Strategy: Vector PDF → go-fitz (free) | Scanned → Fly.io Runtime (direct HTTP)")
+	log.Println("  Strategy: Vector PDF → go-fitz (free) | Scanned/Image → Mistral OCR 4 → offline tesseract fallback")
 
 	return service, nil
 }
@@ -169,18 +235,16 @@ func (s *SimpleOCRService) ProcessDocument(filePath, docType string) (result *OC
 		return result, nil
 
 	case ".png", ".jpg", ".jpeg", ".bmp", ".tiff", ".tif", ".webp":
-		// Image files: try Mistral Vision first, then Fly.io
-		log.Println("🖼️ Image file detected - trying Mistral Vision OCR first")
-		visionResult, visionErr := s.ocrWithMistralVision(filePath, docType)
-		if visionErr == nil {
-			visionResult.ProcessingTime = time.Since(startTime).Milliseconds()
-			return visionResult, nil
-		}
-		log.Printf("⚠ Mistral Vision failed for image: %v, trying Fly.io", visionErr)
-
-		result, err := s.processImage(filePath, docType)
-		if err != nil {
-			return nil, fmt.Errorf("image OCR failed (mistral-vision: %v, fly.io: %w)", visionErr, err)
+		// Images: Mistral OCR 4 first; offline tesseract fallback (never blocks the inbox).
+		log.Println("🖼️ Image file detected - trying Mistral OCR 4")
+		result, mistralErr := s.ocrWithMistral(filePath, docType, true)
+		if mistralErr != nil {
+			log.Printf("⚠ Mistral OCR failed for image: %v, falling back to local tesseract", mistralErr)
+			var localErr error
+			result, localErr = s.ocrWithLocalEngine(filePath, docType, "")
+			if localErr != nil {
+				return nil, fmt.Errorf("image OCR failed (mistral: %v, local: %w)", mistralErr, localErr)
+			}
 		}
 		result.ProcessingTime = time.Since(startTime).Milliseconds()
 		return result, nil
@@ -188,11 +252,12 @@ func (s *SimpleOCRService) ProcessDocument(filePath, docType string) (result *OC
 	case ".pdf":
 		// PDF: ALWAYS try go-fitz first (works offline, fast, free)
 		log.Println("📄 PDF detected - trying local go-fitz extraction first")
+		envCfg := loadMistralOCREnv()
 		text, fitzErr := extractVectorPDF(filePath)
-		if fitzErr == nil && len(strings.TrimSpace(text)) > 50 {
+		if fitzErr == nil && len(strings.TrimSpace(text)) > envCfg.ScantTextThreshold {
 			duration := time.Since(startTime).Milliseconds()
 
-			extractedData := extractFieldsFromText(text, docType)
+			extractedData := extractFieldsFromTextLegacy(text, docType)
 			extractedData["raw_text"] = text
 			log.Printf("📊 Extracted %d fields from PDF via go-fitz (%d chars)", len(extractedData)-1, len(text))
 
@@ -208,29 +273,28 @@ func (s *SimpleOCRService) ProcessDocument(filePath, docType string) (result *OC
 		}
 
 		if fitzErr != nil {
-			log.Printf("⚠ go-fitz extraction failed: %v, trying Fly.io", fitzErr)
+			log.Printf("⚠ go-fitz extraction failed: %v, trying Mistral OCR 4 (native PDF)", fitzErr)
 		} else {
-			log.Printf("⚠ go-fitz got insufficient text (%d chars), trying Fly.io", len(strings.TrimSpace(text)))
+			log.Printf("⚠ go-fitz got insufficient text (%d chars), trying Mistral OCR 4 (native PDF)", len(strings.TrimSpace(text)))
 		}
 
-		// Fallback 1: Mistral Vision OCR (pixtral - works with any image/PDF)
-		log.Println("→ Trying Mistral Vision OCR as primary fallback")
-		visionResult, visionErr := s.ocrWithMistralVision(filePath, docType)
-		if visionErr == nil {
-			visionResult.ProcessingTime = time.Since(startTime).Milliseconds()
-			return visionResult, nil
+		// Fallback 1: Mistral OCR 4, native PDF submission (no page-render-to-PNG loop).
+		result, mistralErr := s.ocrWithMistral(filePath, docType, false)
+		if mistralErr == nil {
+			result.ProcessingTime = time.Since(startTime).Milliseconds()
+			return result, nil
 		}
-		log.Printf("⚠ Mistral Vision failed: %v, trying Fly.io", visionErr)
+		log.Printf("⚠ Mistral OCR failed: %v, falling back to local tesseract", mistralErr)
 
-		// Fallback 2: Fly.io Runtime
-		log.Println("→ Calling Fly.io Runtime for scanned PDF")
-		result, err := s.callFlyOCR(filePath, docType)
-		if err != nil {
-			// If everything fails and we got SOME text from go-fitz, use that
-			if text != "" && len(strings.TrimSpace(text)) > 0 {
+		// Fallback 2: offline tesseract via the local ACEEngine pipeline. Never errors the
+		// inbox — worst case is an honest low-confidence/NeedsReview result.
+		result, localErr := s.ocrWithLocalEngine(filePath, docType, text)
+		if localErr != nil {
+			// Last resort: if go-fitz produced SOME partial text, surface that rather than fail.
+			if strings.TrimSpace(text) != "" {
 				log.Printf("⚠ All OCR engines failed - using partial go-fitz text (%d chars)", len(text))
 				duration := time.Since(startTime).Milliseconds()
-				extractedData := extractFieldsFromText(text, docType)
+				extractedData := extractFieldsFromTextLegacy(text, docType)
 				extractedData["raw_text"] = text
 				return &OCRResultSimple{
 					Success:        true,
@@ -240,9 +304,10 @@ func (s *SimpleOCRService) ProcessDocument(filePath, docType string) (result *OC
 					ExtractedData:  extractedData,
 					ProcessingTime: duration,
 					Engine:         "pymupdf-partial",
+					NeedsReview:    true,
 				}, nil
 			}
-			return nil, fmt.Errorf("all OCR engines failed: go-fitz insufficient, mistral-vision: %v, fly.io: %w", visionErr, err)
+			return nil, fmt.Errorf("all OCR engines failed: go-fitz insufficient, mistral: %v, local: %w", mistralErr, localErr)
 		}
 		result.ProcessingTime = time.Since(startTime).Milliseconds()
 		return result, nil
@@ -270,130 +335,6 @@ func (s *SimpleOCRService) ProcessDocument(filePath, docType string) (result *OC
 	default:
 		return nil, fmt.Errorf("unsupported file type: %s (supported: %s)", ext, strings.Join(supportedOCRFileExtensions(), ", "))
 	}
-}
-
-// processImage handles OCR for image files (PNG, JPG, etc.)
-func (s *SimpleOCRService) processImage(filePath, docType string) (*OCRResultSimple, error) {
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to stat image: %w", err)
-	}
-	if fileInfo.Size() > MaxFileSize {
-		return nil, fmt.Errorf("image too large (%d bytes, max %d)", fileInfo.Size(), MaxFileSize)
-	}
-
-	// Read and encode to base64
-	fileBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read image: %w", err)
-	}
-
-	base64Content := base64.StdEncoding.EncodeToString(fileBytes)
-
-	// Determine MIME type
-	ext := strings.ToLower(filepath.Ext(filePath))
-	mimeType := "image/png"
-	switch ext {
-	case ".jpg", ".jpeg":
-		mimeType = "image/jpeg"
-	case ".bmp":
-		mimeType = "image/bmp"
-	case ".tiff", ".tif":
-		mimeType = "image/tiff"
-	case ".webp":
-		mimeType = "image/webp"
-	}
-
-	// Send to Fly.io image OCR endpoint
-	payload := map[string]any{
-		"base64Content": base64Content,
-		"fileName":      filepath.Base(filePath),
-		"mimeType":      mimeType,
-		"maxPages":      1,
-	}
-
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal image request: %w", err)
-	}
-
-	// Try the image upload endpoint first, fall back to pdf-upload
-	url := s.flyEndpoint + "/api/ocr/image-upload"
-	log.Printf("→ Calling Fly.io image OCR: %s", url)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if apiKey := os.Getenv("ASYMM_API_KEY"); apiKey != "" {
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("fly.io image request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read image response: %w", err)
-	}
-
-	// If image-upload endpoint returns 404, try pdf-upload (some deployments use unified endpoint)
-	if resp.StatusCode == http.StatusNotFound {
-		log.Println("→ image-upload not available, trying pdf-upload endpoint")
-		resp.Body.Close()
-		return s.callFlyOCR(filePath, docType)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("fly.io returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	// Parse response (same format as PDF response)
-	var response struct {
-		Success bool   `json:"success"`
-		Text    string `json:"text"`
-		RawText string `json:"raw_text"`
-		Pages   []struct {
-			PageNumber int    `json:"page_number"`
-			Text       string `json:"text"`
-		} `json:"pages"`
-		Error string `json:"error"`
-	}
-
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse image OCR response: %w", err)
-	}
-
-	rawText := response.Text
-	if rawText == "" {
-		rawText = response.RawText
-	}
-	if rawText == "" && len(response.Pages) > 0 {
-		var pageTexts []string
-		for _, page := range response.Pages {
-			if page.Text != "" {
-				pageTexts = append(pageTexts, page.Text)
-			}
-		}
-		rawText = strings.Join(pageTexts, "\n\n")
-	}
-
-	extractedData := extractFieldsFromText(rawText, docType)
-	extractedData["raw_text"] = rawText
-	extractedData["source_type"] = "image"
-
-	return &OCRResultSimple{
-		Success:       true,
-		Text:          rawText,
-		Confidence:    0.85,
-		DocumentType:  docType,
-		ExtractedData: extractedData,
-		Engine:        "fly-runtime-image",
-	}, nil
 }
 
 // processExcel handles Excel file parsing (local, no OCR needed)
@@ -469,7 +410,7 @@ func (s *SimpleOCRService) processExcel(filePath, docType string) (*OCRResultSim
 	}
 
 	// Also run field extraction on the combined text
-	fields := extractFieldsFromText(text, docType)
+	fields := extractFieldsFromTextLegacy(text, docType)
 	for k, v := range fields {
 		if _, exists := extractedData[k]; !exists {
 			extractedData[k] = v
@@ -686,11 +627,11 @@ func (s *SimpleOCRService) processMSG(filePath, docType string) (*OCRResultSimpl
 	// Detect document type from email content
 	detectedType := docType
 	if detectedType == "" || detectedType == "auto" {
-		detectedType = detectDocumentTypeFromText(text)
+		detectedType = detectDocumentTypeFromTextLegacy(text)
 	}
 
 	// Extract fields from the email text
-	extractedData := extractFieldsFromText(text, detectedType)
+	extractedData := extractFieldsFromTextLegacy(text, detectedType)
 	extractedData["raw_text"] = text
 	extractedData["source_type"] = "msg_email"
 
@@ -811,11 +752,11 @@ func (s *SimpleOCRService) processEML(filePath, docType string) (*OCRResultSimpl
 	// Detect document type from email content
 	detectedType := docType
 	if detectedType == "" || detectedType == "auto" {
-		detectedType = detectDocumentTypeFromText(text)
+		detectedType = detectDocumentTypeFromTextLegacy(text)
 	}
 
 	// Extract fields
-	extractedData := extractFieldsFromText(text, detectedType)
+	extractedData := extractFieldsFromTextLegacy(text, detectedType)
 	extractedData["raw_text"] = text
 	extractedData["source_type"] = "eml_email"
 	extractedData["email_subject"] = subject
@@ -864,11 +805,11 @@ func (s *SimpleOCRService) processDOCX(filePath, docType string) (*OCRResultSimp
 	// Detect document type from content
 	detectedType := docType
 	if detectedType == "" || detectedType == "auto" {
-		detectedType = detectDocumentTypeFromText(text)
+		detectedType = detectDocumentTypeFromTextLegacy(text)
 	}
 
 	// Extract fields
-	extractedData := extractFieldsFromText(text, detectedType)
+	extractedData := extractFieldsFromTextLegacy(text, detectedType)
 	extractedData["raw_text"] = text
 	extractedData["source_type"] = "docx"
 
@@ -905,11 +846,11 @@ func (s *SimpleOCRService) processRTF(filePath, docType string) (*OCRResultSimpl
 	// Detect document type from content
 	detectedType := docType
 	if detectedType == "" || detectedType == "auto" {
-		detectedType = detectDocumentTypeFromText(text)
+		detectedType = detectDocumentTypeFromTextLegacy(text)
 	}
 
 	// Extract fields
-	extractedData := extractFieldsFromText(text, detectedType)
+	extractedData := extractFieldsFromTextLegacy(text, detectedType)
 	extractedData["raw_text"] = text
 	extractedData["source_type"] = "rtf"
 
@@ -1079,9 +1020,17 @@ func (s *SimpleOCRService) ProcessBatch(filePaths []string, docType string) ([]*
 	return results, nil
 }
 
-// callFlyOCR calls Fly.io Runtime directly via HTTP (no PowerShell!)
-func (s *SimpleOCRService) callFlyOCR(filePath, docType string) (*OCRResultSimple, error) {
-	// FIX: Check file size before reading to prevent crashes with large files
+// ocrWithMistral submits a PDF (native — no page-render-to-PNG loop) or image to the Mistral
+// OCR 4 endpoint with a Document AI schema for the given docType, and derives an honest
+// per-field confidence + overall NeedsReview flag from the client's response. Offline-first:
+// if no API key is configured, this returns immediately without attempting a network call so
+// the caller can fall straight through to ocrWithLocalEngine.
+func (s *SimpleOCRService) ocrWithMistral(filePath, docType string, isImage bool) (*OCRResultSimple, error) {
+	apiKey := getMistralAPIKey()
+	if apiKey == "" {
+		return nil, fmt.Errorf("Mistral API key not configured")
+	}
+
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat file: %w", err)
@@ -1091,212 +1040,171 @@ func (s *SimpleOCRService) callFlyOCR(filePath, docType string) (*OCRResultSimpl
 			fileInfo.Size(), MaxFileSize, float64(MaxFileSize)/(1024*1024))
 	}
 
-	// Read file and encode to base64
 	fileBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	base64Content := base64.StdEncoding.EncodeToString(fileBytes)
+	envCfg := loadMistralOCREnv()
+	client := mistralocr.NewClient(mistralocr.Config{
+		APIKey:              apiKey,
+		BaseURL:             envCfg.BaseURL,
+		Model:               envCfg.Model,
+		PageCap:             envCfg.PageCap,
+		Timeout:             envCfg.Timeout,
+		ConfidenceThreshold: envCfg.ConfidenceThreshold,
+	})
 
-	// Build request payload (matches .NET Runtime API spec)
-	payload := map[string]any{
-		"base64Content": base64Content,
-		"fileName":      filepath.Base(filePath),
-		"maxPages":      s.maxPages,
-		"dpi":           s.dpi,
+	mimeType := mimeTypeForOCRFile(filePath, isImage)
+	doc := mistralocr.DocumentInput{
+		Data:     fileBytes,
+		MIMEType: mimeType,
+		IsImage:  isImage,
 	}
 
-	jsonPayload, err := json.Marshal(payload)
+	ctx, cancel := context.WithTimeout(context.Background(), envCfg.Timeout)
+	defer cancel()
+
+	log.Printf("→ Calling Mistral OCR 4 (model=%s, image=%v): %s", envCfg.Model, isImage, filepath.Base(filePath))
+	result, err := client.Process(ctx, doc, mistralocr.ProcessOptions{
+		Schema: schemaForDocType(docType),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	// Call Fly.io OCR endpoint with retry logic
-	url := s.flyEndpoint + "/api/ocr/pdf-upload"
-	log.Printf("→ Calling Fly.io: %s", url)
-
-	const maxRetries = 3
-	var resp *http.Response
-	var body []byte
-
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %w", err)
+		var authErr *mistralocr.AuthError
+		var quotaErr *mistralocr.QuotaError
+		var tooLargeErr *mistralocr.TooLargeError
+		var schemaErr *mistralocr.SchemaMismatchError
+		switch {
+		case errors.As(err, &authErr):
+			log.Printf("⚠ Mistral OCR auth error (bad/missing key): %v", err)
+		case errors.As(err, &quotaErr):
+			log.Printf("⚠ Mistral OCR quota/rate-limit error: %v", err)
+		case errors.As(err, &tooLargeErr):
+			log.Printf("⚠ Mistral OCR document too large: %v", err)
+		case errors.As(err, &schemaErr):
+			log.Printf("⚠ Mistral OCR schema mismatch (falling back to plain OCR would help future work): %v", err)
+		default:
+			log.Printf("⚠ Mistral OCR request failed: %v", err)
 		}
-		req.Header.Set("Content-Type", "application/json")
+		return nil, err
+	}
 
-		// Optional API key from environment
-		if apiKey := os.Getenv("ASYMM_API_KEY"); apiKey != "" {
-			req.Header.Set("Authorization", "Bearer "+apiKey)
+	if len(strings.TrimSpace(result.Text)) == 0 {
+		return nil, fmt.Errorf("Mistral OCR extracted no text")
+	}
+
+	extractedData := make(map[string]any, len(result.Fields)+2)
+	fieldConfidence := make(map[string]float64, len(result.Fields))
+	var fieldsForReview []string
+	minConfidence := 1.0
+	for name, fv := range result.Fields {
+		extractedData[name] = fv.Value
+		fieldConfidence[name] = fv.Confidence
+		if fv.NeedsReview {
+			fieldsForReview = append(fieldsForReview, name)
 		}
-
-		// Make request
-		resp, err = s.httpClient.Do(req)
-		if err != nil {
-			// Network error - retry with exponential backoff
-			if attempt < maxRetries {
-				backoff := time.Duration(1<<uint(attempt-1)) * time.Second
-				log.Printf("⚠️ Fly.io network error (attempt %d/%d): %v. Retrying in %v...", attempt, maxRetries, err, backoff)
-				time.Sleep(backoff)
-				continue
-			}
-			return nil, fmt.Errorf("fly.io request failed after %d attempts: %w", maxRetries, err)
-		}
-
-		// Read response
-		body, err = io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
-		}
-
-		// Check HTTP status
-		if resp.StatusCode >= 500 {
-			// Server error - retry with exponential backoff
-			if attempt < maxRetries {
-				backoff := time.Duration(1<<uint(attempt-1)) * time.Second
-				log.Printf("⚠️ Fly.io server error %d (attempt %d/%d). Retrying in %v...", resp.StatusCode, attempt, maxRetries, backoff)
-				time.Sleep(backoff)
-				continue
-			}
-			return nil, fmt.Errorf("fly.io returned status %d after %d attempts: %s", resp.StatusCode, maxRetries, string(body))
-		}
-
-		if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-			// Client error - don't retry
-			return nil, fmt.Errorf("fly.io returned status %d: %s", resp.StatusCode, string(body))
-		}
-
-		// Success - break out of retry loop
-		break
-	}
-
-	// DEBUG: Log raw response to understand API structure
-	log.Printf("🔍 DEBUG Fly.io raw response (%d bytes): %s", len(body), truncateForLog(string(body), 500))
-
-	// Parse response from .NET Runtime - flexible structure to handle various response formats
-	var response struct {
-		Success bool `json:"success"`
-		Data    struct {
-			InvoiceNumber string  `json:"invoice_number"`
-			InvoiceDate   string  `json:"invoice_date"`
-			CustomerName  string  `json:"customer_name"`
-			Total         float64 `json:"total"`
-			VAT           float64 `json:"vat"`
-			PONumber      string  `json:"po_number"`
-			RawText       string  `json:"raw_text"`
-			Text          string  `json:"text"` // Alternative field name
-		} `json:"data"`
-		Pages []struct {
-			PageNumber int    `json:"page_number"`
-			Text       string `json:"text"`
-		} `json:"pages"`
-		PageCount int    `json:"page_count"`
-		Text      string `json:"text"`     // Top-level text field
-		RawText   string `json:"raw_text"` // Top-level raw_text field
-		Error     string `json:"error"`
-	}
-
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse OCR response: %w\nRaw: %s", err, string(body))
-	}
-
-	if !response.Success {
-		return &OCRResultSimple{
-			Success:      false,
-			DocumentType: docType,
-			Error:        response.Error,
-			Engine:       "fly-runtime",
-		}, nil
-	}
-
-	// Extract raw text from whichever field contains it
-	rawText := response.Data.RawText
-	if rawText == "" {
-		rawText = response.Data.Text
-	}
-	if rawText == "" {
-		rawText = response.Text
-	}
-	if rawText == "" {
-		rawText = response.RawText
-	}
-	// CRITICAL FIX: Always prefer page-by-page text concatenation for multi-page documents
-	// This ensures ALL pages are captured, not just the first page's text
-	if len(response.Pages) > 0 {
-		var pageTexts []string
-		for _, page := range response.Pages {
-			if page.Text != "" {
-				pageTexts = append(pageTexts, page.Text)
-			}
-		}
-		concatenatedText := strings.Join(pageTexts, "\n\n--- PAGE BREAK ---\n\n")
-		// Use concatenated text if it's longer (more complete) than top-level rawText
-		if len(concatenatedText) > len(rawText) {
-			log.Printf("📄 Using page-by-page concatenation: %d pages, %d chars (vs %d chars top-level)",
-				len(response.Pages), len(concatenatedText), len(rawText))
-			rawText = concatenatedText
+		if fv.Confidence < minConfidence {
+			minConfidence = fv.Confidence
 		}
 	}
-
-	// Fallback: if still empty, try any available text source
-	if rawText == "" {
-		log.Printf("⚠️ No text extracted from Fly.io response - document may be empty or unreadable")
+	if len(result.Fields) == 0 {
+		// No schema fields decoded (e.g. document_annotation absent) — refuse to guess.
+		minConfidence = 0
 	}
+	extractedData["raw_text"] = result.Text
+	extractedData["source_type"] = map[bool]string{true: "image", false: "pdf"}[isImage]
 
-	log.Printf("📄 Final extracted text length: %d chars, pages detected: %d", len(rawText), response.PageCount)
-
-	// CRITICAL FIX: Always extract fields from raw text using regex patterns
-	// The Fly.io API may only return raw OCR text, not structured fields
-	extractedData := extractFieldsFromText(rawText, docType)
-	extractedData["raw_text"] = rawText
-	extractedData["page_count"] = response.PageCount
-	if response.PageCount == 0 && len(response.Pages) > 0 {
-		extractedData["page_count"] = len(response.Pages)
+	engine := "mistral-ocr-4"
+	if isImage {
+		engine = "mistral-ocr-4-image"
 	}
 
-	// Override with API-provided structured data if available (non-zero/non-empty values)
-	if response.Data.InvoiceNumber != "" {
-		extractedData["invoice_number"] = response.Data.InvoiceNumber
+	log.Printf("✅ Mistral OCR complete: %d fields extracted, %d flagged for review", len(result.Fields), len(fieldsForReview))
+
+	return &OCRResultSimple{
+		Success:         true,
+		Text:            result.Text,
+		Confidence:      minConfidence,
+		DocumentType:    docType,
+		ExtractedData:   extractedData,
+		Engine:          engine,
+		NeedsReview:     len(fieldsForReview) > 0 || len(result.Fields) == 0,
+		FieldConfidence: fieldConfidence,
+		FieldsForReview: fieldsForReview,
+	}, nil
+}
+
+// mimeTypeForOCRFile derives the MIME type to send to Mistral OCR from the file extension.
+func mimeTypeForOCRFile(filePath string, isImage bool) string {
+	if !isImage {
+		return "application/pdf"
 	}
-	if response.Data.InvoiceDate != "" {
-		extractedData["invoice_date"] = response.Data.InvoiceDate
+	switch strings.ToLower(filepath.Ext(filePath)) {
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".bmp":
+		return "image/bmp"
+	case ".tiff", ".tif":
+		return "image/tiff"
+	case ".webp":
+		return "image/webp"
+	default:
+		return "image/png"
 	}
-	if response.Data.CustomerName != "" {
-		extractedData["customer_name"] = response.Data.CustomerName
+}
+
+// ocrWithLocalEngine is the offline-first fallback: tesseract + pandoc via the local ACEEngine
+// pipeline (no cloud escalation — the engine was constructed with FallbackToMistral:false and no
+// MistralAPIKey in NewSimpleOCRService). This never returns a hard error for a document that opens
+// on disk — worst case is empty text at 0 confidence, honestly marked NeedsReview, so the
+// document inbox never blocks or errors out entirely offline.
+// partialText, if non-empty, is go-fitz's partial extraction (used only to enrich extractedData
+// when tesseract also fails to produce anything useful).
+func (s *SimpleOCRService) ocrWithLocalEngine(filePath, docType, partialText string) (*OCRResultSimple, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file for local OCR: %w", err)
 	}
-	if response.Data.Total > 0 {
-		extractedData["total"] = response.Data.Total
-	}
-	if response.Data.VAT > 0 {
-		extractedData["vat"] = response.Data.VAT
-	}
-	if response.Data.PONumber != "" {
-		extractedData["po_number"] = response.Data.PONumber
+	defer file.Close()
+
+	req := &aceocr.ProcessRequest{
+		Source:              file,
+		SourceType:          aceocr.SourceReader,
+		DocumentType:        aceocr.DocTypeGeneric,
+		Language:            aceocr.LangEnglish,
+		EnableGPU:           false,
+		EnablePreprocessing: false,
+		FallbackToMistral:   false,
 	}
 
-	// Log extracted fields for debugging
-	log.Printf("📊 Extracted fields from Fly.io response:")
-	for k, v := range extractedData {
-		if k != "raw_text" {
-			log.Printf("  %s: %v", k, v)
-		}
+	resp, err := s.localEngine.Process(context.Background(), req)
+	if err != nil {
+		return nil, fmt.Errorf("local OCR engine failed: %w", err)
 	}
 
-	// Build successful result
-	result := &OCRResultSimple{
+	text := resp.Text
+	if strings.TrimSpace(text) == "" {
+		text = partialText
+	}
+
+	extractedData := extractFieldsFromTextLegacy(text, docType)
+	extractedData["raw_text"] = text
+	extractedData["source_type"] = "local_tesseract_fallback"
+
+	confidence := resp.Confidence
+	needsReview := true // offline/degraded-mode result — always surfaced for human review
+
+	log.Printf("✅ Local tesseract fallback complete: %d chars, confidence=%.2f (degraded mode — review recommended)", len(text), confidence)
+
+	return &OCRResultSimple{
 		Success:       true,
-		Text:          rawText,
-		Confidence:    0.88, // .NET Runtime typical confidence
+		Text:          text,
+		Confidence:    confidence,
 		DocumentType:  docType,
 		ExtractedData: extractedData,
-		Engine:        "fly-runtime",
-	}
-
-	log.Printf("✅ Fly.io OCR complete: %d pages, confidence=%.2f", response.PageCount, result.Confidence)
-	return result, nil
+		Engine:        "tesseract-local",
+		NeedsReview:   needsReview,
+	}, nil
 }
 
 // isVectorPDF checks if a PDF contains sufficient extractable text (vector PDF)
@@ -1310,8 +1218,11 @@ func extractVectorPDF(filePath string) (string, error) {
 	return documentsocr.NewFitzEngine().ExtractText(filePath)
 }
 
-// extractFieldsFromText extracts structured fields from OCR text using regex patterns
-func extractFieldsFromText(text, docType string) map[string]any {
+// extractFieldsFromTextLegacy extracts structured fields from OCR text using regex patterns.
+// DEGRADED MODE: this regex layer is demoted (Wave 13) to the offline/tesseract fallback path
+// and local-parse office formats (Excel/MSG/EML/DOCX/RTF) only. The online path uses Mistral OCR
+// 4's schema-shaped Document AI extraction instead (see schemaForDocType / ocrWithMistral).
+func extractFieldsFromTextLegacy(text, docType string) map[string]any {
 	fields := make(map[string]any)
 
 	// Patterns for structured field extraction across document types
@@ -1392,8 +1303,9 @@ func extractFieldsFromText(text, docType string) map[string]any {
 	return fields
 }
 
-// detectDocumentTypeFromText classifies a document based on its text content
-func detectDocumentTypeFromText(text string) string {
+// detectDocumentTypeFromTextLegacy classifies a document based on its text content using
+// keyword scoring. DEGRADED MODE — see extractFieldsFromTextLegacy.
+func detectDocumentTypeFromTextLegacy(text string) string {
 	lower := strings.ToLower(text)
 
 	// Score each document type by keyword matches
@@ -1532,107 +1444,6 @@ func truncateForLog(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// ocrWithMistralVision uses Mistral's pixtral vision model as OCR fallback
-func (s *SimpleOCRService) ocrWithMistralVision(filePath, docType string) (*OCRResultSimple, error) {
-	log.Printf("🔮 Trying Mistral Vision OCR for: %s", filepath.Base(filePath))
-
-	ext := strings.ToLower(filepath.Ext(filePath))
-
-	// For PDFs: convert first page to image using go-fitz, then send to Mistral
-	if ext == ".pdf" {
-		engine := documentsocr.NewFitzEngine()
-		numPages, err := engine.PageCount(filePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open PDF for vision: %w", err)
-		}
-		if numPages > 5 {
-			numPages = 5 // Limit to 5 pages for vision
-		}
-
-		var allText strings.Builder
-		for i := 0; i < numPages; i++ {
-			pngBytes, err := engine.RenderPagePNG(filePath, i)
-			if err != nil {
-				log.Printf("Failed to render page %d: %v", i+1, err)
-				continue
-			}
-
-			base64Img := base64.StdEncoding.EncodeToString(pngBytes)
-			prompt := "Extract ALL text from this document image exactly as written. Preserve the layout, numbers, dates, and formatting. Return only the extracted text, no commentary."
-
-			text, err := callMistralVision(base64Img, "image/png", prompt)
-			if err != nil {
-				log.Printf("Mistral Vision failed on page %d: %v", i+1, err)
-				continue
-			}
-
-			if i > 0 {
-				allText.WriteString("\n\n--- Page " + fmt.Sprintf("%d", i+1) + " ---\n\n")
-			}
-			allText.WriteString(text)
-		}
-
-		extractedText := allText.String()
-		if len(strings.TrimSpace(extractedText)) < 10 {
-			return nil, fmt.Errorf("Mistral Vision extracted insufficient text from PDF")
-		}
-
-		extractedData := extractFieldsFromText(extractedText, docType)
-		extractedData["raw_text"] = extractedText
-
-		return &OCRResultSimple{
-			Success:       true,
-			Text:          extractedText,
-			Confidence:    0.85,
-			DocumentType:  docType,
-			ExtractedData: extractedData,
-			Engine:        "mistral-vision",
-		}, nil
-	}
-
-	// For images: send directly
-	fileBytes, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file: %w", err)
-	}
-
-	mimeType := "image/png"
-	switch ext {
-	case ".jpg", ".jpeg":
-		mimeType = "image/jpeg"
-	case ".bmp":
-		mimeType = "image/bmp"
-	case ".tiff", ".tif":
-		mimeType = "image/tiff"
-	case ".webp":
-		mimeType = "image/webp"
-	}
-
-	base64Img := base64.StdEncoding.EncodeToString(fileBytes)
-	prompt := "Extract ALL text from this document image exactly as written. Preserve the layout, numbers, dates, and formatting. Return only the extracted text, no commentary."
-
-	text, err := callMistralVision(base64Img, mimeType, prompt)
-	if err != nil {
-		return nil, fmt.Errorf("Mistral Vision OCR failed: %w", err)
-	}
-
-	if len(strings.TrimSpace(text)) < 10 {
-		return nil, fmt.Errorf("Mistral Vision extracted insufficient text from image")
-	}
-
-	extractedData := extractFieldsFromText(text, docType)
-	extractedData["raw_text"] = text
-
-	return &OCRResultSimple{
-		Success:       true,
-		Text:          text,
-		Confidence:    0.85,
-		DocumentType:  docType,
-		ExtractedData: extractedData,
-		Engine:        "mistral-vision",
-	}, nil
-}
-
 // Close cleans up resources (no-op for simple service)
 func (s *SimpleOCRService) Close() error {
 	log.Println("🌸 Closing Simple OCR Service...")
@@ -1660,18 +1471,20 @@ func (s *SimpleOCRService) ExtractQuotation(filePath string) (*OCRResultSimple, 
 
 // GetPipelineStats returns pipeline statistics (simplified)
 func (s *SimpleOCRService) GetPipelineStats() map[string]any {
+	envCfg := loadMistralOCREnv()
 	return map[string]any{
 		"engine":          "simple-ocr",
-		"fly_endpoint":    s.flyEndpoint,
+		"mistral_model":   envCfg.Model,
 		"max_pages":       s.maxPages,
 		"dpi":             s.dpi,
 		"vector_strategy": "go-fitz (FREE)",
-		"scan_strategy":   "Fly.io Runtime (68 kernels)",
+		"scan_strategy":   "Mistral OCR 4 (cloud) -> tesseract-local (offline fallback)",
 	}
 }
 
 // GetProcessorStats returns processor statistics (simplified)
 func (s *SimpleOCRService) GetProcessorStats() map[string]any {
+	envCfg := loadMistralOCREnv()
 	return map[string]any{
 		"go_fitz": map[string]any{
 			"status":   "active",
@@ -1679,14 +1492,15 @@ func (s *SimpleOCRService) GetProcessorStats() map[string]any {
 			"speed":    "<100ms for vector PDFs",
 			"accuracy": "100% for vector text",
 		},
-		"fly_runtime": map[string]any{
-			"status":    "active",
-			"endpoint":  s.flyEndpoint,
-			"cost":      "~$0.0004/page",
-			"speed":     "1-3s typical",
-			"accuracy":  "88% typical",
-			"languages": 18,
-			"kernels":   68,
+		"mistral_ocr_4": map[string]any{
+			"status": "active (requires MISTRAL_API_KEY)",
+			"model":  envCfg.Model,
+			"cost":   "$4/1k pages OCR, $5/1k pages with Document AI schema extraction",
+			"speed":  "1-3s typical",
+		},
+		"tesseract_local": map[string]any{
+			"status": "active (offline fallback, no cloud escalation)",
+			"cost":   "FREE",
 		},
 	}
 }
@@ -1705,19 +1519,4 @@ func (s *SimpleOCRService) ProcessWithGoFitz(filePath string) (*OCRResultSimple,
 		Engine:         "pymupdf",
 		ProcessingTime: time.Since(startTime).Milliseconds(),
 	}, nil
-}
-
-// ProcessWithFlorence2 redirects to Fly.io (Florence2 runs on Fly.io)
-func (s *SimpleOCRService) ProcessWithFlorence2(filePath string) (*OCRResultSimple, error) {
-	return s.callFlyOCR(filePath, "invoice")
-}
-
-// ProcessWithTesseract redirects to Fly.io (Tesseract runs on Fly.io)
-func (s *SimpleOCRService) ProcessWithTesseract(filePath string) (*OCRResultSimple, error) {
-	return s.callFlyOCR(filePath, "invoice")
-}
-
-// ProcessWithGPU redirects to Fly.io (GPU processing runs on Fly.io)
-func (s *SimpleOCRService) ProcessWithGPU(filePath string) (*OCRResultSimple, error) {
-	return s.callFlyOCR(filePath, "invoice")
 }

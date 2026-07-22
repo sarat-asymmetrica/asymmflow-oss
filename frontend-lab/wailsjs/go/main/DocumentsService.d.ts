@@ -164,13 +164,7 @@ export function ProcessDocumentsBatch(arg1:Array<string>,arg2:string):Promise<Ar
 
 export function ProcessOffersBatch(arg1:string):Promise<main.BatchOfferResult>;
 
-export function ProcessWithFlorence2(arg1:string):Promise<main.OCRResultSimple>;
-
-export function ProcessWithGPU(arg1:string):Promise<main.OCRResultSimple>;
-
 export function ProcessWithGoFitz(arg1:string):Promise<main.OCRResultSimple>;
-
-export function ProcessWithTesseract(arg1:string):Promise<main.OCRResultSimple>;
 
 export function QuickCaptureDocument(arg1:string):Promise<Record<string, any>>;
 

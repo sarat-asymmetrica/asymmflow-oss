@@ -1,13 +1,19 @@
-// GPU Preprocessor - Connects Level Zero GPU to the Hybrid Pipeline
+// Package preprocess provides image preprocessing ahead of local OCR:
+// quaternion-based (SLERP) denoising and contrast enhancement.
 //
-// For scanned PDFs, this module:
-// 1. Takes extracted images from go-fitz
-// 2. Applies quaternion-based denoising on GPU
-// 3. Applies contrast enhancement on GPU
+// For scanned documents, this module:
+// 1. Takes decoded images (e.g. pages extracted via go-fitz)
+// 2. Applies quaternion-based denoising
+// 3. Applies contrast enhancement
 // 4. Returns preprocessed images ready for OCR
 //
-// Performance: 22.68M quaternion ops/sec on Intel N100
-package orchestrator
+// Honesty note (Wave 13): despite the GPU-flavoured type names (kept for API
+// stability with pkg/ocr's ACEEngine), this is a pure-Go CPU implementation —
+// the UseGPU flag only selects this path, it does not dispatch to a GPU. This
+// file is the sole survivor of the deleted pkg/ocr/orchestrator research tree,
+// retained because ACEEngine.preprocess() calls it on the live
+// EnableGPU/EnablePreprocessing path (Archaeologist + batch offers).
+package preprocess
 
 import (
 	"context"
@@ -52,6 +58,49 @@ type GPUPreprocessStats struct {
 	DenoiseDuration  time.Duration
 	ContrastDuration time.Duration
 	GPUOps           int64
+}
+
+// Validate clamps GPUPreprocessConfig values to safe ranges (ported from the deleted
+// config_validation.go — Wave 13 trimmed this package down to only what engine.go's
+// preprocess() step actually calls; this bounds-check is the one piece of that file this
+// production path still needs).
+func (c *GPUPreprocessConfig) Validate() error {
+	if c.DenoiseStrength < 0 {
+		c.DenoiseStrength = 0
+	}
+	if c.DenoiseStrength > 1 {
+		c.DenoiseStrength = 1
+	}
+
+	if c.ContrastFactor < 0.5 {
+		c.ContrastFactor = 0.5
+	}
+	if c.ContrastFactor > 3.0 {
+		c.ContrastFactor = 3.0
+	}
+
+	if c.DenoiseRadius < 0 {
+		c.DenoiseRadius = 0
+	}
+	if c.DenoiseRadius > 5 {
+		c.DenoiseRadius = 5
+	}
+
+	if c.ParallelImages < 1 {
+		c.ParallelImages = 1
+	}
+	if c.ParallelImages > 16 {
+		c.ParallelImages = 16
+	}
+
+	if c.MaxImageSize < 100000 {
+		c.MaxImageSize = 100000
+	}
+	if c.MaxImageSize > 16000000 {
+		c.MaxImageSize = 16000000
+	}
+
+	return nil
 }
 
 // DefaultGPUPreprocessConfig returns production defaults
