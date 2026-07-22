@@ -343,3 +343,56 @@ Embedded payload = 1,404,176 bytes (~1.34 MiB): NotoSans-Regular 512,588 + NotoS
   host-probing sites named in the spec's §0 ground truth were exactly the two fixed here.
 - Scripts other than Latin/Cyrillic/Arabic still depend on host fonts (unchanged from main) —
   documented in the code comment at the fallback branch.
+
+---
+
+## P6 — Payslip PDF
+
+**Reconstructed at the gate from the recovered diff** — payslip_pdf_service.go survived the crash
+only as an orphaned atomic-write tmp file (write complete, rename lost); it was gated as if no
+coder report ever existed: every helper call re-verified against the real signature, scope
+discipline re-checked against the spec.
+
+Files: new `payslip_pdf_service.go` (278 lines), `service_finance.go` (one delegate),
+`frontend-lab` (bridge + viewmodel + screen + parity ledger + hand-added wailsjs binding entries),
+new `payslip_pdf_service_test.go`.
+
+- `GeneratePayslipPDF(employeeID, payrollPeriodID)` on gofpdf, following the
+  invoice_pdf_service.go pattern: letterhead via `applyLetterheadForDivision`, identity via the
+  overlay-backed `companyDocumentProfile(run.Division)`, export dir via
+  `a.getExportDir(...)` → `<Documents>\AsymmFlow Exports\Reports`, amount-in-words via the
+  existing package-main `amountInWords` (NOT the pkg/engines stub). RBAC:
+  `payrollGuarded(requirePayrollView)`.
+- **Zero payroll computation**: earnings/deductions render from stored `PayrollComponent` rows
+  (fallback for pre-component legacy items: the item's own stored totals); NET PAY displays the
+  item's stored `NetPay`, never re-derived. Picks the MOST RECENT run for the employee/period
+  pair (regenerate-after-correction is legal). Currency from the stored run, defaulting BHD only
+  when the run carries none.
+- Employee display fields fall back to the run item's name/title SNAPSHOTS when the live employee
+  record is gone — a payslip never renders blank identity.
+- Frontend (gated): `FinanceService.GeneratePayslipPDF` delegate + hand-added wailsjs entries;
+  bridge `generatePayslipPdf` is a REAL pass-through (read-only export action — renders committed
+  data, no state transition — documented in the parity ledger as row 15, unlike the file's
+  financial mutations which stay honest INTEG-gap throws); minimal employee picker + button in
+  the run detail, success/error surfaced via the screen's existing CalloutWidget idiom;
+  `selectRun` resets payslip state so results never carry across runs.
+
+### Tests (new, all green)
+
+- `TestGeneratePayslipPDF_FromGoldenRun` — synthetic employee through the payroll golden
+  harness, real run generated, payslip rendered; asserts file exists, >1000 bytes, `%PDF-` header.
+- `TestGeneratePayslipPDF_NoRunItem_Errors` — refuses to render for an employee with no run item.
+- `TestGeneratePayslipPDF_BlankInputs_Error` — blank IDs rejected before DB work.
+- Frontend: svelte-check 357 files 0 errors/0 warnings; vite build green; vitest 238/238
+  (INTEG-gap-count tripwire unaffected).
+
+### Deviations / honesty notes
+
+- `getExportDir("report", ...)` routes all payslips to the flat `Reports` folder (its default
+  branch ignores the category/year args) — consistent with the service's header comment; noted
+  in case a `Payslips` subfolder is wanted later.
+- The tracked-but-gitignored `frontend-lab/dist/index.html` build artifact was reverted at the
+  gate (hash churn referencing an untracked asset — build noise, not mission content).
+
+**Phase 1 gate: COMPLETE.** P2 + P5 + P6 all gated; full suite alone = 87 packages ok, 0
+failures; build + vet clean.

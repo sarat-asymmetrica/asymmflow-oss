@@ -44,6 +44,7 @@ arithmetic/derivation lives in `payroll-vm.svelte.ts` (L5).
 | 12 | Employee picker (`collaboration.listEmployeeProfiles`) | **INTEG** | Cross-domain binding outside this bridge's collision-free file; mocked as a synthetic roster, real throws an honest gap rather than cross-wiring another bridge. |
 | 13 | `RunItem.components` earning/deduction/employer-cost chips | **SLOT (deferred)** | Needs a `ColumnSpec.cell` ejection for a multi-badge breakdown; data present in the mock, not rendered. |
 | 14 | Field-level masking of salary/name | **NET-NEW (not parity)** | Old screen had all-or-nothing screen-level RBAC only. `canViewUnmasked` (defaults **true** = byte-parity) routes every per-employee money/name column through mask helpers; aggregate run totals stay unmasked. A toolbar toggle exercises it. See Owner Question #1. |
+| 15 | Generate per-employee payslip PDF | **DONE (real, read-only)** | `GeneratePayslipPDF` — export/read action (renders from already-committed run data, no state transition), so wired as a real pass-through like the FETCH bindings rather than an INTEG-gap throw. Minimal picker + button in the run detail's item section; success surfaces the saved file path via `CalloutWidget` (success tone). |
 
 ## Orchestrator notes
 - **Form controls** use the kernel-owned `k-field`/`k-field-label`/`k-input` classes

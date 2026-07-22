@@ -165,6 +165,8 @@ export function GenerateInvoiceNumber():Promise<string>;
 
 export function GeneratePayrollRun(arg1:string):Promise<payroll.Run>;
 
+export function GeneratePayslipPDF(arg1:string,arg2:string):Promise<string>;
+
 export function GenerateProfitAndLoss(arg1:number):Promise<main.TallyPLReport>;
 
 export function GenerateRecurringExpenses(arg1:string):Promise<Array<finance.ExpenseEntry>>;

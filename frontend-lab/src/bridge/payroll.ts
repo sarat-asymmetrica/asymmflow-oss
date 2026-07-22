@@ -22,6 +22,7 @@ import {
   ApprovePayrollRun,
   CreatePayrollPeriod,
   GeneratePayrollRun,
+  GeneratePayslipPDF,
   GetActiveBankAccounts,
   GetPayrollRun,
   ListEmployeeCompensationProfiles,
@@ -698,6 +699,11 @@ async function mockPostRun(runId: string): Promise<PayrollRun> {
   return { ...run }
 }
 
+async function mockGeneratePayslipPDF(employeeId: string, _payrollPeriodId: string): Promise<string> {
+  await sleep(300)
+  return `C:\\Users\\demo\\Documents\\AsymmFlow Exports\\Reports\\Payslip_${employeeId}_Jun_2026_Payroll.pdf`
+}
+
 async function mockMarkPaid(runId: string, paidAtIso: string, paymentReference: string, bankAccountId: string): Promise<PayrollRun> {
   await sleep(180)
   const run = findRunOrThrow(runId)
@@ -962,6 +968,14 @@ async function realMarkPaid(runId: string, paidAtIso: string, paymentReference: 
   return mapRun(run as unknown as Record<string, unknown>)
 }
 
+/** GeneratePayslipPDF — export/read action, NOT a financial mutation: it
+ * renders a PDF from data already committed by the run/approve/post/pay
+ * steps above and returns the saved file path. Wired for real like the
+ * FETCH bindings (no INTEG-gap throw). */
+async function realGeneratePayslipPDF(employeeId: string, payrollPeriodId: string): Promise<string> {
+  return GeneratePayslipPDF(employeeId, payrollPeriodId)
+}
+
 /* ---- public switched API (viewmodel imports THESE) ---- */
 export const fetchCompensationProfiles = (activeOnly = false): Promise<CompensationProfile[]> =>
   pick(realFetchProfiles, mockFetchProfiles)(activeOnly)
@@ -992,6 +1006,8 @@ export const markPayrollRunPaid = (
   paymentReference: string,
   bankAccountId: string,
 ): Promise<PayrollRun> => pick(realMarkPaid, mockMarkPaid)(runId, paidAtIso, paymentReference, bankAccountId)
+export const generatePayslipPdf = (employeeId: string, payrollPeriodId: string): Promise<string> =>
+  pick(realGeneratePayslipPDF, mockGeneratePayslipPDF)(employeeId, payrollPeriodId)
 
 /** Client-side division vocabulary — the divisions store lands at K5; until
  * then every payroll list is scoped in the viewmodel via plain equality
