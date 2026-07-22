@@ -14,6 +14,7 @@ import (
 	"github.com/signintech/gopdf"
 	"github.com/xuri/excelize/v2"
 	"ph_holdings_app/pkg/approvals"
+	"ph_holdings_app/pkg/fonts"
 )
 
 func (a *App) CalculateCosting(req CostingRequest) (*CostingResult, error) {
@@ -634,42 +635,55 @@ func (a *App) exportCostingToPDF(data CostingExportData, category string) (strin
 		}
 	}
 
-	// Load font - cross-platform font search
-	fontCandidates := []string{
-		"C:/Windows/Fonts/arial.ttf",
-		"C:/Windows/Fonts/calibri.ttf",
-		"/System/Library/Fonts/Supplemental/Arial.ttf",
-		"/Library/Fonts/Arial.ttf",
-		"/System/Library/Fonts/Helvetica.ttc",
-		"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-	}
-	fontPath := ""
-	for _, candidate := range fontCandidates {
-		if _, err := os.Stat(candidate); err == nil {
-			fontPath = candidate
-			break
-		}
-	}
-	if fontPath == "" {
-		return "", fmt.Errorf("no suitable font found for PDF generation")
-	}
-	if err := pdf.AddTTFFont("main", fontPath); err != nil {
-		return "", fmt.Errorf("failed to load font: %v", err)
-	}
-	// Load bold font - cross-platform
-	boldCandidates := []string{
-		"C:/Windows/Fonts/arialbd.ttf",
-		"C:/Windows/Fonts/calibrib.ttf",
-		"/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-		"/Library/Fonts/Arial Bold.ttf",
-		"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-	}
+	// Embedded Noto Sans (pkg/fonts) is the PRIMARY font source, so this PDF
+	// renders identically on every machine regardless of what's installed on
+	// the host. Host-font probing survives only as a fallback if the embed
+	// somehow fails to parse.
 	hasBold := false
-	for _, candidate := range boldCandidates {
-		if _, err := os.Stat(candidate); err == nil {
-			if err := pdf.AddTTFFont("mainBold", candidate); err == nil {
-				hasBold = true
+	if err := pdf.AddTTFFontData("main", fonts.NotoSans()); err == nil {
+		if err := pdf.AddTTFFontData("mainBold", fonts.NotoSansBold()); err == nil {
+			hasBold = true
+		} else {
+			log.Printf("⚠️ Embedded bold font failed to load, falling back to regular weight: %v", err)
+		}
+	} else {
+		log.Printf("⚠️ Embedded font failed to load (%v), falling back to host-font probe", err)
+
+		fontCandidates := []string{
+			"C:/Windows/Fonts/arial.ttf",
+			"C:/Windows/Fonts/calibri.ttf",
+			"/System/Library/Fonts/Supplemental/Arial.ttf",
+			"/Library/Fonts/Arial.ttf",
+			"/System/Library/Fonts/Helvetica.ttc",
+			"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+		}
+		fontPath := ""
+		for _, candidate := range fontCandidates {
+			if _, err := os.Stat(candidate); err == nil {
+				fontPath = candidate
 				break
+			}
+		}
+		if fontPath == "" {
+			return "", fmt.Errorf("no suitable font found for PDF generation")
+		}
+		if err := pdf.AddTTFFont("main", fontPath); err != nil {
+			return "", fmt.Errorf("failed to load font: %v", err)
+		}
+		// Load bold font - cross-platform
+		boldCandidates := []string{
+			"C:/Windows/Fonts/arialbd.ttf",
+			"C:/Windows/Fonts/calibrib.ttf",
+			"/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+			"/Library/Fonts/Arial Bold.ttf",
+			"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+		}
+		for _, candidate := range boldCandidates {
+			if _, err := os.Stat(candidate); err == nil {
+				if err := pdf.AddTTFFont("mainBold", candidate); err == nil {
+					hasBold = true
+					break
+				}
 			}
 		}
 	}
