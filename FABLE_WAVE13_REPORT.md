@@ -266,16 +266,27 @@ directly if they need finer branching than the four classes.
 All tests assert on concrete decoded values (never `if err != nil { t.Fail() }`-only tautologies)
 so a broken implementation fails visibly, per the "verify the probe" lesson.
 
-### Build/test results
+### Build/test results (measured at the Phase-1 gate, 2026-07-22)
 
-(filled in after implementation — see below)
+- `go build ./...` — clean.
+- `go vet ./...` — clean.
+- `go test ./... -count=1` (full suite, run alone in the worktree): **87 packages ok, 0 failures**,
+  exit code 0. Includes the 11 `pkg/ocr/mistralocr` table-driven tests (re-verified green after
+  crash recovery) and the 3 new payslip tests (below).
+- `go test -v ./pkg/engines/` — embedded-font path confirmed LIVE, not just compiled: test logs
+  show `✓ Loaded embedded font for العربية: pkg/fonts (182848 bytes)` and
+  `✓ Loaded embedded font for English: pkg/fonts (512588 bytes)` (+ Russian on Noto Sans), with
+  **zero** "falling back to host probe" lines. The Arabic RTL and langpack root tests exercise
+  real PDF generation through the embedded fonts.
+- `TestAHSCostingExportEmbedsLetterhead` — the gopdf costing-export path renders green on
+  embedded Noto Sans (no fallback warnings).
 
 ### Deviations from spec
 
 None structural. The per-field confidence derivation is a necessary client-side design decision
 (the API doesn't provide it natively) — flagged above, not hidden.
 
-### What the next wave (P1/P3) can assume
+### What the next phase (P1/P3) can assume
 
 - `mistralocr.NewClient(Config{APIKey: <from existing resolver>})` is the only integration point;
   P1/P3 must NOT read env/DB for the Mistral key themselves — inject via existing
@@ -285,3 +296,50 @@ None structural. The per-field confidence derivation is a necessary client-side 
 - Errors are typed; P3's dispatch should use `errors.As` to decide offline-fallback vs surfacing.
 - Per-field confidence is a heuristic (page-level minimum), documented above — do not present it
   to users as word-exact.
+
+---
+
+## P5 — Print determinism: embedded fonts
+
+**Reconstructed at the gate from the recovered diff** (the coder's report entry was lost to the
+crash); every claim below is re-verified against the code and measured test output, not inherited.
+
+Files: new `pkg/fonts/` (fonts.go + `data/*.ttf` + OFL.txt), `pkg/engines/pdf_generator.go`
+(`loadLanguageFonts` only), `app_costing_exports_surface.go` (font-probe block of
+`exportCostingToPDF` only). No `go.mod` change needed (`go:embed` is stdlib).
+
+- `pkg/fonts` embeds four TTFs via `go:embed` with accessor functions: Noto Sans Regular/Bold
+  (Latin/Cyrillic/Greek) and Noto Naskh Arabic Regular/Bold. OFL 1.1 license text committed
+  alongside (`pkg/fonts/OFL.txt`). Sources: github.com/notofonts hinted static instances.
+- `exportCostingToPDF` (gopdf): embedded Noto Sans via `AddTTFFontData` is now PRIMARY; the old
+  host-font candidate list (arial/calibri/DejaVu/...) survives ONLY as the fallback branch if the
+  embed fails to parse, per spec.
+- `pkg/engines` `loadLanguageFonts` (gopdf): embedded fonts are PRIMARY for the scripts we ship —
+  `ar` → Noto Naskh Arabic, `en`/`ru` → Noto Sans. Host probing remains the source for scripts we
+  do NOT embed (CJK, Thai, Devanagari, Korean, Hebrew) and the fallback if embedding fails.
+
+### Binary-size delta (measured)
+
+Embedded payload = 1,404,176 bytes (~1.34 MiB): NotoSans-Regular 512,588 + NotoSans-Bold
+515,668 + NotoNaskhArabic-Regular 182,848 + NotoNaskhArabic-Bold 193,072. Well under the spec's
+8 MB subsetting threshold — **no subsetting performed**, full glyph coverage retained.
+
+### Acceptance evidence
+
+- Arabic + langpack + generator tests in `pkg/engines` PASS and log the embedded path
+  (`✓ Loaded embedded font ... pkg/fonts (...bytes)`) with zero host-probe fallbacks.
+- `TestAHSCostingExportEmbedsLetterhead` PASS — costing export renders on embedded Noto Sans.
+- Invoice PDF: `TestGenerateInvoicePDF_AttentionFallbackAndLongRef` PASS (truncation helper
+  behaviour intact — `TestTruncatePDFTextToWidth` PASS).
+- **Byte parity with main is intentionally broken** for gopdf documents (different font bytes
+  embedded in the PDF). The invariant honoured is CONTENT parity: same fields, same values, no
+  clipped/overflowed text — stated per spec, not hidden.
+
+### Deviations / honesty notes
+
+- The gofpdf-based generators (invoice, payslip, butler reports) use gofpdf's built-in core
+  Helvetica, which never touched host fonts — they were already deterministic, so they were NOT
+  moved to `AddUTF8FontFromBytes`. The spec's gofpdf mention is satisfied vacuously; the two
+  host-probing sites named in the spec's §0 ground truth were exactly the two fixed here.
+- Scripts other than Latin/Cyrillic/Arabic still depend on host fonts (unchanged from main) —
+  documented in the code comment at the fallback branch.
