@@ -744,50 +744,11 @@ func (a *App) startup(ctx context.Context) {
 	})
 	AppLogger.Info("Mistral API key provider registered (encrypted DB priority)", nil)
 
-	// Register AIML API key provider (for Grok — primary Butler chat backend)
-	// Uses same "apiKeys.aimlapi_key" setting key as the existing AI connectivity test
-	SetAIMLKeyProvider(func() string {
-		// 1. Try encrypted settings DB first
-		if a.settingsService != nil && a.fieldCrypto != nil {
-			if encVal, err := a.settingsService.GetSetting("apiKeys.aimlapi_key"); err == nil && encVal != "" {
-				if a.fieldCrypto.IsEncrypted(encVal) {
-					if decrypted, err := a.fieldCrypto.Decrypt(encVal); err == nil && decrypted != "" {
-						return decrypted
-					}
-				} else if encVal != "" {
-					return encVal
-				}
-			}
-		}
-		// 2. Try settings.json file
-		userSettings, err := a.loadUserSettings()
-		if err == nil {
-			if key := getSettingOrDefault(userSettings, "apiKeys.aimlapi_key", "").(string); key != "" {
-				return key
-			}
-		}
-		return ""
-	})
-	AppLogger.Info("AIML API key provider registered (Grok primary backend)", nil)
-
-	// Register AIML model preference provider (overrides default Grok model per environment/user setting)
-	SetAIMLModelProvider(func() string {
-		if a.settingsService != nil {
-			if model, err := a.settingsService.GetSetting("apiKeys.aiml_model"); err == nil && strings.TrimSpace(model) != "" {
-				return strings.TrimSpace(model)
-			}
-		}
-
-		userSettings, err := a.loadUserSettings()
-		if err == nil {
-			if model := strings.TrimSpace(getSettingOrDefault(userSettings, "apiKeys.aiml_model", "").(string)); model != "" {
-				return model
-			}
-		}
-
-		return ""
-	})
-	AppLogger.Info("AIML model provider registered (Grok model preference)", nil)
+	// Wave 13: AIMLAPI/Grok provider registration removed entirely — Butler chat and OCR
+	// escalation are Mistral-direct only, routed through the resolver above and
+	// pkg/ocr/mistralocr. Model IDs are env-overridable (MISTRAL_MODEL_LARGE/SMALL in
+	// butler_ai.go) rather than a settings-DB provider, since there is only one provider
+	// left to prefer.
 
 	diagLog("STARTUP: Initializing DBManager...")
 	a.InitDBManager()

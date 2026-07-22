@@ -43,9 +43,7 @@ Main sections and fields:
 | Office | Enable Outlook Integration | Turn on only if Microsoft integration is configured |
 | Office | Enable Excel Automations | Turn on where Excel export/import is used |
 | Folders | Folder paths | Local folders for imports, exports, OCR, or watched documents |
-| AI | AIML API Key | Primary Butler chat key |
-| AI | Grok Model | Selected AIML model value |
-| AI | Mistral API Key | OCR/document analysis and fallback chat key |
+| AI | Mistral API Key | Butler chat + OCR/document analysis key (single provider as of Wave 13) |
 | GPU | Use GPU for Local Inference | Enable only on machines with supported GPU |
 | Business | Default Margin (%) | Default commercial margin target |
 | Business | VAT Rate (%) | Bahrain VAT rate used by finance/costing defaults |

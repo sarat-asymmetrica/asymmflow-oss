@@ -334,7 +334,7 @@ type ArtifactB_QualityMetrics struct {
 // ArtifactB_ProvenanceInfo tracks how the document was processed
 type ArtifactB_ProvenanceInfo struct {
 	Engine  string `json:"engine"`  // "ACE", "Tesseract", etc.
-	Backend string `json:"backend"` // "GPU", "CPU", "AIMLAPI"
+	Backend string `json:"backend"` // "GPU", "CPU", "cloud_ocr" (Mistral OCR 4 escalation, Wave 13+)
 	TimeMS  int64  `json:"time_ms"` // Processing time in milliseconds
 }
 

@@ -1,5 +1,12 @@
 # Butler Pipeline Rebuild Spec (AsymmFlow)
 
+> **Superseded (Wave 13, 2026-07-22):** the AIML/Grok primary-backend references below describe
+> the pre-Wave-13 pipeline. As of Wave 13 "Perception & Print," AIMLAPI/Grok has been removed
+> entirely — Butler chat is Mistral-direct only (`mistral-large-latest`, with
+> `mistral-small-latest` for simple queries), via the single `getMistralAPIKey()` resolver.
+> There is no AIML/Grok fallback path anymore. Treat this document's AIML/Grok sections as
+> historical context for the decision contracts they describe, not as current backend wiring.
+
 ## 1. Purpose
 
 This document is a complete technical handoff for recreating the Butler assistant pipeline used in AsymmFlow ERP.

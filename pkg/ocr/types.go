@@ -4,7 +4,7 @@
 // Features:
 // - GPU-first preprocessing (Level Zero / Vulkan / CUDA fallback)
 // - Trinity optimization (Tesla + Ramanujan + Madhava)
-// - AIMLAPI integration for tough cases
+// - Mistral OCR 4 escalation for tough cases (pkg/ocr/mistralocr)
 // - Pandoc multi-format support
 // - ZIP folder processing with checkpoints
 // - Full observability (metrics, logs, streaming)
@@ -30,8 +30,9 @@ type ProcessingTier int
 const (
 	// TierLocal uses local GPU + Tesseract (fastest, cheapest)
 	TierLocal ProcessingTier = iota
-	// TierAIMLAPI uses AIMLAPI for tough cases
-	TierAIMLAPI
+	// TierCloudOCR escalates to the dedicated Mistral OCR 4 endpoint for tough cases
+	// (formerly AIMLAPI/gpt-4o-mini vision-chat; see Wave 13 provider consolidation).
+	TierCloudOCR
 	// TierConsensus uses multi-model consensus (most accurate)
 	TierConsensus
 )
@@ -41,8 +42,8 @@ func (t ProcessingTier) String() string {
 	switch t {
 	case TierLocal:
 		return "local"
-	case TierAIMLAPI:
-		return "aimlapi"
+	case TierCloudOCR:
+		return "cloud_ocr"
 	case TierConsensus:
 		return "consensus"
 	default:
@@ -113,7 +114,7 @@ type ProcessRequest struct {
 
 	// Tier selection
 	Tier              ProcessingTier
-	FallbackToAIMLAPI bool
+	FallbackToMistral bool
 
 	// Checkpointing
 	CheckpointDir        string

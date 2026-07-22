@@ -213,9 +213,9 @@ func (svc *Service) BuildIntentContext(intent Intent, hasFinanceAccess bool) map
 	return context
 }
 
-// buildFullContext gathers ALL domain data for Grok's large context window.
+// buildFullContext gathers ALL domain data for mistral-large-latest's large context window.
 // Unlike buildIntentContext (domain-specific), this loads everything at once —
-// customer, supplier, financial, operations, risk — and lets Grok figure out
+// customer, supplier, financial, operations, risk — and lets the model figure out
 // what's relevant to the user's query. RBAC filtering still applies.
 func (svc *Service) BuildFullContext(intent Intent, hasFinanceAccess bool) map[string]any {
 	context := make(map[string]any)

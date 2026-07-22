@@ -176,7 +176,7 @@ func ExamplePrometheusMetrics() {
 	metrics.RecordProcessingTime(1500*time.Millisecond, TierLocal)
 	metrics.RecordConfidence(0.87, DocTypeInvoice)
 	metrics.RecordGPUUsage(true, 800*time.Millisecond)
-	metrics.RecordCost(0.001, TierAIMLAPI)
+	metrics.RecordCost(0.001, TierCloudOCR)
 
 	// Get statistics
 	stats := metrics.GetStats()

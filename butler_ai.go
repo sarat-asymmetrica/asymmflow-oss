@@ -51,37 +51,37 @@ type ButlerResolvedEntity = butlerdomain.ButlerResolvedEntity
 // MISTRAL API CONSTANTS
 // ============================================================================
 
+// mistralAPIURL, mistralModelSmall, and mistralModelLarge are config, not constants:
+// each has a sane built-in default but can be overridden via env (MISTRAL_CHAT_API_URL,
+// MISTRAL_MODEL_SMALL, MISTRAL_MODEL_LARGE) — see mistralChatConfigDefault below.
+// Butler chat is Mistral-direct only as of Wave 13 (AIMLAPI/Grok removed entirely).
+var (
+	mistralAPIURL     = mistralChatConfigDefault("MISTRAL_CHAT_API_URL", "https://api.mistral.ai/v1/chat/completions")
+	mistralModelSmall = mistralChatConfigDefault("MISTRAL_MODEL_SMALL", "mistral-small-latest")
+	mistralModelLarge = mistralChatConfigDefault("MISTRAL_MODEL_LARGE", "mistral-large-latest")
+)
+
+// mistralChatConfigDefault reads an env override or falls back to the given default.
+// Kept tiny and local so config.go's getEnv (string-returning) doesn't need a new export.
+func mistralChatConfigDefault(envKey, defaultValue string) string {
+	if v := strings.TrimSpace(os.Getenv(envKey)); v != "" {
+		return v
+	}
+	return defaultValue
+}
+
 const (
-	mistralAPIURL      = "https://api.mistral.ai/v1/chat/completions"
-	mistralModelSmall  = "mistral-small-latest"
-	mistralModelLarge  = "mistral-large-latest"
 	mistralMaxTokens   = 8192
 	mistralTemperature = 0.4
-
-	// AIML API (Grok) constants — primary LLM backend for chat queries
-	// AIML API is OpenAI-compatible; Grok offers ~1M token context window
-	// Model ID: verify exact name in your AIML API dashboard (https://api.aimlapi.com)
-	aimlAPIURL      = "https://api.aimlapi.com/v1/chat/completions"
-	aimlModelID     = "x-ai/grok-4-fast-reasoning" // xAI Grok 4 via AIML API (prefixed model IDs)
-	aimlMaxTokens   = 16384
-	aimlTemperature = 0.4
 
 	// Intent classification constants
 	MaxKeywordMatchScore        = 4.0
 	ComplexQueryDomainThreshold = 3
 	ComplexQueryLengthThreshold = 200
 	MistralAPITimeout           = 120 * time.Second
-	AimlAPITimeout              = 120 * time.Second
 	butlerMaxContextChars       = 60000
 	butlerMaxReportContextChars = 80000
 )
-
-var fallbackAIMLModels = []string{
-	"x-ai/grok-4-1-fast-reasoning",
-	"x-ai/grok-3-beta",
-	"gpt-4o",
-	"gpt-4o-mini",
-}
 
 // ============================================================================
 // INTENT CLASSIFICATION
@@ -472,7 +472,7 @@ func (a *App) ChatWithButler(message string) (ButlerResponse, error) {
 		return a.handleReportRequest(message, intent)
 	}
 
-	// 4. Build full context (all domains — Grok's large context window can handle it)
+	// 4. Build full context (all domains — mistral-large-latest's context window can handle it)
 	context := a.buildFullContext(intent)
 
 	// 5. Calculate regime
@@ -482,25 +482,12 @@ func (a *App) ChatWithButler(message string) (ButlerResponse, error) {
 	// 6. Build system prompt with full context and regime
 	systemPrompt := buildMistralSystemPrompt(context, regime)
 
-	// 7. Call AIML/Grok (primary) or fall back to Mistral
-	var aiResponse string
-	var aiErr error
+	// 7. Call Mistral direct (mistral-large-latest) — the only chat backend as of Wave 13.
 	usedBackend := "Mistral"
-	requestedModel := getAIMLModelID()
-	usedModel := ""
+	requestedModel := mistralModelLarge
+	usedModel := mistralModelLarge
 	fallbackReason := ""
-	if aimlKey := getAIMLAPIKey(); aimlKey != "" {
-		aiResponse, usedModel, aiErr = callAIMLWithFallback(aimlKey, systemPrompt, message)
-		usedBackend = "AIML/Grok"
-		if aiErr != nil {
-			fallbackReason = aiErr.Error()
-			log.Printf("⚠️ AIML API error, falling back to Mistral: %v", aiErr)
-			aiResponse, aiErr = callMistral(mistralModelLarge, systemPrompt, message)
-			usedBackend = "Mistral (fallback)"
-		}
-	} else {
-		aiResponse, aiErr = callMistral(mistralModelLarge, systemPrompt, message)
-	}
+	aiResponse, aiErr := callMistral(mistralModelLarge, systemPrompt, message)
 
 	if aiErr != nil {
 		log.Printf("❌ AI backend error: %v", aiErr)
@@ -698,295 +685,6 @@ func callMistral(model, systemPrompt, userMessage string) (string, error) {
 	}
 
 	return apiResponse.Choices[0].Message.Content, nil
-}
-
-// callMistralVision sends an image to Mistral's pixtral vision model for OCR
-func callMistralVision(base64Image string, mimeType string, prompt string) (string, error) {
-	apiKey := getMistralAPIKey()
-	if apiKey == "" {
-		return "", fmt.Errorf("Mistral API key not configured")
-	}
-
-	requestBody := map[string]any{
-		"model": "pixtral-large-latest",
-		"messages": []map[string]any{
-			{
-				"role": "user",
-				"content": []map[string]any{
-					{
-						"type": "text",
-						"text": prompt,
-					},
-					{
-						"type": "image_url",
-						"image_url": map[string]string{
-							"url": "data:" + mimeType + ";base64," + base64Image,
-						},
-					},
-				},
-			},
-		},
-		"max_tokens":  8192,
-		"temperature": 0.1,
-	}
-
-	jsonData, err := json.Marshal(requestBody)
-	if err != nil {
-		return "", fmt.Errorf("marshal error: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", mistralAPIURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("request creation error: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{Timeout: MistralAPITimeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("read response error: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("Mistral Vision API error (status %d): %s", resp.StatusCode, string(body))
-	}
-
-	var apiResponse struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-
-	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		return "", fmt.Errorf("JSON parse error: %w", err)
-	}
-
-	if len(apiResponse.Choices) == 0 {
-		return "", fmt.Errorf("no response from Mistral Vision")
-	}
-
-	return apiResponse.Choices[0].Message.Content, nil
-}
-
-// ============================================================================
-// AIML API CLIENT (Grok — primary chat backend)
-// ============================================================================
-
-// settingsBasedAIMLKey is injected by the App during startup for settings-based key lookup
-var settingsBasedAIMLKey func() string
-var settingsBasedAIMLModel func() string
-
-// SetAIMLKeyProvider allows the App to inject the settings-based AIML key provider
-func SetAIMLKeyProvider(provider func() string) {
-	settingsBasedAIMLKey = provider
-}
-
-// SetAIMLModelProvider allows the App to inject the settings-based AIML model provider.
-func SetAIMLModelProvider(provider func() string) {
-	settingsBasedAIMLModel = provider
-}
-
-// getAIMLAPIKey retrieves the AIML API key from settings or environment.
-// Priority: settings DB → ASYMM/AIML env var.
-func getAIMLAPIKey() string {
-	// 1. Try settings-based provider (injected by App)
-	if settingsBasedAIMLKey != nil {
-		if key := strings.TrimSpace(settingsBasedAIMLKey()); key != "" {
-			return key
-		}
-	}
-	// 2. Try environment variables
-	if key := strings.TrimSpace(os.Getenv("ASYMM_AIML_API_KEY")); key != "" {
-		return key
-	}
-	if key := strings.TrimSpace(os.Getenv("AIML_API_KEY")); key != "" {
-		return key
-	}
-	return ""
-}
-
-func getAIMLModelID() string {
-	if settingsBasedAIMLModel != nil {
-		if model := strings.TrimSpace(settingsBasedAIMLModel()); model != "" {
-			return model
-		}
-	}
-	if model := strings.TrimSpace(os.Getenv("ASYMM_AIML_MODEL")); model != "" {
-		return model
-	}
-	if model := strings.TrimSpace(os.Getenv("AIML_MODEL")); model != "" {
-		return model
-	}
-	return aimlModelID
-}
-
-func getAIMLModelCandidates() []string {
-	requested := getAIMLModelID()
-	models := []string{}
-	if requested != "" {
-		models = append(models, requested)
-	}
-	models = append(models, fallbackAIMLModels...)
-	return dedupeStringSlice(models)
-}
-
-func dedupeStringSlice(values []string) []string {
-	seen := make(map[string]struct{}, len(values))
-	unique := make([]string, 0, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		key := strings.ToLower(value)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		unique = append(unique, value)
-	}
-	return unique
-}
-
-// callAIML sends a chat request to the AIML API (OpenAI-compatible format).
-// Uses explicit model selection to support runtime fallback orchestration.
-func callAIML(apiKey, systemPrompt, userMessage, model string) (string, error) {
-	requestBody := map[string]any{
-		"model": model,
-		"messages": []map[string]any{
-			{"role": "system", "content": systemPrompt},
-			{"role": "user", "content": userMessage},
-		},
-		"max_tokens":  aimlMaxTokens,
-		"temperature": aimlTemperature,
-	}
-
-	jsonData, err := json.Marshal(requestBody)
-	if err != nil {
-		return "", fmt.Errorf("marshal error: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", aimlAPIURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", fmt.Errorf("request creation error: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	client := &http.Client{Timeout: AimlAPITimeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("HTTP request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("read response error: %w", err)
-	}
-
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("AIML API error (status %d): %s", resp.StatusCode, string(body))
-	}
-
-	var apiResponse struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-
-	if err := json.Unmarshal(body, &apiResponse); err != nil {
-		return "", fmt.Errorf("JSON parse error: %w", err)
-	}
-
-	if len(apiResponse.Choices) == 0 {
-		return "", fmt.Errorf("no response choices from AIML API")
-	}
-
-	return apiResponse.Choices[0].Message.Content, nil
-}
-
-func callAIMLWithFallback(apiKey, systemPrompt, userMessage string) (string, string, error) {
-	var lastErr error
-	for _, model := range getAIMLModelCandidates() {
-		response, err := callAIML(apiKey, systemPrompt, userMessage, model)
-		if err == nil {
-			return response, model, nil
-		}
-		lastErr = err
-		log.Printf("⚠️ AIML model attempt failed (%s): %v", model, err)
-	}
-	return "", "", lastErr
-}
-
-// callAIMLWithMessages sends the full messages array to AIML API (preserves conversation history).
-func callAIMLWithMessages(apiKey string, messages []map[string]any) (string, string, error) {
-	var lastErr error
-	for _, model := range getAIMLModelCandidates() {
-		requestBody := map[string]any{
-			"model":       model,
-			"messages":    messages,
-			"max_tokens":  aimlMaxTokens,
-			"temperature": aimlTemperature,
-		}
-		jsonData, err := json.Marshal(requestBody)
-		if err != nil {
-			lastErr = fmt.Errorf("marshal error: %w", err)
-			continue
-		}
-		req, err := http.NewRequest("POST", aimlAPIURL, bytes.NewBuffer(jsonData))
-		if err != nil {
-			lastErr = fmt.Errorf("request creation error: %w", err)
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", "Bearer "+apiKey)
-
-		client := &http.Client{Timeout: AimlAPITimeout}
-		resp, err := client.Do(req)
-		if err != nil {
-			lastErr = fmt.Errorf("HTTP request failed: %w", err)
-			log.Printf("⚠️ AIML model attempt failed (%s): %v", model, lastErr)
-			continue
-		}
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if resp.StatusCode != 200 {
-			lastErr = fmt.Errorf("AIML API error (status %d): %s", resp.StatusCode, string(body))
-			log.Printf("⚠️ AIML model attempt failed (%s): %v", model, lastErr)
-			continue
-		}
-		var apiResponse struct {
-			Choices []struct {
-				Message struct {
-					Content string `json:"content"`
-				} `json:"message"`
-			} `json:"choices"`
-		}
-		if err := json.Unmarshal(body, &apiResponse); err != nil {
-			lastErr = fmt.Errorf("JSON parse error: %w", err)
-			log.Printf("⚠️ AIML model attempt failed (%s): %v", model, lastErr)
-			continue
-		}
-		if len(apiResponse.Choices) == 0 {
-			lastErr = fmt.Errorf("no response choices from AIML API")
-			log.Printf("⚠️ AIML model attempt failed (%s): %v", model, lastErr)
-			continue
-		}
-		return apiResponse.Choices[0].Message.Content, model, nil
-	}
-	return "", "", lastErr
 }
 
 // ============================================================================
