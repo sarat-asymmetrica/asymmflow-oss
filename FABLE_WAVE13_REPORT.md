@@ -396,3 +396,103 @@ new `payslip_pdf_service_test.go`.
 
 **Phase 1 gate: COMPLETE.** P2 + P5 + P6 all gated; full suite alone = 87 packages ok, 0
 failures; build + vet clean.
+
+---
+
+## P1 — One provider: Butler → Mistral direct (AIMLAPI/Grok deleted)
+
+Coder report gate-verified: the sacred key resolver `getMistralAPIKey` is untouched (all 10
+diff hunks in butler_ai.go end before it — verified hunk-by-hunk at the gate), and the
+aiml/grok grep sweep was re-run independently.
+
+- **Butler chat**: primary = `mistral-large-latest` via api.mistral.ai direct; the entire
+  AIMLAPI/Grok client deleted from butler_ai.go (callAIML* family, key/model providers, ~290
+  lines), the app.go provider-registration block removed, chat_service.go's two AIML branches
+  now call Mistral directly (`usedBackend` always "Mistral"), app_butler_ports.go de-branched.
+- **Config-not-constant**: `MISTRAL_CHAT_API_URL` (default api.mistral.ai/v1/chat/completions),
+  `MISTRAL_MODEL_SMALL` (mistral-small-latest), `MISTRAL_MODEL_LARGE` (mistral-large-latest) —
+  env-seeded package vars with the previous literals as defaults. `mistral-small-latest` kept
+  where already used for classification.
+- **callMistralVision / pixtral + page-render loop: DELETED.** Callers repointed to
+  pkg/ocr/mistralocr (P3's dispatch).
+- **ACEEngine (pkg/ocr/engine.go)**: tesseract+pandoc local pipeline kept exactly; cloud
+  escalation is now pkg/ocr/mistralocr (native PDF/image, IncludeBlocks) behind
+  `EngineConfig.MistralAPIKey/MistralBaseURL/MistralModel/FallbackToMistral` +
+  `ConfidenceThreshold` (default 0.85, replaces the old AIMLAPI_THRESHOLD constant).
+  `TierAIMLAPI` → `TierCloudOCR`. pkg/ocr/aimlapi.go deleted. Archaeologist key usage moved to
+  the standard resolver.
+- **Bank-statement AI assist** (LOW deviation, ratified at gate): stays on Mistral
+  chat-completions rather than mistralocr because both call sites only ever pass already-
+  extracted TEXT, never document bytes — mistralocr (document-native) does not fit. Renames:
+  `ENABLE_MISTRAL_BANK_STATEMENT_ASSIST` (was ENABLE_AIML_...), import tag `PDF_OCR_MISTRAL:`.
+- **Dead scaffolding modernized rather than deleted** (zero callers, verified): pkg/setup/wizard
+  (Mistral key + api.mistral.ai validation), pkg/orchestrator/intent_processor
+  (mistral-small-latest).
+- **Docs**: SECRET_CONFIGURATION_BASELINE gains a Wave 13 addendum retiring the documented
+  AIML key-naming-mismatch bug (strikethrough, not silent rewrite); admin guide settings table
+  collapsed to one Mistral key row; BUTLER_PIPELINE_REBUILD_SPEC banner-marked superseded.
+- **Grep-clean (gate-verified)**: remaining aiml/grok hits in live Go code are removal-
+  documentation comments, one legacy-key MASKING rule in security_enhancements.go (kept
+  deliberately — old DBs may still hold an aimlapi key that must never print), an arbitrary
+  test env-var name in config_test.go, and the generated capnp schema (exempt).
+- LOW deviations ratified: three one-line collateral compile fixes outside the exclusive list
+  (pkg/ocr/example_test.go, pkg/ocr/batch_offers_test.go, manual_deployment_package_test.go);
+  chat model config is env-level only (the settings-DB model provider was itself part of the
+  deleted provider plumbing — single-provider system needs no per-user model override).
+
+## P3 — Dispatch rewire · Fly.io retired · dead tree deleted
+
+- **New dispatch** (ocr_service_simple.go): PDF → go-fitz → if scant (`OCR_SCANT_TEXT_THRESHOLD`,
+  default 50, was a hardcoded literal) → Mistral OCR 4 NATIVE PDF with a Document AI schema →
+  offline tesseract via a dedicated local-only ACEEngine (constructed with no key,
+  FallbackToMistral:false — structurally incapable of a network call). Images → mistralocr →
+  tesseract. Office formats unchanged (local parse). `ocrWithMistral` checks the key BEFORE any
+  network attempt, so keyless boxes fall straight through — offline-first verified by a test
+  asserting the local path returns Success=true + NeedsReview=true, never an error.
+- **Structured extraction** (new ocr_document_schemas.go): 5 Document AI schemas (invoice
+  [+supplier_invoice], rfq [+quotation], purchase_order, bank_statement, generic) mirroring the
+  regex layer's field names so downstream consumers are agnostic to the engine. The regex layer
+  is DEMOTED: `extractFieldsFromTextLegacy` / `detectDocumentTypeFromTextLegacy`, offline/
+  local-parse paths only, doc-commented as degraded mode.
+- **Confidence UX**: OCRResultSimple gains `NeedsReview`, `FieldConfidence`,
+  `FieldsForReview` (wailsjs models/bindings hand-updated). HONEST GAP, ratified at gate: no
+  frontend screen consumes OCR results today (verified — none of the OCR bindings are called
+  from frontend-lab/src), so this is forward-wiring; building a review screen would have been a
+  redesign outside scope. Flagged for the wave that builds the document inbox UI.
+- **Mistral OCR config** (env, all defaulted): MISTRAL_OCR_MODEL, MISTRAL_OCR_BASE_URL,
+  MISTRAL_OCR_PAGE_CAP, MISTRAL_OCR_TIMEOUT_SECONDS, MISTRAL_OCR_CONFIDENCE_THRESHOLD.
+- **Fly.io retired**: callFlyOCR + retry client + pkg/ocr/fly_ocr_client.go + `flyEndpoint`
+  field deleted; the misleading ProcessWithFlorence2/Tesseract/GPU bindings deleted outright
+  (zero frontend callers — verified, so no repoint needed) with their service_documents.go and
+  wailsjs mirrors. Gate-verified grep: `fly.dev` / `FLY_OCR_URL` / `ASYMM_API_KEY` (OCR) /
+  `pixtral` = zero hits in live Go code.
+- **Dead tree deleted**: pkg/ocr went from ~90 files / 8 subdirs to 12 files / 2 subdirs.
+  orchestrator (~30 files incl. florence/modal/fly processors), ksum, octonion, organism,
+  predator, sparse, and the research fitz all deleted (each verified import-free first;
+  pkg/documents/ocr fitz engine kept). trinity.go kept (live: TrinityOptimizer/BabelMapper used
+  by engine.go).
+- **Error-policy ruling**: on ANY mistralocr error class the dispatch logs the specific class
+  but always falls back to the offline path — offline-first ("never error the inbox") outranks
+  fast-fail. Ratified at gate.
+- Also fixed at coder level: a self-caught err-shadowing bug in the image branch
+  (mistralErr/localErr separated); two AIMLAPI settings-surface remnants in
+  app_setup_documents_surface.go.
+
+## Gate rulings & gate-applied fixes (Phase 2)
+
+1. **pkg/ocr/orchestrator rump → pkg/ocr/preprocess** (gate-applied): the sole live dependency
+   of the deleted research tree (gpu_preprocessor.go, self-contained, stdlib-only) is a genuine
+   direct dep of ACEEngine.preprocess() — live via Archaeologist/batch-offers `EnableGPU:true` —
+   so per spec it survives; but a one-file package still named "orchestrator" is misleading
+   residue, so it was renamed to `pkg/ocr/preprocess` and its header comment corrected for
+   honesty: it is a pure-Go CPU implementation (SLERP quaternion denoising + contrast); the old
+   "Level Zero GPU" / "22.68M ops/sec" claims are gone, and engine.go's call-site comment now
+   states that EnableGPU merely selects the path.
+2. **runtime_handlers.go needs no change** (verified at gate): its client targets a LOCAL
+   .NET runtime at localhost:5263 — NOT the Fly deployment — and its offline fallback already
+   routes through SimpleOCRService, so it inherits the new dispatch automatically. Its header
+   comment describes the external C# runtime's endpoints, left as-is.
+3. **.env.example**: verified clean at the gate — zero aiml/fly/grok/pixtral references existed;
+   nothing to remove. MISTRAL_API_KEY remains the single AI credential.
+4. **Generated capnp schema** (OCRTier_aimlapi): exempt as generated wire-schema; regeneration
+   is out of wave scope. Residue, flagged.
