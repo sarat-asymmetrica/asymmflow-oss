@@ -37,8 +37,17 @@ func TestBackupCreatesVerifiableSnapshot(t *testing.T) {
 		t.Fatalf("Backup: %v", err)
 	}
 	wantDir := filepath.Join(filepath.Dir(dbPath), "backups")
-	if filepath.Dir(path) != wantDir {
-		t.Errorf("backup dir = %s, want %s", filepath.Dir(path), wantDir)
+	gotDir := filepath.Dir(path)
+	// Compare canonical forms: on hosted Windows runners TMP is an 8.3 short
+	// name (RUNNER~1) while the engine reports the long form of the same dir.
+	if canon, err := filepath.EvalSymlinks(gotDir); err == nil {
+		gotDir = canon
+	}
+	if canon, err := filepath.EvalSymlinks(wantDir); err == nil {
+		wantDir = canon
+	}
+	if gotDir != wantDir {
+		t.Errorf("backup dir = %s, want %s", gotDir, wantDir)
 	}
 	if filepath.Base(path) != "sample_20260703_120000.db" {
 		t.Errorf("backup name = %s", filepath.Base(path))
