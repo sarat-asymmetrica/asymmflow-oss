@@ -1,8 +1,10 @@
 # AsymmFlow v0.1 Backup/Restore Preflight
 
-**Date**: 2026-05-08  
-**Wave**: 16 - Release Engineering + Installer Spine  
+**Date**: 2026-05-08 (path correction 2026-07-23, Custodian Wave 1 / CW1-B)
+**Wave**: 16 - Release Engineering + Installer Spine
 **Purpose**: Verify that a pilot release has a usable active database, a valid backup, and a restore-tested backup copy before packaging or deployment.
+
+> **STALE-PATH NOTICE:** the examples below originally cited `$env:APPDATA\AsymmFlow\ph_holdings.db`. That path is dead — no current build reads or writes it (Mission DP1 introduced the three-plane layout; `pkg/infra/deploy/paths.go:9-10`). The examples are corrected below. For the full resolver, deployment paths, stopwatch numbers, and the disaster-recovery procedure this preflight feeds into, see `docs/custodian/DISASTER_RECOVERY_RUNBOOK.md`.
 
 ## Scope
 
@@ -23,17 +25,23 @@ For the repository/dev database when a `backups` directory exists next to `ph_ho
 .\scripts\preflight_backup_restore.ps1
 ```
 
-For a packaged Windows install using the default app data location:
+For a packaged Windows install using the default (non-portable, no `PH_DB_PATH`) data plane — resolve `<slug>` from the install's exe-adjacent `deployment.json` (defaults to `AsymmFlow-Dev`; see `docs/custodian/DISASTER_RECOVERY_RUNBOOK.md` §1 for the full three-step resolver):
 
 ```powershell
-.\scripts\preflight_backup_restore.ps1 -ActiveDb "$env:APPDATA\AsymmFlow\ph_holdings.db"
+.\scripts\preflight_backup_restore.ps1 -ActiveDb "$env:APPDATA\Asymmetrica\<slug>\data\ph_holdings.db"
+```
+
+For a portable install (`portable.flag` next to the exe):
+
+```powershell
+.\scripts\preflight_backup_restore.ps1 -ActiveDb "<exeDir>\data\ph_holdings.db"
 ```
 
 For an explicit backup file:
 
 ```powershell
 .\scripts\preflight_backup_restore.ps1 `
-  -ActiveDb "$env:APPDATA\AsymmFlow\ph_holdings.db" `
+  -ActiveDb "$env:APPDATA\Asymmetrica\<slug>\data\ph_holdings.db" `
   -BackupPath "D:\AsymmFlowBackups\ph_holdings_20260508_120000.db"
 ```
 
