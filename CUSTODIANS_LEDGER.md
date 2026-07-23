@@ -76,6 +76,6 @@ choose to share. Data-steered waves instead of intuition-steered.
 
 | Wave | Spec | Items | Status |
 |---|---|---|---|
-| 1 | `FABLE_CUSTODIAN_SPEC_01_THE_EXISTENTIAL_FLOOR.md` | C1 + C2 + C7 | SPECCED |
+| 1 | `FABLE_CUSTODIAN_SPEC_01_THE_EXISTENTIAL_FLOOR.md` | C1 + C2 + C7 | BUILT + GATED (2026-07-23, `FABLE_CUSTODIAN_SPEC_01_REPORT.md`) — awaiting owner review |
 
 *Correctness makes it work. Custody keeps it alive.*
