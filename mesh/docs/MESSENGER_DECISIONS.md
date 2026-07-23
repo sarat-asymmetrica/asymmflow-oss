@@ -766,3 +766,52 @@ rehearsal, and the India↔Bahrain ceremony are field work, with the runbook at
 `mesh/docs/bare-corridor/CORRIDOR_RUNBOOK_SEALED.md`. The A2.1 Node kit remains
 the rollback path and that decision is made BEFORE ceremony day: a slipped gate
 is a report, a fudged gate is a failure.
+
+## MSG-D29 — DRAFT — Field results: receptionist Round-2 + first India↔Bahrain sealed corridor
+
+**Status: DRAFT — pre-authored by the Field Packet campaign (FP-3) so nobody
+re-derives the evidence schema on ceremony day. This is NOT a decision until
+the field fills the slots and the owner ratifies it.**
+
+Artifacts this entry covers: `AsymmFlow-SealedKit-Field-20260723.zip`
+(sha256 `130BF121870BF47CA9…`, drive-through gate FP-1 green 16/16 with
+red-provable controls) + `FIELD_PACKET.pdf` (FP-2). Rollback stays binding:
+if anything below goes red, the ceremony runs on the A2.1 Node kit and this
+entry records that plainly — a slipped gate is a report, not a failure.
+
+### Round 2 — receptionist machine (real field hardware)
+
+- Round-2 verdict line, verbatim: `________________________________________`
+- Ceremony tally, verbatim (expect `OK=16/16 HANG=0/16 CONTENT_FAIL=0/16`): `________________`
+- Phase A cleanliness lines (the Node-free claim — THIS machine is the one
+  that can prove it): `________________________________________`
+- `vcruntime140.dll in System32 = ` (True/False — settles the Sandbox
+  copy-on-write caveat from PHASE4 Round 1): `________`
+- First-run Defender delay observed? (slow first run is NOT a failure): `________`
+- **SmartScreen / MOTW behaviour observed** (USB copy expected silent; if a
+  browser download was involved, which warning appeared and which button was
+  pressed): `________________________________________`
+  **→ this slot explicitly feeds the deferred DP2 §9 Authenticode decision:
+  a recurring field prompt is the argument FOR buying a signing cert; a
+  silent USB path is the argument that deferral costs nothing yet.**
+- `VERIFY_EVIDENCE.txt` + `verify-logs\` returned and archived at: `________`
+
+### The ceremony — India↔Bahrain, two sealed kits, one phone call
+
+- Date/time + who played STARTING / JOINING (roles only, no real names in
+  this public file): `________________________________________`
+- Invite delivery channel (never the code itself — bearer secret): `________`
+- **Both-ways proof (the ONLY acceptable "it worked"):**
+  - message typed by JOINER visible on STARTER's `/read`: `____` (yes/no)
+  - message typed by STARTER visible on JOINER's `/read`: `____` (yes/no)
+  - same session, actual text matching: `____`
+- LAN-address prompt path taken (different countries → Enter expected): `________`
+- Any red/unexpected line, in full (photograph both halves — the sentence
+  AND the detail below the fold): `________________________________________`
+- Photographs index (both verdict screens, both `/read` outputs; NEVER the
+  long invite code): `________________________________________`
+- Rollback invoked? (if yes: which leg went red, and the A2.1 outcome): `________`
+
+### Ratification
+
+- Owner signature line (converts DRAFT → decision): `________ · date ________`
