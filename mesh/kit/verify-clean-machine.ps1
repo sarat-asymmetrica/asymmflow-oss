@@ -134,7 +134,14 @@ function Invoke-Ceremony([string]$label, [string]$stdinText, [int]$timeout) {
 }
 
 # CRLF line endings on stdin, matching what a real console sends.
-$CEREMONY_STDIN = "2`r`n`r`nhello from the clean-machine verification`r`n/exit`r`n5`r`n"
+# Line 3 (the bare Enter after the permission notice's Enter) answers the
+# corridor guide's "Press Enter to start a conversation on this computer, or
+# type connect" prompt, added at SC-3. The pre-corridor sequence lacked it, so
+# this verifier reported CONTENT_FAIL 16/16 against a HEALTHY corridor-era kit
+# (message text consumed by the start/connect prompt, nothing ever posted) --
+# found by the Field Packet campaign's FP-1 drive-through gate 2026-07-23,
+# fix owner-authorized. Round 1's sandbox PASS predated the corridor guide.
+$CEREMONY_STDIN = "2`r`n`r`n`r`nhello from the clean-machine verification`r`n/exit`r`n5`r`n"
 $CONTROL_STDIN  = "5`r`n"
 
 # -- Phase C: probe self-test (the checker must be able to go red) ----------
