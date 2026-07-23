@@ -1,0 +1,129 @@
+name: gate
+
+# CW1-C — the public CI floor (see docs/custodian/CI_LAW.md).
+# Secretless by doctrine: no `secrets.*` reference anywhere in this file. If a
+# job needs one to go green, that is a stop-and-report finding, not something
+# to add here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same PR/branch so the floor stays cheap.
+concurrency:
+  group: gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------
+  # Go floor — build, vet, full test suite.
+  #
+  # Runner: windows-latest. AsymmFlow ships on Windows (Wails desktop app),
+  # and several packages are OS-coupled (hardware_id_keystore_windows.go /
+  # _other.go build-tag pair, command_window_windows.go). Measured locally
+  # on the dev machine (docs/custodian/CI_LAW.md has the numbers): build
+  # ~2m42s cold-cache, vet ~57s, full `go test ./...` measured and recorded
+  # in CI_LAW.md. Combined wall-clock stays well inside a single job's
+  # sensible CI budget, so this is ONE windows-latest job, not a split.
+  # Revisit the split decision if the measured total materially grows.
+  go:
+    name: go (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Pinned from go.mod (module ph_holdings_app requires go 1.25.0).
+          go-version: "1.25.0"
+          cache: true
+
+      - name: go build ./...
+        run: go build ./...
+
+      - name: go vet ./...
+        run: go vet ./...
+
+      - name: go test ./...
+        run: go test ./...
+        # No env vars beyond what actions/setup-go and actions/checkout set.
+        # Manual/opt-in tests (B2_STOCK_*, ONEDRIVE_IMPORT_*, *_COMMIT,
+        # APPLY_SUPABASE_SCHEMA, etc.) self-skip via `if os.Getenv(...) != "1"`
+        # guards already in the test files (see CI_LAW.md) — CI adds nothing
+        # new, it just doesn't set the opt-in vars. Hardware-ID / wmic tests
+        # use their own pre-existing honest-skip guards and run for real on
+        # this Windows runner.
+
+  # ---------------------------------------------------------------------
+  # Frontend build — frontend-lab is the Wails frontend (wails.json
+  # frontend:dir). `npm ci` from the committed lockfile + `vite build` is
+  # deterministic and network-only for package fetch (normal CI behavior,
+  # not a secret). Measured locally: npm ci ~25s, vite build ~17s.
+  frontend:
+    name: frontend-lab build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-lab
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend-lab/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: vite build
+        run: npm run build
+
+  # ---------------------------------------------------------------------
+  # Mesh floor — the deterministic Go->WASM->JS boundary smoke test only.
+  # `npm run smoke` (build reducer.wasm + host/smoke.mjs) is local-only:
+  # no swarm, no DHT, no Holesail tunnel, no live peer. It is the check the
+  # mesh/README.md itself documents as the floor ("Run it" section).
+  #
+  # Everything else under mesh/host and mesh/kit that talks to a swarm/DHT/
+  # Holesail/live peer (wave1:holesail, missiond:holesail, host/join peer
+  # scripts, mirrorspike/reactor-parity/bare-net/bare-corridor spikes, the
+  # kit-net/anchor/corridor family) is EXCLUDED here on purpose: those are
+  # AMBER by nature (network-dependent, multi-process, or require a second
+  # peer) and would make this floor flaky, not stronger. They stay part of
+  # the full local wave-gate (docs/custodian/CI_LAW.md), never CI.
+  #
+  # `go test ./mesh/...` (the pure reducer host tests) is already covered by
+  # the `go` job's `go test ./...` above — not duplicated here.
+  mesh:
+    name: mesh smoke
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mesh
+    steps:
+      - uses: actions/checkout@v4
+
+      # `npm run smoke` shells out to `go build` (GOOS=wasip1, scripts/
+      # build-reducer.mjs) against the repo's go.mod (requires 1.25.0).
+      # The runner image's preinstalled Go floats with the image — pin it,
+      # same version as the go job. (Gate finding CW1C-G1.)
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.0"
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mesh/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: npm run smoke
+        run: npm run smoke
